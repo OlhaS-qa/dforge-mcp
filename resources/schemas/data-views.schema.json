@@ -14,7 +14,7 @@
 			"properties": {
 				"viewType": {
 					"type": "string",
-					"enum": ["grid", "list", "kanban", "calendar", "gallery", "tree-grid", "diagram", "library", "matrix"],
+					"enum": ["grid", "list", "checklist", "kanban", "calendar", "gallery", "tree-grid", "diagram", "library", "matrix"],
 					"default": "grid",
 					"description": "View display type. Optional — omitted or unknown values fall back to 'grid' at runtime."
 				},
@@ -116,6 +116,18 @@
 					"properties": {
 						"viewConfig": { "$ref": "#/$defs/listViewConfig" }
 					}
+				}
+			},
+			"checklist": {
+				"if": {
+					"properties": { "viewType": { "const": "checklist" } },
+					"required": ["viewType"]
+				},
+				"then": {
+					"properties": {
+						"viewConfig": { "$ref": "#/$defs/checklistViewConfig" }
+					},
+					"required": ["viewConfig"]
 				}
 			},
 			"diagram": {
@@ -227,6 +239,47 @@
 					"type": "array",
 					"items": { "$ref": "#/$defs/listLevelConfig" },
 					"description": "Hierarchical child levels for expandable list rows"
+				},
+				"groupByField": {
+					"type": "string",
+					"description": "Dropdown, reference or user column the rows are grouped by"
+				},
+				"groupByOptions": {
+					"type": "array",
+					"items": { "type": "string" },
+					"description": "Columns the user may regroup by; must include groupByField"
+				},
+				"collapsedGroups": {
+					"type": "array",
+					"items": { "type": "string" },
+					"description": "Option values of groupByField whose groups start collapsed"
+				},
+				"inlineAdd": {
+					"type": "boolean",
+					"description": "Show an add row in each group (at the top when ungrouped)"
+				}
+			},
+			"additionalProperties": false
+		},
+		"checklistViewConfig": {
+			"type": "object",
+			"required": ["doneField"],
+			"properties": {
+				"titleField": {
+					"type": "string",
+					"description": "Column code of the row title; defaults to the record's display name. Also the column an inline add row types into"
+				},
+				"doneField": {
+					"type": "string",
+					"description": "Column the row's done circle reads and writes: a bool column, or a dropdown column with doneValue"
+				},
+				"doneValue": {
+					"type": "string",
+					"description": "Option value of a dropdown doneField that means done (ignored for a bool doneField)"
+				},
+				"undoneValue": {
+					"type": "string",
+					"description": "Option value a dropdown doneField is set back to when the circle is cleared (ignored for a bool doneField)"
 				},
 				"groupByField": {
 					"type": "string",

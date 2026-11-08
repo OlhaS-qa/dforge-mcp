@@ -4,6 +4,17 @@ All notable changes to `@dforge-core/dforge-mcp`. This project uses semver-ish
 `0.1.0-rc.N` pre-release tags; the published version is set at publish time via
 the release workflow, so committed `package.json` versions are placeholders.
 
+## 0.2.51 - 2026-11-08
+
+**Field rules are checked everywhere, and a coloured option is one pill.** A `params.fieldOptions` rule (`canEdit`,
+`foreColor`, `backColor`) on a column or on a column domain that does not parse or calls an unknown function is refused
+by `dforge_module_validate`, `dforge_module_pack` and install; a domain's rule and a module with domains and no entities
+were not checked before. `$value` stands for the column the rule is on. `field-types.md`, `column-domains.md`,
+`formulas.md` and the validation checklist say so.
+An option with a `color` is drawn as one pill (tint, edge, dark text, icon in the full colour) in the field display and
+the dropdown. The vendored entity schema carries `fieldOptions`; `@dforge-core/metadata` moves to ^0.0.51 and
+`@dforge-core/dforge-cli` to ^0.2.40, which holds the check.
+
 ## 0.2.50 - 2026-11-04
 
 **Print snippets in dependency contracts (core #1627).** `deps/<provider>.json` takes `"snippets"`, the provider's print

@@ -39,6 +39,10 @@ Without domains, every "status" column — and every action param that writes to
 | `maxLen` / `precision` | no | Sizing for string / numeric domains. |
 | `params` | no | Shared field-type config — most importantly `options` for `dropdown`/`radio`/`flags`. |
 
+## Field rules on a domain
+
+A `params.fieldOptions` rule (`canEdit`, `foreColor`, `backColor`) declared in a domain's `params` fits every column using it; `$value` stands for the column the rule is on, e.g. `IF($value < 0, 'danger', '')`. Validate, pack and install refuse a rule that does not parse (not-equal is `!=`, there is no `<>`) or calls an unknown function — a domain's rule included, and a module that ships domains and no entities.
+
 ## Using a domain in an entity
 
 A column swaps its whole type block for a single `domain` key — qualified as `module_cd.domain_cd`, or bare for a domain in the current module (unqualified resolves the current module first, then tenant-created domains):

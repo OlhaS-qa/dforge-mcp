@@ -59,6 +59,11 @@ For each entity:
 - [ ] Does NOT have `dbDatatype` (formula columns are virtual)
 - [ ] Flags is usually `"V"` (read-only)
 
+### Field rules (`params.fieldOptions`)
+
+- [ ] `foreColor` / `backColor` / `canEdit` each parse as a formula (not-equal is `!=`, never `<>`) and call only known functions — a column's rule and a column domain's rule alike (`dforge_module_validate`, pack and install refuse the rest)
+- [ ] `$value` appears only inside a field rule, where it stands for the column itself; anywhere else it is a parse error
+
 ### Set columns
 
 - [ ] `columnType: "S"`

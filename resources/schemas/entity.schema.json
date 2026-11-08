@@ -602,6 +602,25 @@
 							"type": "string",
 							"description": "Format rule for this column, as an ECMAScript regex source. Overrides the field type's own pattern (field_type.def_params.pattern, which is what makes email/phone/url reject a malformed value). Enforced in the browser and again on data.insert / data.update, so keep to constructs both engines read alike: [0-9] and \\d are the same there, \\s is normalized to JavaScript's set, and a pattern that will not compile is skipped by both rather than enforced by one."
 						},
+						"fieldOptions": {
+							"type": "object",
+							"description": "Per-record rules for this field, each a formula over the record evaluated in the browser wherever the value renders (grid, card, list, checklist, kanban). $value stands for this column, so one rule (e.g. on a column domain) fits every column using it: IF($value < 0, 'danger', ''). Install refuses a rule that does not parse or calls an unknown function. Not-equal is != (there is no <>).",
+							"properties": {
+								"foreColor": {
+									"type": "string",
+									"description": "Formula returning the text colour, or '' for none. A theme name (danger, warning, success, info, accent, muted) follows light/dark mode and the UI style; any other value is used as CSS. E.g. IF([due_date] < TODAY() AND [status] != 'done', 'danger', '')"
+								},
+								"backColor": {
+									"type": "string",
+									"description": "Formula returning the background colour, or '' for none. A theme name gives that colour's subtle tint."
+								},
+								"canEdit": {
+									"type": "string",
+									"description": "Formula; false makes the field read-only on that record (a UI hint — the server enforces its own locks)."
+								}
+							},
+							"additionalProperties": false
+						},
 						"patternFlags": {
 							"type": "string",
 							"description": "Flags for 'pattern', as a JavaScript regex literal would carry them; 'i' and 'm' are the two honoured, each at most once — the RegExp constructor rejects a repeated flag, and a rule the browser cannot compile is skipped there and would then be enforced by the API alone. JavaScript has no inline (?i), so case-insensitivity has to be stated here.",

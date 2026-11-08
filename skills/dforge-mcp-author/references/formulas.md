@@ -318,6 +318,10 @@ In modules that use settings, formulas can reference setting values with `$[Sett
 [total] * $[VAT_Rate]
 ```
 
+## `$value` in a field rule
+
+Inside a column's `params.fieldOptions` rule (`foreColor`, `backColor`, `canEdit`) — and in a column domain's, where it lets one rule fit every consuming column — `$value` stands for the column the rule belongs to: `IF($value < 0, 'danger', '')`. It means nothing in any other formula, where it is a parse error. See `field-types.md` § Conditional colour.
+
 ## Validation and CHECK constraints
 
 A check constraint's `expression` is **not** a formula. It is copied verbatim into a

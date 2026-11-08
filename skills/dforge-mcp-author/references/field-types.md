@@ -152,6 +152,10 @@ These are the field type names LLMs tend to invent. **They are all wrong.**
 | `userPicker` | `user` |
 | `phoneNumber` | `phone` |
 
+## Conditional colour and read-only (`params.fieldOptions`)
+
+Any column can colour its value, or lock it, per record: `params.fieldOptions.foreColor` / `backColor` are formulas that return a colour (a theme name — `danger`, `warning`, `success`, `info`, `accent`, `muted` — or CSS) or `''`; `canEdit` returns false to make the field read-only on that record. `$value` stands for the column itself, so a rule declared once on a column domain fits every column using it: `IF($value < 0, 'danger', '')`. Not-equal is `!=` (there is no `<>`). Validate, pack and install refuse a rule that does not parse or calls an unknown function. An option with a `color` is drawn as one pill; the icon takes the same colour unless it is packed (`"bi-circle|#6c757d"`).
+
 ## When in doubt
 
 If the user describes a field type that isn't in this list (e.g. "rating stars", "geo location", "signature pad"), those field types **do not currently exist**. Do not fabricate a `fieldTypeCd` value. Tell the user what's available and ask how they'd like to model it with existing types (e.g. rating as `number` with `min: 1, max: 5`, geo location as two `number` columns or a `json` column).

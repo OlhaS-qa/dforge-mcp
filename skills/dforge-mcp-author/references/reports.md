@@ -250,6 +250,8 @@ The installer merges both into the report's single param set (**report level win
 
 Two spellings that look right and are silently ignored: **`isRequired`** (the key is `required`, so the param installs as optional) and a **top-level `link`** (it must be nested under `params`, so the lookup installs with no autocomplete). Both are validator errors.
 
+**A lookup whose entity another param picks.** `"params": { "link": { "entity": "@p_kind.target_entity" } }` lists the rows of the entity whose code the `target_entity` column holds on the row picked in `p_kind` — an analytic value picked from the analytic kind's own entity, instead of a text "contains" filter. The column holds an entity code as `link.entity` takes one (`cdy-hr.employee`). Until `p_kind` is picked the field has nothing to pick; picking another row empties it. The report receives the picked row's key, so compare by key in the query or SQL. Install refuses any other `@` spelling, an undeclared or self-referencing param, a source that is not a lookup on a fixed entity (no chains), a column that entity lacks, and an `otherKey`. Report params only.
+
 **Dropdown params: prefer `domain`, and never ship bare codes.** A list shared with a column belongs on a `column_domain` — bind the param to it and the options plus their translations are authored once (`column-domains.md`). For a list that exists only for this report, write the rich option form (`{ "value": "north", "label": "North" }`); a bare `"options": ["north", "south"]` renders the raw codes in **every** locale, English included. Per-locale labels go under `reports.<cd>.params.<param_cd>.options` (`translations.md`).
 
 Reference a parameter with `@param_code` inside a query filter value:

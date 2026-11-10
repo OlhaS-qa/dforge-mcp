@@ -352,6 +352,8 @@ error('Insufficient stock. Available: {available}, requested: {requested}',
     { available: availableQty, requested: params[quantity] })
 ```
 
+A write the database refuses — a closed period, a posted document, a constraint — fails the action with the refusal itself, no "Script execution error:" prefix, and a closed period or posted document is translated into the user's language by the platform. Do not wrap such a write in `try/catch` just to `error()` the same text in English: let it through, and catch it only to do something else.
+
 ### Email
 
 | Function | Description |

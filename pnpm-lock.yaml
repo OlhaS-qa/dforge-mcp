@@ -170,8 +170,8 @@ importers:
         specifier: ^0.2.40
         version: 0.2.40
       '@dforge-core/metadata':
-        specifier: ^0.0.51
-        version: 0.0.51
+        specifier: ^0.0.52
+        version: 0.0.52
       '@modelcontextprotocol/sdk':
         specifier: ^1.30.0
         version: 1.30.0(zod@4.4.3)
@@ -230,8 +230,8 @@ packages:
     engines: {node: '>=18'}
     hasBin: true
 
-  '@dforge-core/metadata@0.0.51':
-    resolution: {integrity: sha512-YymgTjlJl4IaORaUkzdIuXW9McJ1dD8FQk5uHhUtZc9xp0lZBKgXFbqPNhLScNWIMJVS+LIdQtXy8h+vvl2wTQ==}
+  '@dforge-core/metadata@0.0.52':
+    resolution: {integrity: sha512-Sw44Bb+PW1zUUm+7Zxxn2dZuKKuJGzJgk1bv8P/bTNPI6cH0fIHHpvU1cjpVFUM8VtPAxt2TFXhPJDmHB6g0eg==}
 
   '@esbuild/aix-ppc64@0.27.7':
     resolution: {integrity: sha512-EKX3Qwmhz1eMdEJokhALr0YiD0lhQNwDqkPYyPhiSwKrh7/4KRjQc04sZ8db+5DVVnZ1LmbNDI1uAMPEUBnQPg==}
@@ -1494,7 +1494,7 @@ snapshots:
       '@dforge-core/dforge-cli-win32-arm64': 0.2.40
       '@dforge-core/dforge-cli-win32-x64': 0.2.40
 
-  '@dforge-core/metadata@0.0.51': {}
+  '@dforge-core/metadata@0.0.52': {}
 
   '@esbuild/aix-ppc64@0.27.7':
     optional: true

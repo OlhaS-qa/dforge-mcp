@@ -7,7 +7,43 @@ Two DSL built-ins do the work, both host functions callable from `logic/actions/
 - `ocrExtract(...)` — send a file to the OCR endpoint, get structured fields back.
 - `detectDocument(rawText)` — score a document's text against your profiles' detect rules to guess its type.
 
-The OCR endpoint URL is a module setting (commonly `ocr_endpoint_url`), read with `getSetting('ocr_endpoint_url')`.
+## Where documents go: the `ocr` module
+
+Don't declare an OCR endpoint setting of your own. Depend on the platform's `ocr` module and call its functions: it holds the one **OCR service** setting a workspace sets once (per folder if it wants), `platform` by default — the server's own OCR service — or the URL of an external one.
+
+```jsonc
+// manifest.json
+"dependencies": { "ocr": ">=0.1.0" }
+
+// deps/ocr.json
+{ "module": "ocr", "version": ">=0.1.0", "entities": {}, "functions": ["extract", "extractProfile", "summary", "raw"] }
+```
+
+```
+execute:
+  var r = ocr.extractProfile([doc_file], 'proc.bill_of_lading')
+  if (r.ok) {
+    [bl_no] = r.data.fields.bl_no
+    [status] = 'recognized'
+  } else {
+    [status] = 'failed'
+    [error_text] = r.error
+  }
+```
+
+| Function | `data` on success |
+|---|---|
+| `ocr.extract(file, schema)` | `{ fields, confidence?, unmatched, raw_text, meta }` — `schema` is the action's `schema:` block |
+| `ocr.extractProfile(file, 'module_cd.profile_cd')` | as `extract` |
+| `ocr.summary(file)` | `{ summary, raw_text, meta }` |
+| `ocr.raw(file)` | the raw bundle, `raw_text` included |
+
+- Each returns `{ ok, data, error }` and **never throws**, so write `error` to a status column instead of rolling the run back.
+- **Name a profile in full** (`'proc.bill_of_lading'`): the functions run as the `ocr` module, so a short name would be looked up there and is refused.
+- **Call `detectDocument()` from your own action**, where it sees your module's profiles, and pass the code it returns to `ocr.extractProfile()`.
+- The folder's **Settings** tab of a module that uses `ocr` shows the OCR section, so an admin changes the service there.
+
+Calling `ocrExtract()` directly still works — for a module that really needs its own endpoint. The second argument is `'platform'` (any case) for the server's own service, or the base URL of an external one. A URL on a private or loopback address is refused (`Blocked endpoint: private network addresses are not allowed`) unless the server allows that host; `'platform'` and the platform service's own address always pass. A server with no OCR service of its own refuses `'platform'`.
 
 ## `ocrExtract()`
 
@@ -15,18 +51,18 @@ Three forms, from raw to managed:
 
 **v1 — raw bundle** (back-compat; returns a JSON **string**, you `JSON.parse` it):
 ```
-var raw = ocrExtract([doc_file], getSetting('ocr_endpoint_url'))        // hints optional (array | string | object)
+var raw = ocrExtract([doc_file], 'platform')        // hints optional (array | string | object)
 ```
 
 **v2 — inline schema** (explicit opt-in via `opts.mode`; returns the **parsed** object):
 ```
-var r = ocrExtract([doc_file], getSetting('ocr_endpoint_url'), schema, { mode: 'extract' })
+var r = ocrExtract([doc_file], 'platform', schema, { mode: 'extract' })
 // r → { fields, confidence?, unmatched, raw_text, meta }
 ```
 
 **v2 — extraction profile** (the managed path; schema lives in a row, not inline):
 ```
-var r = ocrExtract([doc_file], getSetting('ocr_endpoint_url'), null, { profile: 'proc.bill_of_lading' })
+var r = ocrExtract([doc_file], 'platform', null, { profile: 'proc.bill_of_lading' })
 ```
 
 Notes:
@@ -45,7 +81,7 @@ schema:
   issue_date:   { type: 'date' }
 
 execute:
-  var r = ocrExtract([doc_file], getSetting('ocr_endpoint_url'), schema, { mode: 'extract' })
+  var r = ocrExtract([doc_file], 'platform', schema, { mode: 'extract' })
   var bl = insert('bill_of_lading', { bl_no: r.fields.bl_no, issue_date: r.fields.issue_date })
   if (r.fields.container_no != null) {
     insert('container', { bill_of_lading_id: bl.bill_of_lading_id, container_no: r.fields.container_no })
@@ -91,7 +127,7 @@ A profile's optional `detect` rules let the platform guess a document's type bef
 execute:
   var det = detectDocument(data.raw_text)     // → { profile: 'proc.bill_of_lading', docType: 'bill_of_lading', score } | null
   if (det != null && det.docType != null) { [doc_type] = det.docType }
-  var r = ocrExtract([doc_file], getSetting('ocr_endpoint_url'), null, { profile: det.profile })
+  var r = ocrExtract([doc_file], 'platform', null, { profile: det.profile })
 ```
 
 - Returns `{ profile, docType, score }` (the profile code is already module-qualified, ready to pass to `ocrExtract`) or `null`.
@@ -110,4 +146,6 @@ execute:
 - Unquoted values in a `schema:` block (`type: string`) — compile fails; quote them.
 - A `profile_cd` containing `.` — rejected (reserved for the `module.profile` form).
 - Treating `detectDocument` as authoritative — it's advisory; confirm the type before an irreversible write.
-- Forgetting the OCR endpoint is a **setting** — read it with `getSetting(...)`, don't hardcode.
+- Declaring an `ocr_endpoint_url` setting of your own — use the `ocr` module, so the workspace sets the service once.
+- Hardcoding a private address such as `http://ocr:8080` or `http://10.0.0.5` in a direct `ocrExtract()` call — pass `'platform'`; a private address is refused unless the server allows it.
+- Passing a short profile name to `ocr.extractProfile()` — name it `'module_cd.profile_cd'`.

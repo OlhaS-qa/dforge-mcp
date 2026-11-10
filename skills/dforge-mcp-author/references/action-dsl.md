@@ -387,7 +387,7 @@ error('Insufficient stock. Available: {available}, requested: {requested}',
 | Function | Returns | Description |
 |---|---|---|
 | `getSetting('setting_cd')` | Any | Read a module setting, resolved through the folder chain (current folder → parents → module default). |
-| `ocrExtract(fileField, endpointBaseUrl, schema?, opts?)` | Object | Run OCR extraction against a document. `opts.profile` selects a registered extraction profile, e.g. `{ profile: 'proc.bill_of_lading' }`. |
+| `ocrExtract(fileField, endpointBaseUrl, schema?, opts?)` | Object | Run OCR extraction against a document. `endpointBaseUrl` is `'platform'` (the server's own OCR service) or an external URL; a private address is refused unless the server allows it. `opts.profile` selects a registered extraction profile, e.g. `{ profile: 'proc.bill_of_lading' }`. Prefer the `ocr` module's functions — see [document-extraction.md](document-extraction.md). |
 | `detectDocument(rawText)` | Object \| null | Score text against reachable extraction profiles; returns the best match `{ profile, docType, score }` or `null`. |
 | `applyProfile(json, 'module.profile_cd')` | Object | Map already-extracted JSON through a profile's field schema, without re-running OCR. |
 

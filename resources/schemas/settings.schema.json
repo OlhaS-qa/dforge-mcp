@@ -57,11 +57,11 @@
 				},
 				"description": {
 					"type": "string",
-					"description": "Display label (older style). Use `label` for new settings."
+					"description": "Display label (older style). Use `label` for new settings. Beside a `label`, it is the help text instead, unless `desc` is given."
 				},
 				"desc": {
 					"type": "string",
-					"description": "Alternative label key used by some older modules. Prefer `label`."
+					"description": "Longer help text shown under the label (localized as settings.<code>.desc). Not a label."
 				},
 				"defaultValue": {
 					"description": "Default value before the user sets one. Type matches `baseDatatypeCd`."

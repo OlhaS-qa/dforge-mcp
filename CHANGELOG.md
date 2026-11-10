@@ -4,6 +4,20 @@ All notable changes to `@dforge-core/dforge-mcp`. This project uses semver-ish
 `0.1.0-rc.N` pre-release tags; the published version is set at publish time via
 the release workflow, so committed `package.json` versions are placeholders.
 
+## 0.2.52 - 2026-11-10
+
+**One OCR setting per workspace: the `ocr` module (core #1649).** A module that recognizes documents depends on the
+platform's `ocr` module and calls `ocr.extract` / `ocr.extractProfile` / `ocr.summary` / `ocr.raw` instead of declaring
+an `ocr_endpoint_url` of its own; they return `{ ok, data, error }` and never throw. Profiles are named in full
+(`'module.profile'`), and `detectDocument()` stays in the module's own action. A direct `ocrExtract()` takes `'platform'`
+for the server's own OCR service; a private address such as `http://ocr:8080` written into a module is refused unless
+the server allows it. `document-extraction.md` and the `ocrExtract` row of `action-dsl.md` say so.
+
+**Setting names and help text.** `label` is a setting's name and `desc` the help text under it; `description` is the
+older key for the name, and help text when it stands beside a `label`. A gateway module's settings (`ai`, `ocr`) are
+edited on the Settings tab of each folder whose module uses it. `settings.md` says so. `@dforge-core/metadata` moves
+to ^0.0.52, which carries the new `ocrExtract` description and the vendored settings schema's `desc` wording.
+
 ## 0.2.51 - 2026-11-08
 
 **Field rules are checked everywhere, and a coloured option is one pill.** A `params.fieldOptions` rule (`canEdit`,

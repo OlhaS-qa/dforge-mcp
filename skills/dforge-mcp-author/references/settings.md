@@ -13,7 +13,8 @@ Settings use the **same field type system as entity columns**. Each setting is l
     "company_name": {
         "fieldTypeCd": "text",
         "baseDatatypeCd": "string",
-        "description": "Company name displayed on documents",
+        "label": "Company name",
+        "desc": "Shown in the header of every printed document",
         "defaultValue": "Your Company Name"
     },
     "invoice_prefix": {
@@ -43,6 +44,13 @@ Settings use the **same field type system as entity columns**. Each setting is l
     }
 }
 ```
+
+### Name and help text
+
+- `label` — the name shown for the setting. Translate it as `settings.<code>.label`.
+- `desc` — optional help text shown under the name. Translate it as `settings.<code>.desc`.
+- `description` — the older key for the name, still accepted (the other examples use it). Beside a `label` it is taken as the help text instead, unless `desc` is given.
+- A setting with neither `label` nor `description` shows its code.
 
 ## Reading settings
 
@@ -81,6 +89,10 @@ The walk stops at a folder whose `inherit_security` is false; that folder's own 
 
 **Which folder is "the context's folder"** depends on what is reading. A user request uses the folder the user navigated to; an action uses the folder of the record or the queue entry; a **scheduled job** uses `scheduled_job.folder_id`, defaulting to its module's root folder. A job is the one context with no user, which is why it carries an explicit binding — without one it would see only the module default, and module defaults are not writable through the API (`settings.set` requires a folder).
 
+## Where a setting is edited
+
+A setting is edited on the **Settings** tab of a folder. That tab lists the module owning the folder, the modules that depend on it, and the modules those depend on that **own no folder** and have settings — gateway modules such as `ai` and `ocr`. A gateway's functions run in the calling module's folder and read their settings there, so a value set on that folder's tab applies to calls made from it. A module with settings but no folder and no dependants has nowhere to edit them.
+
 ## Field types supported in settings
 
 Any field type that makes sense for a single scalar value:
@@ -118,6 +130,8 @@ By default, only the module/tenant admin can change settings. If you want specif
 - Using `lookup` as a setting field type — unsupported.
 - Hardcoding values that should be settings — makes the module non-configurable. Any string/number that might vary per deployment is a good candidate for a setting.
 - Reading a setting that doesn't exist — returns null, which causes formula errors. Always provide a default.
+- A setting with neither `label` nor `description` — the settings page shows its bare code.
+- Restating a gateway module's setting (an OCR endpoint, an AI provider) in your own `settings.json` — depend on the gateway and call its functions, so the workspace sets it once.
 
 ## Reference
 

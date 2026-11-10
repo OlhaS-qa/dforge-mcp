@@ -446,7 +446,7 @@
 				},
 				"params": {
 					"type": "object",
-					"description": "Field-type-specific params, nested under this key — there is no top-level `link`. A `lookup` param needs `{ \"link\": { \"entity\": \"<code>\", \"otherKey\": \"<column>\" } }`; `otherKey` auto-fills from the target's PK when omitted. Without `params.link` a lookup param installs, warns, and has no autocomplete."
+					"description": "Field-type-specific params, nested under this key — there is no top-level `link`. A `lookup` param needs `{ \"link\": { \"entity\": \"<code>\", \"otherKey\": \"<column>\" } }`; `otherKey` auto-fills from the target's PK when omitted. Without `params.link` a lookup param installs, warns, and has no autocomplete. `min` / `max` may be `\"@<code>\"` of another param of this report — `{ \"min\": \"@date_from\" }` keeps Date To from preceding Date From in the parameter dialog; install refuses an `@` naming no param, or the param itself."
 				}
 			},
 			"additionalProperties": false

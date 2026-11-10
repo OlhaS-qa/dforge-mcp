@@ -4,6 +4,23 @@ All notable changes to `@dforge-core/dforge-mcp`. This project uses semver-ish
 `0.1.0-rc.N` pre-release tags; the published version is set at publish time via
 the release workflow, so committed `package.json` versions are placeholders.
 
+## 0.2.53 - 2026-11-10
+
+**A report lookup can list the entity another param picks.** `"params": { "link": { "entity": "@p_kind.target_entity" } }`
+lists the rows of the entity whose code the `target_entity` column holds on the row picked in `p_kind`, instead of a
+text "contains" filter. Install refuses a malformed or unknown reference, a source that is not a lookup on a fixed
+entity, a column that entity lacks, and an `otherKey`. `reports.md` says so.
+
+**A report param can be bounded by another.** `"date_to": { "params": { "min": "@date_from" } }`; install refuses an `@`
+naming no param of the report, or the param itself. The vendored reports schema carries it, and param rules
+(`required`, `min`, `max`, `@other`) are now enforced when a report or an action runs.
+
+**A write the database refuses is the action's error as it is.** No "Script execution error:" prefix, and a closed period
+or posted document is translated into the user's language; do not wrap such a write in `try/catch` just to `error()`
+the same text. `action-dsl.md` says so.
+
+`@dforge-core/metadata` moves to ^0.0.53 and `@dforge-core/dforge-cli` to ^0.2.42, which hold the new checks.
+
 ## 0.2.52 - 2026-11-10
 
 **One OCR setting per workspace: the `ocr` module (core #1649).** A module that recognizes documents depends on the

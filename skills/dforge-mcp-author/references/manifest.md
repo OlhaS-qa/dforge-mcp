@@ -37,12 +37,13 @@ Every dForge module has a `manifest.json` at its root. This file declares the mo
 | `version` | semver | Module version. Bump on every release. |
 | `dbSchemaVersion` | semver | Schema version. Bump when the DB schema changes (column add/remove, new entity, etc.). |
 | `displayName` | string | Human-readable name shown in the UI and marketplace. |
-| `description` | string | One-line summary of what the module does. |
+| `description` | string | What the module does. A paragraph or more is fine. The marketplace card shows it cut at the last whole sentence within 1000 characters. When the package has no README.md, the module page shows the whole text. |
 
 ## Optional but recommended
 
 | Field | Type | Description |
 |---|---|---|
+| `shortDescription` | string | The marketplace card text (at most 1000 characters). Use it when the cut `description` reads badly on the card. Publishing refuses a longer one. When it is set, the module page shows the full `description`, or README.md if the package has one. |
 | `author` | object | `{name, email?, url?}` |
 | `license` | string | SPDX identifier (e.g. `"MIT"`, `"Apache-2.0"`) |
 | `category` | string | Marketplace category slug (e.g. `"sales"`, `"hr"`, `"other"`) |
@@ -50,6 +51,8 @@ Every dForge module has a `manifest.json` at its root. This file declares the mo
 | `icon` | string | Bootstrap icon name (e.g. `"bi-briefcase"`) or similar |
 | `dependencies` | object | Map of `module_code → semver range`. Each entry also requires a `deps/<module_code>.json` contract — see [Dependencies](#dependencies). |
 | `created`, `updated` | ISO date | Timestamps |
+
+Both texts come from the package and are refreshed on every publish. To change a catalog description, edit the manifest and publish a new version. The developer metadata PATCH refuses `shortDescription` with a 400. A module published before this change keeps its old card text until its next version is published.
 
 ## Content declarations
 

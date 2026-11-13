@@ -4,6 +4,16 @@ All notable changes to `@dforge-core/dforge-mcp`. This project uses semver-ish
 `0.1.0-rc.N` pre-release tags; the published version is set at publish time via
 the release workflow, so committed `package.json` versions are placeholders.
 
+## 0.2.54 - 2026-11-12
+
+**Files can live in S3.** `dforge_module_install` and the other CLI-backed tools now install the `admin` system module
+1.33.0, which stores a print archive's file as one `file` value, the shape a file column holds. A workspace keeps its
+files in S3 through its `file_storage_config`, set by the operator, and a file column may name a store with
+`params.storage.provider`. Nothing about a module package changes, so no skill or schema changes.
+
+`@dforge-core/dforge-cli` moves to ^0.2.43, which carries admin 1.33.0, backup that refuses files in any non-local
+store, and restore that keeps the workspace's file stores.
+
 ## 0.2.53 - 2026-11-10
 
 **A report lookup can list the entity another param picks.** `"params": { "link": { "entity": "@p_kind.target_entity" } }`

@@ -1,15 +1,13 @@
 {
 	"$schema": "https://json-schema.org/draft/2020-12/schema",
 	"title": "dForge Module Test Scenarios",
-	"description": "Scenarios for a dForge module (tests/*.test.json), run by `dforge-cli module test`. Covers the v0 subset described in docs/modules/module-tests.md: given / do / expect over the API as the signed-in user.",
+	"description": "Scenarios for a dForge module (tests/*.test.json), run by `dforge-cli module test`. Covers the v0 subset described in docs/modules/module-tests.md: given / do / expect over the API as the signed-in user. A suite has no fixture or isolation yet: the workspace must already hold the data the scenarios rely on.",
 	"type": "object",
 	"required": ["describe", "tests"],
 	"additionalProperties": false,
 	"properties": {
 		"$comment": { "type": "string" },
 		"describe": { "type": "string", "description": "Name of the suite." },
-		"fixture": { "type": "string", "description": "Named fixture from tests/test.json. Not read by v0: the workspace must already hold the data the scenarios rely on." },
-		"isolation": { "enum": ["rollback", "clone"], "description": "Not used by v0: tests commit and leave their records behind." },
 		"tests": { "type": "array", "items": { "$ref": "#/$defs/test" } }
 	},
 	"$defs": {

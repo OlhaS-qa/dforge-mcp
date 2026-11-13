@@ -191,13 +191,24 @@ credentials/connectivity, NOT a module defect. Tell the user to verify
 **Exit criterion:** install exits 0 against a real tenant.
 
 **Scenarios, when the module has `tests/*.test.json`:** run
-`dforge-cli module test <moduleDir> --url <workspace>` on a **fresh test workspace**
-with the module installed `--with-demo-data`. It runs them in the module's own
-folder as the signed-in user: steps `insert` / `update` / `delete` / `action`,
-expectations `record`, `count`, `error`, `refused: "canExecute"`. A step or
-expectation it does not support **fails** the test, it is never skipped. Tests
-commit and leave their records behind, so a second run on the same workspace can
-fail with "matched 2 records". Needs the API and CLI on 0.2.39 or later. A failing
+`dforge-cli module test <moduleDir> --url <server>` (sign in first with
+`dforge-cli auth login --url <server>`). Every test runs in a temporary workspace of
+its own, a copy of a template that holds the module, every module it depends on and
+their demo data; the copy is dropped when the test ends, so tests cannot affect each
+other and a second run finds no duplicates. Dependencies are read from the folder next
+to the module (`--modules-dir` for another), as a folder with `manifest.json` or a
+`{code}[-{version}].dforge` package; one that is missing or outside its version
+constraint fails the run before anything is installed, and all of them are named at
+once. Flags: `--filter <text>`, `--keep` (keep each workspace for a day),
+`--no-demo-data`, `--shared` (run in the workspace you are signed in to, in the
+module's own folder, for debugging: tests commit there and a rerun can fail on
+"matched 2 records"). Steps `insert` / `update` / `delete` / `action`, expectations
+`record`, `count`, `error`, `refused: "canExecute"`; a step or expectation it does not
+support **fails** the test, it is never skipped. Exit 0 all passed, 1 a test failed,
+2 the run could not start. Exit 2 with a message that temporary workspaces are not
+allowed means the server does not set `ModuleTests__Enabled=true` (the local docker
+stack does; production never does) or the signed-in user is not an instance admin:
+that is the environment, not a module defect. Needs CLI 0.2.43 or later. A failing
 scenario is a module defect: fix it, then re-install.
 
 ## Step 6 — Record and close out

@@ -237,6 +237,11 @@ must set `jobClass: 'long_running'`. `dforge_module_validate` flags violations.
 refused). `tests/upgrade.test.json` and anything else outside `tests/*.test.json`
 is not read. Phase 6 runs them.
 
+Every test starts from the module, its dependencies and their demo data, so `given`
+only creates what the scenario needs. Do not write `fixture` or `isolation` in a
+suite: the schema refuses them and the runner fails every test of that suite.
+`refused: "canExecute"` matches the `ACTION_NOT_AVAILABLE` refusal.
+
 ## Phase 3 — Views + menus (3a required), reports (optional)
 
 **3a. Default grids first.** Every entity gets a `viewType: "grid"` view with

@@ -16,7 +16,7 @@ import {
 	type ToolResult,
 } from "./_helpers";
 import { readMessageTranslations } from "./validate/translations";
-import { checkDsl, type DslIssue } from "./dsl-check";
+import { checkDsl, readLibraryFunctions, type DslIssue } from "./dsl-check";
 
 export const actionCheckSchema = {
 	moduleDir: z
@@ -73,6 +73,7 @@ export function actionCheck(args: Args): ToolResult {
 	let moduleCode: string | undefined;
 	let entity: { qualified: string; columns: Set<string> } | undefined;
 	let messageTranslations: Record<string, Record<string, string>> | undefined;
+	let libraryFunctions: string[] | undefined;
 	// Defects found while resolving the module, reported alongside the DSL ones
 	// so a single result answers "is this body ready to commit?".
 	const preIssues: DslIssue[] = [];
@@ -84,6 +85,7 @@ export function actionCheck(args: Args): ToolResult {
 	if (args.moduleDir) {
 		const { paths, manifest } = loadManifest(args.moduleDir);
 		moduleCode = manifest.code;
+		libraryFunctions = readLibraryFunctions(paths.logicDir);
 		messageTranslations = readMessageTranslations(paths.translationsDir, manifest.supportedLocales);
 
 		if (args.actionCode) {
@@ -150,6 +152,7 @@ export function actionCheck(args: Args): ToolResult {
 			actionCode: args.actionCode,
 			entity,
 			messageTranslations,
+			libraryFunctions,
 		}),
 	];
 	const errors = issues.filter((i) => i.level === "error");

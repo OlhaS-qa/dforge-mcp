@@ -30,11 +30,24 @@ import { checkDataViews, checkVisibleColumns, checkViewGrouping, checkMenus } fr
 import { checkRoleRights, checkSelectCoverage } from "./validate/security";
 import { checkConstraintTranslations, checkMessageTranslations, checkTranslationCompleteness } from "./validate/translations";
 import { checkActions, checkTriggersJobsWebhooks, checkActionDsl } from "./validate/logic";
-import { checkFolders, checkDiagrams } from "./validate/folders";
+import { checkFolders, checkDiagrams, checkMenuFolderCoverage } from "./validate/folders";
+import { checkJsonSchemas } from "./validate/schemas";
+import { checkTestScenarios } from "./validate/scenarios";
+import { checkEmptySeedData, checkEmptyViewColumns, checkDependencyContracts } from "./validate/scaffold";
+import * as crypto from "node:crypto";
+import * as fs from "node:fs";
+import * as os from "node:os";
+import * as path from "node:path";
 import { checkReports } from "./validate/reports";
 
 export const moduleValidateSchema = {
 	moduleDir: z.string().describe("Path to the module root. Run this after authoring and before dforge_module_pack."),
+	format: z
+		.enum(["full", "summary"])
+		.optional()
+		.describe(
+			"'full' (default): every error and warning listed one by one in _validate.json. 'summary': repeated messages are grouped by rule with a count and 3 examples, which keeps the response small on a large module (a 26-entity module can produce 60K+ characters in full); the complete list is written to a file whose path is returned in `fullReport`. The `summary` line carries the error/warning counts in both formats.",
+		),
 };
 
 // Order matters only for the order issues are listed in (and so the summary's
@@ -60,7 +73,77 @@ const CHECKS: Array<(ctx: ValidateContext) => void> = [
 	checkReports,
 	checkTranslationCompleteness,
 	checkMessageTranslations,
+	checkMenuFolderCoverage,
+	checkEmptySeedData,
+	checkEmptyViewColumns,
+	checkDependencyContracts,
+	checkTestScenarios,
+	checkJsonSchemas,
 ];
+
+interface Issue {
+	level: "error" | "warning";
+	where: string;
+	message: string;
+	rule?: string;
+}
+
+/** Message with its variable parts (quoted names, braces, numbers) blanked, so repeats collapse into one rule. */
+function ruleOf(i: Issue): string {
+	if (i.rule) return `${i.where.split(" → ")[0].replace(/[^/\s:]+\.(json|dsl)(:\d+)?/g, "*.$1")} | ${i.rule}`;
+	const where = i.where
+		.split(" → ")[0]
+		.replace(/[^/\s:]+\.(json|dsl)(:\d+)?/g, "*.$1")
+		.replace(/\.[A-Za-z_][\w-]*$/, ".*");
+	const msg = i.message
+		.replace(/'[^']*'/g, "'…'")
+		.replace(/"[^"]*"/g, '"…"')
+		.replace(/\{[^}]*\}/g, "{…}")
+		.replace(/\[[^\]]*\]/g, "[…]")
+		.replace(/\d+/g, "N");
+	return `${where} | ${msg}`;
+}
+
+function groupIssues(issues: Issue[]): Array<{ rule: string; count: number; examples: Issue[] }> {
+	const groups = new Map<string, { rule: string; count: number; examples: Issue[] }>();
+	for (const i of issues) {
+		const key = ruleOf(i);
+		const g = groups.get(key) ?? groups.set(key, { rule: key, count: 0, examples: [] }).get(key)!;
+		g.count++;
+		if (g.examples.length < 3) g.examples.push(i);
+	}
+	return [...groups.values()].sort((a, b) => b.count - a.count);
+}
+
+/** Which family a finding belongs to, for the summary line. */
+function categoryOf(i: Issue): string {
+	if (/\([\w-]+ schema\)\.?$/.test(i.message)) return "schema";
+	const w = i.where;
+	if (/\.dsl\b/.test(w) || w.startsWith("logic/functions")) return "dsl";
+	if (w.startsWith("translations") || /^translations\b/.test(w)) return "translations";
+	if (w.startsWith("cli")) return "cli";
+	return "other";
+}
+
+/**
+ * "(schema: 234 in 27 files; dsl: 129; translations: 1)" — warnings by family,
+ * largest first, so a pile of schema findings cannot hide behind "0 errors".
+ */
+function warningBreakdown(warnings: Issue[]): string {
+	if (warnings.length === 0) return "";
+	const byCat = new Map<string, { n: number; files: Set<string> }>();
+	for (const w of warnings) {
+		const c = categoryOf(w);
+		const e = byCat.get(c) ?? byCat.set(c, { n: 0, files: new Set() }).get(c)!;
+		e.n++;
+		e.files.add(w.where.split(" → ")[0]);
+	}
+	const parts = [...byCat.entries()]
+		.sort((a, b) => b[1].n - a[1].n)
+		.slice(0, 4)
+		.map(([c, e]) => (c === "schema" ? `schema: ${e.n} in ${e.files.size} file${e.files.size === 1 ? "" : "s"}` : `${c}: ${e.n}`));
+	return ` (${parts.join("; ")})`;
+}
 
 export function moduleValidate(
 	args: z.infer<z.ZodObject<typeof moduleValidateSchema>>,
@@ -98,12 +181,52 @@ export function moduleValidate(
 	const clean = errors.length === 0 && warnings.length === 0;
 	const summary = clean
 		? `✓ ${manifest.code}: no cross-reference issues found across ${Object.keys(entities).length} entities, ${viewCodes.size} views, ${Object.keys(roles).length} roles.`
-		: `${manifest.code}: ${errors.length} error(s), ${warnings.length} warning(s).${errors.length ? ` First error: ${errors[0].where} — ${errors[0].message}` : ""}`;
+		: `${manifest.code}: ${errors.length} error(s), ${warnings.length} warning(s)${warningBreakdown(warnings)}.${errors.length ? ` First error: ${errors[0].where} — ${errors[0].message}` : ""}`;
+
+	const fullJson = JSON.stringify({ ok: errors.length === 0, errors, warnings }, null, "\t") + "\n";
+	if (args.format === "summary") {
+		// The complete list goes to a file outside the module (so pack never sees it).
+		let fullReport: string | undefined;
+		try {
+			const dir = path.join(os.tmpdir(), "dforge-validate");
+			fs.mkdirSync(dir, { recursive: true });
+			// Retention: drop reports older than a day so repeated runs don't pile up.
+			const cutoff = Date.now() - 24 * 60 * 60 * 1000;
+			for (const f of fs.readdirSync(dir)) {
+				if (!f.endsWith(".json")) continue;
+				try {
+					const p = path.join(dir, f);
+					if (fs.statSync(p).mtimeMs < cutoff) fs.unlinkSync(p);
+				} catch {
+					/* best effort */
+				}
+			}
+			fullReport = path.join(dir, `${manifest.code}-${Date.now()}-${process.pid}-${crypto.randomUUID().slice(0, 8)}.json`);
+			fs.writeFileSync(fullReport, fullJson);
+		} catch {
+			fullReport = undefined;
+		}
+		const grouped = {
+			ok: errors.length === 0,
+			format: "summary",
+			counts: { errors: errors.length, warnings: warnings.length },
+			errors: groupIssues(errors),
+			warnings: groupIssues(warnings),
+			fullReport,
+		};
+		return {
+			summary: `${summary}${fullReport ? ` Full list: ${fullReport}.` : ""}`,
+			files: { "_validate.json": JSON.stringify(grouped, null, "\t") + "\n" },
+			warning: errors.length
+				? `${errors.length} validation error(s) — fix before dforge_module_pack / dforge_module_install. Grouped in _validate.json.`
+				: undefined,
+		};
+	}
 
 	return {
 		summary,
 		files: {
-			"_validate.json": JSON.stringify({ ok: errors.length === 0, errors, warnings }, null, "\t") + "\n",
+			"_validate.json": fullJson,
 		},
 		warning: errors.length
 			? `${errors.length} validation error(s) — fix before dforge_module_pack / dforge_module_install. Details in _validate.json.`

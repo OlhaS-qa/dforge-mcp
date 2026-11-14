@@ -34,6 +34,8 @@ function makeModule(): void {
 			entities: { product: "./entities/product.json" },
 		}),
 	);
+	mkdirSync(join(dir, "deps"), { recursive: true });
+	writeFileSync(join(dir, "deps", "fin.json"), JSON.stringify({ module: "fin", version: "^1.0.0", entities: {} }));
 	writeFileSync(
 		join(dir, "entities", "product.json"),
 		JSON.stringify({

@@ -4,7 +4,6 @@
 // directory reads from it and reports through err/warn.
 
 import * as fs from "node:fs";
-import * as path from "node:path";
 import {
 	loadManifest,
 	readJsonOrDefault,
@@ -15,6 +14,7 @@ import {
 	TRAIT_CODES,
 	type Manifest,
 	type ModulePaths,
+	entityFilePath,
 } from "../_helpers";
 
 type Level = "error" | "warning";
@@ -22,6 +22,8 @@ export interface Issue {
 	level: Level;
 	where: string;
 	message: string;
+	/** Stable rule id set by the checker; summary grouping uses it before any text heuristic. */
+	rule?: string;
 }
 
 // Platform-provided entities that are valid FK targets but not authored in the
@@ -38,8 +40,8 @@ export interface ValidateContext {
 	paths: ModulePaths;
 	manifest: Manifest;
 	issues: Issue[];
-	err: (where: string, message: string) => void;
-	warn: (where: string, message: string) => void;
+	err: (where: string, message: string, rule?: string) => void;
+	warn: (where: string, message: string, rule?: string) => void;
 	/** manifest.entities, including cross-module extension keys. */
 	entityMap: Record<string, string>;
 	/** Same-module entity files that exist and parse. */
@@ -61,8 +63,8 @@ export interface ValidateContext {
 export function loadContext(moduleDir: string): ValidateContext {
 	const { paths, manifest } = loadManifest(moduleDir);
 	const issues: Issue[] = [];
-	const err = (where: string, message: string) => issues.push({ level: "error", where, message });
-	const warn = (where: string, message: string) => issues.push({ level: "warning", where, message });
+	const err = (where: string, message: string, rule?: string) => issues.push({ level: "error", where, message, ...(rule ? { rule } : {}) });
+	const warn = (where: string, message: string, rule?: string) => issues.push({ level: "warning", where, message, ...(rule ? { rule } : {}) });
 
 	// ── Load same-module entities + compute each one's valid column set ──
 	const entityMap = (manifest.entities ?? {}) as Record<string, string>;
@@ -95,7 +97,7 @@ export function loadContext(moduleDir: string): ValidateContext {
 
 	for (const [name, relPath] of Object.entries(entityMap)) {
 		if (name.includes(".")) continue; // cross-module extension key — not authored here
-		const abs = path.join(paths.root, relPath.replace(/^\.\//, ""));
+		const abs = entityFilePath(paths.root, relPath);
 		if (!fs.existsSync(abs)) {
 			err(`manifest.entities.${name}`, `points to '${relPath}' which does not exist on disk`);
 			continue;

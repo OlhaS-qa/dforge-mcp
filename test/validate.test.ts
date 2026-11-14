@@ -10,6 +10,17 @@ import { afterAll, describe, expect, it } from "vitest";
 import { moduleValidate } from "../src/tools/module-validate";
 import type { CliValidate, CliValidateReport } from "../src/tools/native-shell";
 
+
+// Contract files for every non-system dependency a fixture declares (the offline
+// "dependency contracts" check requires one per dependency).
+const writeContracts = (dir: string, deps: Record<string, unknown>, consumed: string[] = []): void => {
+	mkdirSync(join(dir, "deps"), { recursive: true });
+	for (const d of Object.keys(deps)) {
+		if (["admin", "metadata", "workspace", "sys-billing"].includes(d)) continue;
+		writeFileSync(join(dir, "deps", `${d}.json`), JSON.stringify({ module: d, version: ">=0.0.1", entities: Object.fromEntries(consumed.map((e) => [e, { columns: {} }])) }));
+	}
+};
+
 const run = (dir: string) => JSON.parse(moduleValidate({ moduleDir: dir }).files["_validate.json"]);
 
 describe("module_validate — canonical example", () => {
@@ -39,6 +50,7 @@ describe("module_validate — cross-module references", () => {
 		const dir = mkdtempSync(join(tmpdir(), "dforge-mcp-xmod-"));
 		mkdirSync(join(dir, "entities"), { recursive: true });
 		writeFileSync(join(dir, "manifest.json"), JSON.stringify({ code: "t", dependencies, entities: { line: "./entities/line.json" } }));
+		writeContracts(dir, dependencies);
 		writeFileSync(
 			join(dir, "entities", "line.json"),
 			JSON.stringify({
@@ -79,6 +91,7 @@ describe("module_validate — role rights key resolution", () => {
 			writeFileSync(join(dir, "logic", "stored_procedures.json"), JSON.stringify({ rpt_names: { functionName: "rpt_names", params: [] } }));
 		}
 		writeFileSync(join(dir, "manifest.json"), JSON.stringify({ code: "t", dependencies, entities: { thing: "./entities/thing.json" } }));
+		writeContracts(dir, dependencies);
 		writeFileSync(join(dir, "entities", "thing.json"), JSON.stringify({ description: "Thing", traits: ["identity"], fields: { name: { fieldTypeCd: "text", dbDatatype: "varchar", flags: "VEM" } } }));
 		writeFileSync(join(dir, "security", "roles.json"), JSON.stringify({ admin: { rights } }));
 		try {
@@ -526,6 +539,7 @@ describe("module_validate — record-report attachments", () => {
 			join(dir, "manifest.json"),
 			JSON.stringify({ code: "t", dependencies: opts.dependencies ?? { metadata: ">=1.5.0" }, entities: { order: "./entities/order.json" } }),
 		);
+		writeContracts(dir, opts.dependencies ?? {});
 		writeFileSync(
 			join(dir, "entities", "order.json"),
 			JSON.stringify({
@@ -805,6 +819,7 @@ describe("module_validate — docs/diagrams/*.json", () => {
 				entities: { invoice: "./entities/invoice.json" },
 			}),
 		);
+		writeContracts(dir, { acme: 1, "acme.parties": 1 }, ["region", "party"]);
 		writeFileSync(
 			join(dir, "entities", "invoice.json"),
 			JSON.stringify({

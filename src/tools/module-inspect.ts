@@ -11,6 +11,7 @@ import {
 	readJsonOrDefault,
 	diagramFiles,
 	type ToolResult,
+	entityFilePath,
 } from "./_helpers";
 
 export const moduleInspectSchema = {
@@ -75,7 +76,7 @@ export function moduleInspect(
 
 	const entities = (manifest.entities ?? {}) as Record<string, string>;
 	const entitySummaries = Object.entries(entities).map(([name, relPath]) => {
-		const abs = path.join(paths.root, relPath.replace(/^\.\//, ""));
+		const abs = entityFilePath(paths.root, relPath);
 		const e = readJsonOrDefault<Record<string, unknown>>(abs, {});
 		const fields = (e.fields as Record<string, unknown> | undefined) ?? {};
 		return {

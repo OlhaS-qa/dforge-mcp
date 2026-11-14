@@ -6,7 +6,7 @@ import type { ValidateContext } from "./context";
 
 // Role rights keyed on real objects.
 export function checkRoleRights(ctx: ValidateContext): void {
-	const { paths, manifest, err, deps, isKnownEntity, roles, actions, reports } = ctx;
+	const { paths, manifest, err, warn, deps, isKnownEntity, roles, actions, reports } = ctx;
 	const storedProcedures = readJsonOrDefault<Record<string, unknown>>(paths.storedProcedures, {});
 	// report: and sp: may be qualified 'module.code'; only a foreign module's objects are out of sight.
 	// Codes are [a-z][a-z0-9_]* (no dots), so the single dot is unambiguous — a
@@ -40,7 +40,16 @@ export function checkRoleRights(ctx: ValidateContext): void {
 			} else if (key.startsWith("sp:")) {
 				checkObjectKey(rcode, key, "sp", storedProcedures, paths.storedProcedures, "logic/stored_procedures.json");
 			} else if (key.startsWith("folder:")) {
-				// folder existence lives in folders.json's tree — skip (soft)
+				// `dforge-cli module validate` rejects this prefix in role rights. The
+				// vendored folders.schema.json has no 'roles' key either, so the offline
+				// tooling cannot say what replaces it. Report early, state exactly that.
+				warn(
+					`roles → ${rcode}`,
+					`rights key '${key}': the CLI's role-rights check rejects the 'folder:' prefix ('cli: role rights keys'), so pack fails. ` +
+						"The CLI points at a 'roles' map inside the folder in folders.json, but the vendored folders.schema.json " +
+						"does not define one, so this tool cannot confirm how a role is bound to a folder. Remove the key and " +
+						"ask the platform owners how to grant folder access.",
+				);
 			} else if (!isKnownEntity(key)) {
 				// An entity rights key: same-module, a system entity (user, document,
 				// …), or a declared cross-module dependency. Reuse the same resolver

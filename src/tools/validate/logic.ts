@@ -3,7 +3,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { readJsonOrDefault, localEntityCode } from "../_helpers";
-import { checkDsl } from "../dsl-check";
+import { checkDsl, readLibraryFunctions } from "../dsl-check";
 import type { ValidateContext } from "./context";
 import { readMessageTranslations } from "./translations";
 
@@ -127,6 +127,7 @@ export function checkTriggersJobsWebhooks(ctx: ValidateContext): void {
 export function checkActionDsl(ctx: ValidateContext): void {
 	const { paths, manifest, issues, columnsOf, partialColumns, actions } = ctx;
 	const messageTranslations = readMessageTranslations(paths.translationsDir, ctx.supportedLocales);
+	const libraryFunctions = readLibraryFunctions(paths.logicDir);
 	for (const [acode, a] of Object.entries(actions)) {
 		// The installer defaults the script to the action code.
 		const declared = (a as Record<string, unknown> | undefined)?.script;
@@ -164,6 +165,7 @@ export function checkActionDsl(ctx: ValidateContext): void {
 					? { qualified: `${manifest.code}.${entityCode}`, columns }
 					: undefined,
 			messageTranslations,
+			libraryFunctions,
 		})) {
 			issues.push({
 				level: issue.level,

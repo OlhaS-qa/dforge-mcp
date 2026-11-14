@@ -7,13 +7,19 @@ import {
 	isReadyToScaffold,
 	readPhaseState,
 	markPhase,
+	beginIteration,
+	noteIteration,
+	endIteration,
+	openIteration,
 	modulePaths,
 	readJsonOrDefault,
 	checkSecurityCoverage,
 	BUILD_PHASES,
 	type BuildPhase,
 	type FileMap,
+	entityFilePath,
 } from "./_helpers";
+import { applyToDisk } from "./apply";
 
 // Phase 0 doc paths (relative to module root)
 const P0 = {
@@ -29,6 +35,8 @@ const P0 = {
 // place and is delivered just-in-time — instead of sitting permanently in the
 // skill prompt. The section headers (## Entity List / ## Relationship Map /
 // ## Gaps & Proposals) MUST stay in sync with the regexes in runStructuralChecks.
+// Visibility / Rules & Constraints / Notifications / Permissions Matrix are WARN-
+// level in the structural check (older docs without them keep working).
 const DESIGN_TEMPLATE = `# Design Document
 <!-- written after Phase 0c approval — edit with care -->
 
@@ -75,6 +83,21 @@ Total FKs: <N>
 ## Special Behaviors
 <entity — soft-delete? sorting? webhooks? print templates? — or "None">
 
+## Visibility
+<who sees which records — per role/persona and entity, INCLUDING child records (do they follow the parent's visibility?) and how people bind to departments/roles/teams (which field or table links a user to a department)>
+
+## Rules & Constraints
+| Rule (spec statement id if any) | Mechanism | Where |
+|---|---|---|
+| <rule> | CHECK constraint / trigger / action body / canExecute (own-record fields only) / text only | <entity.field or action> |
+
+## Notifications
+| Event | Recipient | Channel | Text |
+|---|---|---|---|
+
+## Permissions Matrix
+<every role x entity (Select/Insert/Update/Delete) and every action (Execute) — INCLUDING trigger-only actions that no user calls directly>
+
 ## Gaps & Proposals
 <findings from the gap detection pass, or omit this section if none>
 
@@ -93,9 +116,12 @@ export const planModuleSchema = {
 			"write_design",
 			"validate",
 			"complete_phase",
+			"begin_change",
+			"end_change",
+			"note_change",
 		])
 		.describe(
-			"Sub-command: 'check' = current lifecycle state (Phase 0 sub-phase, or the build/ship phase once Phase 0 is done) + which skill to run next; 'write_identity' = Phase 0a; 'write_requirements' = Phase 0b; 'write_design' = Phase 0c; 'validate' = Phase 0d; 'complete_phase' = record a build phase (1-6) as done or deliberately skipped.",
+			"Sub-command: 'check' = current lifecycle state (Phase 0 sub-phase, or the build/ship phase once Phase 0 is done) + which skill to run next; 'write_identity' = Phase 0a; 'write_requirements' = Phase 0b; 'write_design' = Phase 0c; 'validate' = Phase 0d; 'complete_phase' = record a build phase (1-6) as done or deliberately skipped; 'begin_change' = open a new change iteration on a finished module (note required) so check/complete_phase work against it without overwriting history; 'end_change' = close the open iteration explicitly; 'note_change' = append `statements` (deduped) and/or a `note` to the open iteration without recording a phase.",
 		),
 	moduleDir: z
 		.string()
@@ -166,7 +192,21 @@ export const planModuleSchema = {
 	note: z
 		.string()
 		.optional()
-		.describe("[complete_phase] One-line record of what was done or why it was skipped."),
+		.describe(
+			"[complete_phase, end_change] One-line record of what was done or why it was skipped. [begin_change] REQUIRED: what the change is.",
+		),
+	statements: z
+		.array(z.string())
+		.optional()
+		.describe(
+			"[begin_change, complete_phase, note_change] Spec statement ids this change affects (e.g. ['S-3','R-4']). Recorded on the iteration; later calls append (deduped) the ones found to be affected afterwards.",
+		),
+	apply: z
+		.boolean()
+		.optional()
+		.describe(
+			"When true, WRITE the resulting files (docs/phase.json, CLAUDE.md, ...) to disk here instead of returning them for the client to write. Recommended for complete_phase / begin_change / end_change: the ledger is a read-modify-write of the file on disk, so a client that skips a write (or writes two results out of order) loses phases.",
+		),
 };
 
 type Args = z.infer<z.ZodObject<typeof planModuleSchema>>;
@@ -191,6 +231,24 @@ export interface PlanResult {
 // ─── Dispatcher ───────────────────────────────────────────────────────────────
 
 export function planModule(rawArgs: Args): PlanResult {
+	const result = dispatch(rawArgs);
+	if (rawArgs.apply && result.files && Object.keys(result.files).length > 0) {
+		const applied = applyToDisk(rawArgs.moduleDir, { summary: result.summary, files: result.files } as never);
+		const { files: _files, ...rest } = result;
+		return {
+			...rest,
+			applied: true,
+			written: applied.written,
+			nextStep: String(rest.nextStep ?? "").replace(
+				/^(Write the updated [^.]*?\.|Write both files to disk\.)\s*/,
+				"Files already written to disk (apply: true). ",
+			),
+		};
+	}
+	return result;
+}
+
+function dispatch(rawArgs: Args): PlanResult {
 	const root = path.resolve(rawArgs.moduleDir);
 	switch (rawArgs.action) {
 		case "check":
@@ -205,6 +263,12 @@ export function planModule(rawArgs: Args): PlanResult {
 			return handleValidate(root, rawArgs);
 		case "complete_phase":
 			return handleCompletePhase(root, rawArgs);
+		case "begin_change":
+			return handleBeginChange(root, rawArgs);
+		case "end_change":
+			return handleEndChange(root, rawArgs);
+		case "note_change":
+			return handleNoteChange(root, rawArgs);
 	}
 }
 
@@ -250,6 +314,10 @@ interface BuildEvidence {
 	entitiesWithoutView: string[];
 	entitiesWithoutSelect: string[];
 	actionCount: number;
+	/** Entities with at least one field besides the scaffold's stub `name`. */
+	entitiesBeyondStub: number;
+	/** Entries in logic/triggers.json + logic/jobs.json + logic/webhooks.json. */
+	automationCount: number;
 	viewCount: number;
 	roleCount: number;
 }
@@ -264,6 +332,8 @@ function gatherEvidence(root: string): BuildEvidence {
 		entitiesWithoutView: [],
 		entitiesWithoutSelect: [],
 		actionCount: 0,
+		entitiesBeyondStub: 0,
+		automationCount: 0,
 		viewCount: 0,
 		roleCount: 0,
 	};
@@ -279,15 +349,18 @@ function gatherEvidence(root: string): BuildEvidence {
 	const entityMap = (manifest.entities ?? {}) as Record<string, string>;
 	const names = Object.keys(entityMap).filter((n) => !n.includes("."));
 	const entitiesWithoutFields: string[] = [];
+	let entitiesBeyondStub = 0;
 	for (const name of names) {
-		const abs = path.join(root, entityMap[name].replace(/^\.\//, ""));
+		const abs = entityFilePath(root, entityMap[name]);
 		if (!fileExists(abs)) {
 			entitiesWithoutFields.push(name);
 			continue;
 		}
 		try {
 			const e = JSON.parse(readFile(abs)) as { fields?: Record<string, unknown> };
-			if (Object.keys(e.fields ?? {}).length === 0) entitiesWithoutFields.push(name);
+			const keys = Object.keys(e.fields ?? {});
+			if (keys.length === 0) entitiesWithoutFields.push(name);
+			if (keys.some((k) => k !== "name")) entitiesBeyondStub++;
 		} catch {
 			entitiesWithoutFields.push(name);
 		}
@@ -315,6 +388,11 @@ function gatherEvidence(root: string): BuildEvidence {
 		entitiesWithoutView: names.filter((n) => !covered.has(n)),
 		entitiesWithoutSelect,
 		actionCount: Object.keys(readJsonOrDefault<Record<string, unknown>>(paths.actions, {})).length,
+		entitiesBeyondStub,
+		automationCount: [paths.triggers, paths.jobs, path.join(root, "logic", "webhooks.json")].reduce(
+			(n, p) => n + Object.keys(readJsonOrDefault<Record<string, unknown>>(p, {})).length,
+			0,
+		),
 		viewCount: Object.keys(views).length,
 		roleCount: Object.keys(readJsonOrDefault<Record<string, unknown>>(paths.roles, {})).length,
 	};
@@ -334,6 +412,47 @@ export interface BuildPhaseCheck extends PlanResult {
 	gaps: string[];
 	completed: BuildPhase[];
 	pending: BuildPhase[];
+	/** Set while a change iteration (begin_change) is open. */
+	iteration?: { id: string; note: string; startedAt: string; statements?: string[] };
+	/** Phases the module's own state proves done but the ledger does not record. */
+	ledgerBehind?: string[];
+}
+
+/**
+ * Phases whose evidence is present in the module but missing from the ledger.
+ * The usual cause: the client did not write the docs/phase.json that an earlier
+ * complete_phase returned (or two results were written out of order).
+ */
+function ledgerDrift(ev: BuildEvidence, recorded: (p: BuildPhase) => boolean): string[] {
+	if (!ev.scaffolded) return [];
+	const out: string[] = [];
+	// Only evidence the scaffold itself cannot produce counts. dforge_module_create
+	// writes a stub `name` field, a default grid per entity, menus and an admin
+	// role with rights on everything, so "views cover every entity" (Phase 3) and
+	// "a role grants Select on every entity" (Phase 5) are true straight after
+	// scaffolding and would wrongly report "Phase 3, 5 look done" when only Phase 1
+	// is recorded. Those two are therefore NOT used as drift evidence: they stay
+	// under `gaps` (what is missing), not under `ledgerBehind` (what looks done).
+	const evidence: Partial<Record<BuildPhase, string>> = {};
+	if (ev.entityCount > 0 && ev.entitiesWithoutFields.length === 0 && ev.entitiesBeyondStub > 0) {
+		evidence["1"] = `${ev.entitiesBeyondStub} of ${ev.entityCount} entities have fields beyond the scaffold stub`;
+	}
+	if (ev.actionCount + ev.automationCount > 0) {
+		evidence["2"] = `${ev.actionCount} action(s), ${ev.automationCount} trigger/job/webhook(s)`;
+	}
+	for (const p of BUILD_PHASES) {
+		if (evidence[p] && !recorded(p)) out.push(`Phase ${p} (${evidence[p]})`);
+	}
+	// A later phase recorded while an earlier required one is not.
+	const lastRecorded = [...BUILD_PHASES].reverse().find(recorded);
+	if (lastRecorded) {
+		for (const p of REQUIRED_PHASES) {
+			if (p < lastRecorded && !recorded(p) && !out.some((o) => o.startsWith(`Phase ${p} `))) {
+				out.push(`Phase ${p} (a later phase ${lastRecorded} is recorded)`);
+			}
+		}
+	}
+	return out;
 }
 
 /**
@@ -341,8 +460,10 @@ export interface BuildPhaseCheck extends PlanResult {
  * next phase to work on, the skill that owns it, and — where the module's own
  * state contradicts the ledger — the specific gaps.
  */
-function buildPhaseCheck(root: string): BuildPhaseCheck {
-	const ledger = readPhaseState(root)?.phases ?? {};
+function buildPhaseCheck(root: string, override?: PhaseStateLike): BuildPhaseCheck {
+	const state = override ?? readPhaseState(root);
+	const open = openIteration(state);
+	const ledger = open ? open.phases : (state?.phases ?? {});
 	const ev = gatherEvidence(root);
 
 	const recorded = (p: BuildPhase) => Boolean(ledger[p]);
@@ -370,13 +491,45 @@ function buildPhaseCheck(root: string): BuildPhaseCheck {
 		}
 	}
 
+	// Evidence-vs-ledger drift only makes sense for the first build; an iteration
+	// legitimately touches a subset of phases.
+	const ledgerBehind = open ? [] : ledgerDrift(ev, recorded);
+	const driftNote = ledgerBehind.length
+		? `LEDGER BEHIND THE MODULE: ${ledgerBehind.join("; ")} look done but are not recorded in ${P0.phaseState} — a complete_phase result was probably not written to disk. Re-record them (complete_phase with apply: true) before continuing. `
+		: "";
+
+	if (open) {
+		// Change iteration: only Phase 6 (verify) is mandatory, and it closes the
+		// iteration. Other phases are recorded when touched, or skipped.
+		const itInfo = { id: open.id, note: open.note, startedAt: open.startedAt, statements: open.statements };
+		const nextIt = BUILD_PHASES.find((p) => !recorded(p)) as BuildPhase;
+		return {
+			summary: `Change iteration ${open.id} open ("${open.note}"). Recorded in it: ${completed.join(", ") || "none"}. Next: Phase ${nextIt} — ${PHASE_TITLES[nextIt]}.`,
+			currentPhase: nextIt,
+			phase0: "complete",
+			readyToScaffold: true,
+			iteration: itInfo,
+			completed,
+			pending: BUILD_PHASES.filter((p) => !recorded(p)),
+			gaps,
+			evidence: ev,
+			nextSkill: SKILL_FOR_PHASE[nextIt],
+			nextStep:
+				`Iteration ${open.id}: work only the phases this change touches with the '${SKILL_FOR_PHASE[nextIt]}' skill. ` +
+				`Record each with dforge_module_plan({ action: 'complete_phase', moduleDir, phase, note, apply: true }); a phase the change does not touch is recorded with skipped: true (any phase may be skipped inside an iteration). ` +
+				`Completing Phase 6 closes the iteration (or call action 'end_change'). The first-build ledger is not modified.` +
+				(gaps.length > 0 ? ` Open gaps: ${gaps.join(" ")}` : ""),
+		};
+	}
+
 	// Next phase = the first required-or-unrecorded phase that isn't done.
 	const next = BUILD_PHASES.find((p) => !recorded(p));
 	const allRequiredDone = REQUIRED_PHASES.every(recorded);
 
 	if (!next || (allRequiredDone && gaps.length === 0)) {
 		return {
-			summary: `Module complete — all build phases recorded${gaps.length ? " (with open gaps, see below)" : ""}.`,
+			summary: `Module complete — all build phases recorded${gaps.length ? " (with open gaps, see below)" : ""}.${driftNote ? " " + driftNote.trim() : ""}`,
+			...(ledgerBehind.length ? { ledgerBehind } : {}),
 			currentPhase: "complete",
 			phase0: "complete",
 			readyToScaffold: true,
@@ -387,12 +540,13 @@ function buildPhaseCheck(root: string): BuildPhaseCheck {
 			nextStep:
 				gaps.length > 0
 					? "Every phase is recorded as done, but the module still shows the gaps listed above. Resolve them, then re-run dforge_module_validate."
-					: "Nothing left to do. Run dforge_module_validate for a final check if the module has changed since install.",
+					: "Nothing left to do. Run dforge_module_validate for a final check if the module has changed since install. To change a finished module, call dforge_module_plan({ action: 'begin_change', moduleDir, note }) first — it opens an iteration so the change is recorded without overwriting this ledger.",
 		};
 	}
 
 	return {
-		summary: `Phase 0 complete. ${completed.length ? `Recorded: ${completed.join(", ")}. ` : ""}Next: Phase ${next} — ${PHASE_TITLES[next]}.`,
+		summary: `Phase 0 complete. ${completed.length ? `Recorded: ${completed.join(", ")}. ` : ""}Next: Phase ${next} — ${PHASE_TITLES[next]}.${driftNote ? " " + driftNote.trim() : ""}`,
+		...(ledgerBehind.length ? { ledgerBehind } : {}),
 		currentPhase: next,
 		phase0: "complete",
 		readyToScaffold: true,
@@ -403,10 +557,11 @@ function buildPhaseCheck(root: string): BuildPhaseCheck {
 		evidence: ev,
 		nextSkill: SKILL_FOR_PHASE[next],
 		nextStep:
+			driftNote +
 			`Run the '${SKILL_FOR_PHASE[next]}' skill and work Phase ${next} (${PHASE_TITLES[next]}). ` +
 			(gaps.length > 0 ? `Open gaps to resolve first: ${gaps.join(" ")} ` : "") +
 			`When the phase is done (or the user declines an optional one), record it with ` +
-			`dforge_module_plan({ action: 'complete_phase', moduleDir, phase: '${next}', note: '...' }).`,
+			`dforge_module_plan({ action: 'complete_phase', moduleDir, phase: '${next}', note: '...', apply: true }).`,
 	};
 }
 
@@ -421,20 +576,94 @@ function handleCompletePhase(root: string, args: Args): PlanResult {
 			"Phase 0 has not passed validation yet — there are no build phases to record. Call dforge_module_plan({ action: 'check', moduleDir }) to see what Phase 0 still needs.",
 		);
 	}
-	if (args.skipped && args.phase !== "2" && args.phase !== "4") {
+	const open = openIteration(readPhaseState(root));
+	if (!open && args.skipped && args.phase !== "2" && args.phase !== "4") {
 		throw new Error(
-			`Phase ${args.phase} (${PHASE_TITLES[args.phase]}) is required and can't be marked skipped. Only Phases 2 and 4 are optional.`,
+			`Phase ${args.phase} (${PHASE_TITLES[args.phase]}) is required and can't be marked skipped. Only Phases 2 and 4 are optional (inside a change iteration, any phase may be skipped).`,
 		);
 	}
 
-	const { json } = markPhase(root, args.phase, { skipped: args.skipped, note: args.note });
-	const { currentPhase, nextSkill, nextStep, gaps } = buildPhaseCheck(root);
+	const { json, iteration, closedIteration } = markPhase(root, args.phase, {
+		skipped: args.skipped,
+		note: args.note,
+		statements: args.statements,
+	});
+	// `next` is evaluated against the NEW ledger (not on disk yet unless applied).
+	const { currentPhase, nextSkill, nextStep, gaps } = buildPhaseCheck(
+		root,
+		JSON.parse(json) as PhaseStateLike,
+	);
+
+	const files: FileMap = { [P0.phaseState]: json };
+	if (!args.skipped) {
+		const claudePath = path.join(root, "CLAUDE.md");
+		if (fileExists(claudePath)) {
+			const claude = readFile(claudePath);
+			const ticked = claude.replace(new RegExp(`- \\[ \\] (\\*\\*${args.phase}\\*\\*)`), "- [x] $1");
+			if (ticked !== claude) files["CLAUDE.md"] = ticked;
+		}
+	}
 
 	return {
-		summary: `Recorded Phase ${args.phase} as ${args.skipped ? "SKIPPED" : "complete"}${args.note ? ` — ${args.note}` : ""}.`,
-		files: { [P0.phaseState]: json },
+		summary: `Recorded Phase ${args.phase} as ${args.skipped ? "SKIPPED" : "complete"}${iteration ? ` in iteration ${iteration}` : ""}${args.note ? ` — ${args.note}` : ""}${closedIteration ? ` (iteration ${iteration} closed)` : ""}.`,
+		files,
 		next: { currentPhase, nextSkill, nextStep, gaps },
-		nextStep: `Write the updated ${P0.phaseState} to disk, then continue: ${nextStep}`,
+		nextStep: `${writeLedgerNote(args)} Then continue: ${nextStep}`,
+	};
+}
+
+type PhaseStateLike = NonNullable<ReturnType<typeof readPhaseState>>;
+
+function writeLedgerNote(args: Args): string {
+	return args.apply
+		? `${P0.phaseState} written to disk (apply: true).`
+		: `WRITE ${P0.phaseState} to disk BEFORE the next dforge_module_plan call — the ledger is merged with the file on disk, so an unwritten result is lost (and parallel calls overwrite each other). Pass apply: true to have the tool write it.`;
+}
+
+function handleBeginChange(root: string, args: Args): PlanResult {
+	if (!args.note || !args.note.trim()) {
+		throw new Error(
+			"begin_change needs a 'note' — one line saying what the change is (and optionally 'statements': the spec ids it affects).",
+		);
+	}
+	if (!isReadyToScaffold(root)) {
+		throw new Error(
+			"Phase 0 has not passed validation yet — there is no finished module to change. Call dforge_module_plan({ action: 'check', moduleDir }).",
+		);
+	}
+	const { json, iteration } = beginIteration(root, {
+		note: args.note.trim(),
+		statements: args.statements,
+	});
+	return {
+		summary: `Change iteration ${iteration.id} opened — "${iteration.note}".`,
+		files: { [P0.phaseState]: json },
+		iteration,
+		nextStep: `${writeLedgerNote(args)} Then update docs/REQUIREMENTS.md / docs/DESIGN.md for this change, work the phases it touches (dforge-module-build), and record each with complete_phase (skipped: true for phases the change does not touch). Completing Phase 6 closes the iteration.`,
+	};
+}
+
+function handleNoteChange(root: string, args: Args): PlanResult {
+	const statements = args.statements ?? [];
+	if (statements.length === 0 && !(args.note && args.note.trim())) {
+		throw new Error("note_change needs 'statements' (spec ids found to be affected) and/or a 'note'.");
+	}
+	const { json, iteration } = noteIteration(root, { statements, note: args.note?.trim() || undefined });
+	return {
+		summary: `Iteration ${iteration.id} now lists ${iteration.statements?.length ?? 0} statement(s)${iteration.statements?.length ? `: ${iteration.statements.join(", ")}` : ""}.`,
+		files: { [P0.phaseState]: json },
+		iteration,
+		nextStep: writeLedgerNote(args),
+	};
+}
+
+function handleEndChange(root: string, args: Args): PlanResult {
+	const { json, iteration } = endIteration(root, { note: args.note });
+	return {
+		summary: `Change iteration ${iteration.id} closed.`,
+		files: { [P0.phaseState]: json },
+		iteration,
+		nextStep: writeLedgerNote(args),
 	};
 }
 
@@ -449,9 +678,13 @@ function handleCheck(root: string): PlanResult {
 	const claudeContent = has0a ? readFile(claudePath) : "";
 	// 0b/0c file existence alone isn't "done" — the agent writes the draft to disk
 	// before the user confirms it, so the CLAUDE.md checklist tick is the source of truth.
-	const has0b = has0a && /- \[x\] \*\*0b\*\*/.test(claudeContent);
-	const has0c = has0b && /- \[x\] \*\*0c\*\*/.test(claudeContent);
-	const has0d = has0c && isReadyToScaffold(root);
+	// A later tick implies the earlier ones (an older write may have returned a
+	// CLAUDE.md with only its own phase ticked and the client never ticked the rest).
+	const ticked = (ph: string) => new RegExp(`- \\[x\\] \\*\\*${ph}\\*\\*`).test(claudeContent);
+	const ready = has0a && isReadyToScaffold(root);
+	const has0c = has0a && (ticked("0c") || ticked("0d") || ready);
+	const has0b = has0a && (ticked("0b") || has0c);
+	const has0d = has0c && ready;
 
 	const completed: string[] = [];
 	if (has0a) completed.push("0a");
@@ -552,6 +785,10 @@ function handleCheck(root: string): PlanResult {
 				"6. Seed data (entities needing initial rows, parent-before-child order)",
 				"7. Reports & queries",
 				"8. Special behaviors (soft-delete, sorting, webhooks, print templates)",
+				"8a. Visibility (who sees which records, child records, how people bind to departments/roles)",
+				"8b. Rules & Constraints (each rule with its enforcing MECHANISM: CHECK / trigger / action body / canExecute own-record fields / text only)",
+				"8c. Notifications (event -> recipient -> channel -> text)",
+				"8d. Permissions Matrix (every role x entity and action, incl. trigger-only actions)",
 			],
 			gapDetection:
 				"After drafting: run gap detection pass (FK optionality, status recovery, boolean-to-status smell, set aggregation risk, deep navigation, self-referential FK, security coverage, seed data circular refs). Add a 'Gaps & Proposals' section for each issue found. ALL gaps must be resolved before Phase 0d.",
@@ -747,12 +984,52 @@ const SEMANTIC_CHECK_DESCRIPTIONS = [
 		description:
 			"If REQUIREMENTS.md implies initial reference data or starting state, is it covered in DESIGN.md Seed Data section?",
 	},
+	{
+		name: "Visibility & permissions completeness",
+		description:
+			"Does DESIGN.md say who sees which records (including child records and how people bind to departments/roles) and give a Permissions Matrix covering every role x entity and every action, trigger-only actions included?",
+	},
+	{
+		name: "Rules enforcement mechanism",
+		description:
+			"Does every business rule in REQUIREMENTS.md appear in DESIGN.md Rules & Constraints with the mechanism that enforces it (CHECK constraint / trigger / action body / canExecute on own-record fields / text only) — and is 'text only' a deliberate, stated choice?",
+	},
+	{
+		name: "Notification coverage",
+		description:
+			"Does every notification or alert in REQUIREMENTS.md have a DESIGN.md Notifications row (event -> recipient -> channel -> text)?",
+	},
 ];
 
 interface CheckResult {
 	check: string;
 	pass: boolean;
 	detail: string;
+	/**
+	 * Non-blocking outcomes: 'warn' = something to look at (does not fail the
+	 * gate), 'skipped' = the check could not run (must NOT read as PASS).
+	 */
+	status?: "warn" | "skipped";
+}
+
+/** Body of a `## <title>` section (any heading level 2, tolerant of CRLF/trailing text), or null. */
+function sectionBody(doc: string, title: string): string | null {
+	const text = doc.replace(/\r\n/g, "\n");
+	const esc = title.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+	const m = text.match(new RegExp(`^##[ \\t]+${esc}\\b[^\\n]*\\n([\\s\\S]*?)(?=^##[ \\t]|(?![\\s\\S]))`, "mi"));
+	return m ? m[1] : null;
+}
+
+const STATEMENT_ID = /\b([SNVURP])-(\d+)\b/g;
+
+/** Statement definitions: an ID at the start of a line / list item / table cell / bold. */
+function statementDefinitions(doc: string): string[] {
+	const out: string[] = [];
+	for (const line of doc.replace(/\r\n/g, "\n").split("\n")) {
+		const m = line.match(/^\s*(?:[-*+]\s+|\d+\.\s+|\|\s*|#{1,6}\s+)?[*_`[(]*([SNVURP]-\d+)\b/);
+		if (m) out.push(m[1]);
+	}
+	return out;
 }
 
 function runStructuralChecks(root: string): CheckResult[] {
@@ -823,21 +1100,23 @@ function runStructuralChecks(root: string): CheckResult[] {
 	}
 
 	// Check 6: Relationship completeness — every entity in Relationship Map appears in Entity List
-	const entityListMatch = designContent.match(/## Entity List\n([\s\S]*?)(?=\n##|$)/);
-	const entityListText = entityListMatch?.[1] ?? "";
+	const entityListText = sectionBody(designContent, "Entity List") ?? "";
 	const knownEntities = new Set<string>();
 	for (const line of entityListText.split("\n")) {
-		const m = line.match(/^[-*]\s+(?:\*\*)?([a-z][a-z0-9_]*)(?:\*\*)?/);
+		// "- name", "* **name**", "1. name — ...", "| name | ... |", "### name"
+		const m =
+			line.match(/^\s*(?:[-*+]|\d+[.)])\s+(?:\*\*|`)?([a-z][a-z0-9_]*)\b/) ??
+			line.match(/^\s*\|\s*(?:\*\*|`)?([a-z][a-z0-9_]*)(?:\*\*|`)?\s*\|/) ??
+			line.match(/^#{3,6}\s+(?:\*\*|`)?([a-z][a-z0-9_]*)\b/);
 		if (m) knownEntities.add(m[1]);
 	}
 
-	const relMapMatch = designContent.match(/## Relationship Map\n([\s\S]*?)(?=\n##|$)/);
-	const relMapText = relMapMatch?.[1] ?? "";
+	const relMapText = sectionBody(designContent, "Relationship Map") ?? "";
 	const referencedEntities: string[] = [];
 	for (const line of relMapText.split("\n")) {
-		const entityDef = line.match(/^\s{4}([a-z][a-z0-9_]*)\s*\{/);
+		const entityDef = line.match(/^\s{2,}([a-z][a-z0-9_]*)\s*\{/);
 		if (entityDef) referencedEntities.push(entityDef[1]);
-		const relLine = line.match(/\b([a-z][a-z0-9_]*)\s+[|o]{2}[-]{2}[|o{]{2}\s+([a-z][a-z0-9_]*)\b/);
+		const relLine = line.match(/\b([a-z][a-z0-9_]*)\s+[|}o]{2}[-.]{2}[|{o]{2}\s+([a-z][a-z0-9_]*)\b/);
 		if (relLine) {
 			referencedEntities.push(relLine[1]);
 			referencedEntities.push(relLine[2]);
@@ -845,11 +1124,19 @@ function runStructuralChecks(root: string): CheckResult[] {
 	}
 
 	if (knownEntities.size === 0 || referencedEntities.length === 0) {
+		const why =
+			sectionBody(designContent, "Entity List") === null
+				? "no '## Entity List' section"
+				: knownEntities.size === 0
+					? "no entity names recognised in '## Entity List' (expected list items like '- name', '1. name — ...', or table rows)"
+					: sectionBody(designContent, "Relationship Map") === null
+						? "no '## Relationship Map' section"
+						: "no relationships recognised in '## Relationship Map' (expected a mermaid erDiagram)";
 		results.push({
 			check: "Relationship completeness",
 			pass: true,
-			detail:
-				"Entity List or Relationship Map section not found — skipped cross-check. Verify manually.",
+			status: "skipped",
+			detail: `SKIPPED (not verified): ${why}. Verify manually.`,
 		});
 	} else {
 		const missing = [...new Set(referencedEntities.filter((e) => !knownEntities.has(e)))];
@@ -863,8 +1150,48 @@ function runStructuralChecks(root: string): CheckResult[] {
 		});
 	}
 
+	// Warn-level: sections every real design needed (older docs may lack them).
+	const wantedSections = ["Visibility", "Rules & Constraints", "Notifications", "Permissions Matrix"];
+	const missingSections = wantedSections.filter((t) => sectionBody(designContent, t) === null);
+	results.push({
+		check: "Design sections (Visibility, Rules & Constraints, Notifications, Permissions Matrix)",
+		pass: true,
+		...(missingSections.length ? { status: "warn" as const } : {}),
+		detail:
+			missingSections.length === 0
+				? "All four sections present."
+				: `WARN: missing section(s) in DESIGN.md: ${missingSections.map((t) => "## " + t).join(", ")}. Add them (see designTemplate) — each rule needs its enforcing mechanism, every role x entity/action needs a matrix row. Not blocking for older docs.`,
+	});
+
+	// Warn-level: statement IDs (S-1, N-3, V-2, U-1, R-4, P-1) in REQUIREMENTS / SPEC vs DESIGN.
+	const specPath = path.join(root, "docs", "SPEC.md");
+	const specDocs = [reqContent, ...(fileExists(specPath) ? [readFile(specPath)] : [])];
+	const defs = specDocs.flatMap(statementDefinitions);
+	if (defs.length > 0) {
+		const seen = new Set<string>();
+		const dupes = new Set<string>();
+		for (const d of defs) (seen.has(d) ? dupes : seen).add(d);
+		const referenced = new Set<string>();
+		for (const m of designContent.matchAll(STATEMENT_ID)) referenced.add(`${m[1]}-${m[2]}`);
+		const undefinedRefs = [...referenced].filter((r) => !seen.has(r));
+		const problems: string[] = [];
+		if (dupes.size) problems.push(`duplicate statement ids: ${[...dupes].join(", ")}`);
+		if (undefinedRefs.length) {
+			problems.push(`ids referenced in DESIGN.md but not defined in REQUIREMENTS/SPEC: ${undefinedRefs.join(", ")}`);
+		}
+		results.push({
+			check: "Statement ids",
+			pass: true,
+			...(problems.length ? { status: "warn" as const } : {}),
+			detail: problems.length
+				? `WARN: ${problems.join("; ")}.`
+				: `${seen.size} statement id(s) defined; no duplicates; every id referenced in DESIGN.md is defined.`,
+		});
+	}
+
 	// Check 10: Gap resolution — scan Gaps & Proposals for unresolved markers
-	const gapsMatch = designContent.match(/## Gaps & Proposals\n([\s\S]*?)(?=\n##|$)/i);
+	const gapsBody = sectionBody(designContent, "Gaps & Proposals");
+	const gapsMatch = gapsBody === null ? null : [gapsBody, gapsBody];
 	if (!gapsMatch) {
 		results.push({
 			check: "Gap resolution",
@@ -909,7 +1236,7 @@ function handleValidate(root: string, args: Args): PlanResult {
 			structuralChecks: structuralResults,
 			semanticChecks: SEMANTIC_CHECK_DESCRIPTIONS,
 			nextStep:
-				"Evaluate each semantic check against the Phase 0 docs — read docs/REQUIREMENTS.md and docs/DESIGN.md from disk (and CLAUDE.md) if they aren't already in your context — then call dforge_module_plan({ action: 'validate', moduleDir, checkResults: [...] }) with your results for all 7 checks.",
+				`Evaluate each semantic check against the Phase 0 docs — read docs/REQUIREMENTS.md and docs/DESIGN.md from disk (and CLAUDE.md) if they aren't already in your context — then call dforge_module_plan({ action: 'validate', moduleDir, checkResults: [...] }) with your results for all ${SEMANTIC_CHECK_DESCRIPTIONS.length} checks.`,
 		};
 	}
 
@@ -936,7 +1263,10 @@ function handleValidate(root: string, args: Args): PlanResult {
 	// All pass → write VALIDATION.md and tick 0d in CLAUDE.md
 	const today = new Date().toISOString().slice(0, 10);
 	const rows = allResults
-		.map((r, i) => `| ${i + 1} | ${r.check} | ${r.pass ? "✅ PASS" : "❌ FAIL"} | ${r.detail} |`)
+		.map((r, i) => {
+			const res = !r.pass ? "❌ FAIL" : r.status === "skipped" ? "⚠️ SKIPPED" : r.status === "warn" ? "⚠️ WARN" : "✅ PASS";
+			return `| ${i + 1} | ${r.check} | ${res} | ${r.detail.replace(/\|/g, "\\|")} |`;
+		})
 		.join("\n");
 
 	const validationMd = `# Validation Report
@@ -949,7 +1279,7 @@ function handleValidate(root: string, args: Args): PlanResult {
 |---|-------|--------|--------|
 ${rows}
 
-**Result: ✅ ALL DESIGN-DOC CHECKS PASSED**
+**Result: ✅ ALL DESIGN-DOC CHECKS PASSED**${allResults.some((r) => r.status) ? " (with warnings / skipped checks above — review them)" : ""}
 
 > Scope: these checks validate the **Phase 0 design documents** only (identity, requirements,
 > design consistency). They do **not** inspect generated entity / UI / security / DSL artifacts —
@@ -1005,11 +1335,17 @@ function assertDocReady(absPath: string, relPath: string): void {
 	}
 }
 
+/**
+ * Tick `phase` AND every earlier Phase 0 checkbox: a phase can only be reached
+ * through its predecessors, so the returned CLAUDE.md never shows an earlier
+ * phase unticked just because the client skipped an earlier write.
+ */
 function tickChecklist(claudeMd: string, phase: "0b" | "0c" | "0d", nextStep: string): string {
-	const ticked = claudeMd.replace(
-		new RegExp(`- \\[ \\] (\\*\\*${phase}\\*\\*)`),
-		"- [x] $1",
-	);
+	const upTo = ["0a", "0b", "0c", "0d"].slice(0, ["0a", "0b", "0c", "0d"].indexOf(phase) + 1);
+	let ticked = claudeMd;
+	for (const ph of upTo) {
+		ticked = ticked.replace(new RegExp(`- \\[ \\] (\\*\\*${ph}\\*\\*)`), "- [x] $1");
+	}
 	return ticked.replace(
 		/\*\*Next step:\*\* .+/,
 		`**Next step:** ${nextStep}`,

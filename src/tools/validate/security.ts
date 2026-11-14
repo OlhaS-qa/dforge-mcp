@@ -138,7 +138,7 @@ export function checkPermissionsAgainstDesign(ctx: ValidateContext): void {
 		if (!have && r.object.startsWith("folder:")) {
 			warn(
 				where,
-				`the design grants '${r.rights}' on '${r.object}', but role rights cannot carry folder: keys (the CLI refuses them) — the role-to-folder binding is an open platform question, so this row cannot be satisfied`,
+				`the design grants '${r.rights}' on '${r.object}', but roles.json has no folder keys: a role reaches a folder through a user_role assignment (user, role, folder) made by the tenant admin, and folder access only gives navigation — data access comes from entity rights. Remove the row and write the folder assignment as a note`,
 				"perm:folder-binding",
 			);
 			continue;
@@ -177,7 +177,7 @@ export function checkPermissionsAgainstDesign(ctx: ValidateContext): void {
 
 /** Each role can actually do what its rights imply. */
 export function checkRoleReachability(ctx: ValidateContext): void {
-	const { paths, roles, actions, reports, warn, isKnownEntity } = ctx;
+	const { paths, manifest, roles, actions, reports, warn, isKnownEntity } = ctx;
 	const roleEntries = Object.entries(roles).map(
 		([code, r]) => [code, (r.rights as Record<string, string> | undefined) ?? {}] as const,
 	);
@@ -200,7 +200,9 @@ export function checkRoleReachability(ctx: ValidateContext): void {
 		for (const key of Object.keys(rights)) {
 			if (key.startsWith("action:")) {
 				const a = actions[key.slice(7)] as { entityCode?: string } | undefined;
-				const ent = a?.entityCode;
+				// An own-module entity may be written qualified ('hr.order'); rights use the bare code.
+				const raw = a?.entityCode;
+				const ent = raw?.startsWith(`${manifest.code}.`) ? raw.slice(manifest.code.length + 1) : raw;
 				if (ent && isKnownEntity(ent) && !canSelect(rights, ent)) {
 					warn(
 						where,
@@ -226,36 +228,13 @@ export function checkRoleReachability(ctx: ValidateContext): void {
 		}
 	}
 
-	// A trigger runs its action in the writer's name. Group by action: one finding, roles listed.
+	// A trigger runs its action in the writer's name WITHOUT checking Execute on it (core: TriggerQueueService
+	// never consults ActionRight.Execute), so a trigger action needs no E grant; it only needs to be known here.
 	const trig = readJsonOrDefault<{ triggers?: Array<Record<string, unknown>> }>(paths.triggers, {});
 	const triggerActions = new Set<string>();
-	const lacking = new Map<string, { trigger: string; entity: string; event: string; roles: string[] }>();
 	for (const t of trig.triggers ?? []) {
-		const entity = String(t.entity ?? "");
 		const action = String(t.action ?? "");
-		if (!action || !entity) continue; // malformed trigger: the schema pass reports it
-		triggerActions.add(action);
-		const letter = t.event === "insert" ? "I" : t.event === "update" ? "U" : t.event === "delete" ? "D" : null;
-		if (!letter) continue; // unknown event: don't guess which right the writer needs
-		for (const [code, rights] of roleEntries) {
-			if (hasLetter(rights[entity], letter) && !hasLetter(rights[`action:${action}`], "E")) {
-				const e = lacking.get(action) ?? {
-					trigger: String(t.code ?? "?"),
-					entity,
-					event: String(t.event ?? "write"),
-					roles: [],
-				};
-				e.roles.push(code);
-				lacking.set(action, e);
-			}
-		}
-	}
-	for (const [action, e] of lacking) {
-		warn(
-			"security",
-			`trigger '${e.trigger}' (${e.event} on '${e.entity}') runs action '${action}', but ${e.roles.length} role(s) that write '${e.entity}' have no E on 'action:${action}': ${e.roles.join(", ")}. Grant it, or confirm on the platform that trigger actions run without the writer's Execute right (not verified here).`,
-			"perm:trigger-action-no-execute",
-		);
+		if (action) triggerActions.add(action);
 	}
 
 	// Every action is runnable by someone, run by a job or a trigger, or deliberately canExecute:false.

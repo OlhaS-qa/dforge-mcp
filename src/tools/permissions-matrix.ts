@@ -34,7 +34,7 @@ export interface ParsedMatrix {
 	problems: string[];
 }
 
-const cells = (line: string): string[] =>
+export const cells = (line: string): string[] =>
 	line
 		.trim()
 		.replace(/^\||\|$/g, "")
@@ -47,7 +47,7 @@ const cells = (line: string): string[] =>
 				.trim(),
 		);
 
-const isSeparator = (line: string): boolean => /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(line);
+export const isSeparator = (line: string): boolean => /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(line);
 
 export function parsePermissionsMatrix(sectionBody: string | null): ParsedMatrix {
 	const out: ParsedMatrix = { machine: false, rows: [], problems: [] };

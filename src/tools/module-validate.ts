@@ -48,6 +48,7 @@ import * as fs from "node:fs";
 import * as os from "node:os";
 import * as path from "node:path";
 import { checkReports } from "./validate/reports";
+import { checkOutputs } from "./validate/outputs";
 
 export const moduleValidateSchema = {
 	moduleDir: z.string().describe("Path to the module root. Run this after authoring and before dforge_module_pack."),
@@ -86,6 +87,7 @@ const CHECKS: Array<(ctx: ValidateContext) => void> = [
 	checkFolders,
 	checkDiagrams,
 	checkReports,
+	checkOutputs,
 	checkTranslationCompleteness,
 	checkMessageTranslations,
 	checkMenuFolderCoverage,
@@ -137,6 +139,7 @@ function categoryOf(i: Issue): string {
 	if (/\.dsl\b/.test(w) || w.startsWith("logic/functions")) return "dsl";
 	if (w.startsWith("translations") || /^translations\b/.test(w)) return "translations";
 	if (i.rule?.startsWith("perm:")) return "permissions";
+	if (i.rule?.startsWith("out:")) return "outputs";
 	if (w.startsWith("cli")) return "cli";
 	return "other";
 }

@@ -59,6 +59,12 @@ Total FKs: <N>
 ## Reports & Queries
 <report/query name — entity, key columns; or "None">
 
+## Outputs
+<!-- Everything the module PRODUCES: printed documents, reports, exports, feeds, mails. One row per O-n id from REQUIREMENTS.md; "None" if screens only. -->
+| Output | Kind | Source | Mechanism | Run by | Verified by |
+|---|---|---|---|---|---|
+| O-1 <name> | print / report / export / api / mail / file | <entity>, <entity.field> | print:<code> / report:<code> / export:<entity> / job:<code> / webhook:<code> / action:<code> | <code>.<role> or system / schedule / external | test:<scenario name> or manual: <how> |
+
 ## Special Behaviors
 <entity — soft-delete? sorting? webhooks? print templates? — or "None">
 
@@ -75,7 +81,7 @@ Total FKs: <N>
 |---|---|---|---|
 
 ## Permissions Matrix
-<one row per role x object, INCLUDING every action (Execute) and every report, trigger-only actions too. Machine-checked against security/roles.json at validate time.>
+<one row per role x object, INCLUDING every action a person runs (Execute) and every report; actions fired only by a trigger or job need no row. Machine-checked against security/roles.json at validate time.>
 
 | Role | Object | Rights | Statements |
 |---|---|---|---|

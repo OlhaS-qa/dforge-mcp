@@ -141,7 +141,7 @@ describe("permissions checks", () => {
 		).toMatch(/not machine-readable/);
 	});
 
-	it("checks per-role reachability: write without S, action without S, unreachable action, trigger action without E", () => {
+	it("checks per-role reachability: write without S, action without S, unreachable action; a trigger action needs no E", () => {
 		w("security/roles.json", {
 			"shop.buyer": { description: "b", rights: { order: "SIU", "action:approve": "E" } },
 			"shop.blind": { description: "x", rights: { line: "IU", "action:approve": "E" } },
@@ -153,7 +153,7 @@ describe("permissions checks", () => {
 		expect(msgs).toMatch(/can run 'action:approve' but has no S on 'order'/);
 		expect(msgs).toMatch(/action 'orphan' is granted \(E\) to no role/);
 		expect(msgs).not.toMatch(/action 'init_order' is granted/); // run by a trigger
-		expect(msgs).toMatch(/trigger 'order_created'.*shop\.buyer/);
+		expect(msgs).not.toMatch(/trigger 'order_created'/); // triggers bypass Execute
 	});
 
 	it("ignores triggers with an unknown event or empty action instead of guessing", () => {
@@ -168,5 +168,16 @@ describe("permissions checks", () => {
 			.join("\n");
 		expect(msgs).not.toMatch(/trigger 't1'/);
 		expect(msgs).not.toMatch(/action ''/);
+	});
+
+	it("treats an action's own-module qualified entityCode as the bare entity", () => {
+		w("ui/actions.json", {
+			approve: { label: "Approve", entityCode: "shop.order", executionMode: "single", script: "approve" },
+		});
+		w("security/roles.json", { "shop.buyer": { description: "b", rights: { order: "S", "action:approve": "E" } } });
+		const msgs = run(checkRoleReachability)
+			.map((i) => i.message)
+			.join("\n");
+		expect(msgs).not.toMatch(/has no S on/);
 	});
 });

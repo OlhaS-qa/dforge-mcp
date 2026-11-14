@@ -2,6 +2,14 @@ import * as path from "node:path";
 import { phaseStateJson } from "../_helpers";
 import { sectionBody, entityListCodes, sectionCodes } from "../design-doc";
 import { MATRIX_FORMAT_HINT, parsePermissionsMatrix } from "../permissions-matrix";
+import {
+	OUTPUT_FORMAT_HINT,
+	outputIdsDefined,
+	parseOutputs,
+	rightsKeyFor,
+	sectionSaysNone,
+	splitSource,
+} from "../outputs";
 import type { Args, PlanResult } from "./types";
 import { P0 } from "./templates";
 import { fileExists, readFile, tickChecklist } from "./helpers";
@@ -23,6 +31,13 @@ const SEMANTIC_CHECK_DESCRIPTIONS = [
 		description:
 			"Does every process in REQUIREMENTS.md Core Processes have a corresponding entity, action, or status " +
 			"machine in DESIGN.md?",
+	},
+	{
+		name: "Output data coverage",
+		description:
+			"For every output (O-n) in DESIGN.md Outputs: does the Fields per Entity section hold every datum its " +
+			"sample in REQUIREMENTS.md shows (names, ids, dates, totals, reference numbers, signatures, legal " +
+			"identifiers)? A printed order or a regulatory report needs those fields to exist, not be implied.",
 	},
 	{
 		name: "Entity traceability",
@@ -238,7 +253,7 @@ function runStructuralChecks(root: string): CheckResult[] {
 					const actions = [...sectionCodes(designContent, "Actions")].filter((a) => !objects.has(`action:${a}`));
 					if (actions.length)
 						problems.push(
-							`action(s) in the Actions section with no 'action:<code>' row: ${actions.join(", ")} (a trigger-only action still needs a row naming who may run it, or '-')`,
+							`action(s) in the Actions section with no 'action:<code>' row: ${actions.join(", ")} (skip it only for an action fired solely by a trigger or job: those run without Execute)`,
 						);
 				}
 			}
@@ -263,6 +278,80 @@ function runStructuralChecks(root: string): CheckResult[] {
 				"WARN: REQUIREMENTS.md has no '## Access Needs' section. For each user type write what it must be " +
 				"able to reach and what it must NOT see or change (verb-led, no role codes) — the Permissions Matrix " +
 				"and Phase 5 are checked against it.",
+		});
+	}
+
+	// Warn-level: Outputs — what the module must produce (prints, reports, exports, feeds).
+	{
+		const reqOut = sectionBody(reqContent, "Outputs");
+		const designOut = sectionBody(designContent, "Outputs");
+		const reqNone = sectionSaysNone(reqOut);
+		const problems: string[] = [];
+		if (reqOut === null) {
+			problems.push(
+				"REQUIREMENTS.md has no '## Outputs' section. List every document, report, export or feed the module must " +
+					"produce (O-1 …: who receives it, format, how often, a sample) — or write 'None' if it only has screens",
+			);
+		}
+		if (designOut === null) {
+			if (!reqNone) problems.push("DESIGN.md has no '## Outputs' table (see designTemplate)");
+		} else {
+			const o = parseOutputs(designOut);
+			if (!o.machine) {
+				if (!o.none)
+					problems.push(
+						`the Outputs section is not a table with Output / Kind / Mechanism columns. ${OUTPUT_FORMAT_HINT}`,
+					);
+			} else {
+				problems.push(...o.problems);
+				const entities = entityListCodes(designContent);
+				const known = (e: string) => entities.has(e);
+				for (const r of o.rows) {
+					if (r.sources.length === 0) problems.push(`${r.id}: 'Source' is empty — name the entities/fields it reads`);
+					for (const src of r.sources) {
+						const { entity } = splitSource(src, known);
+						if (!entity.includes(".") && !known(entity))
+							problems.push(`${r.id}: source '${src}' names '${entity}', which is not in the Entity List`);
+					}
+					if (!r.verifiedBy) problems.push(`${r.id}: 'Verified by' is empty (test:<scenario name> or manual: <how>)`);
+				}
+				const defined = outputIdsDefined(reqOut);
+				const inDesign = new Set(o.rows.map((r) => r.id));
+				const unplanned = defined.filter((id) => !inDesign.has(id));
+				if (unplanned.length)
+					problems.push(`outputs in REQUIREMENTS.md with no row in the DESIGN.md table: ${unplanned.join(", ")}`);
+				if (reqOut !== null) {
+					const orphan = [...inDesign].filter((id) => !defined.includes(id));
+					if (orphan.length)
+						problems.push(`outputs in DESIGN.md that REQUIREMENTS.md never asked for: ${orphan.join(", ")}`);
+				}
+				// The people who run an output must be able to: the matrix has to grant what the mechanism needs.
+				const matrix = parsePermissionsMatrix(sectionBody(designContent, "Permissions Matrix"));
+				if (matrix.machine) {
+					const granted = (role: string, key: string, need: string) =>
+						matrix.rows.some((m) => m.role === role && m.object === key && m.rights !== "-" && m.rights.includes(need));
+					for (const r of o.rows) {
+						const need = rightsKeyFor(r, known);
+						if (!need) continue;
+						for (const role of r.runBy.filter((x) => x.includes("."))) {
+							if (!granted(role, need.key, need.need))
+								problems.push(
+									`${r.id}: ${role} runs it, but the Permissions Matrix has no '${need.need}' on '${need.key}' for that role`,
+								);
+						}
+					}
+				}
+			}
+		}
+		results.push({
+			check: "Outputs (documents, reports, exports — requirements ↔ design ↔ access)",
+			pass: true,
+			...(problems.length ? { status: "warn" as const } : {}),
+			detail: problems.length
+				? `WARN: ${problems.join("; ")}.`
+				: reqNone
+					? "REQUIREMENTS.md states the module has no outputs beyond its screens."
+					: `${parseOutputs(designOut).rows.length} output(s) traced from REQUIREMENTS to DESIGN, runners have the access they need.`,
 		});
 	}
 
@@ -346,7 +435,7 @@ export function handleValidate(root: string, args: Args): PlanResult {
 				"validate with checkResults.",
 			structuralChecks: structuralResults,
 			semanticChecks: SEMANTIC_CHECK_DESCRIPTIONS,
-			nextStep: `Evaluate each semantic check against the Phase 0 docs — read docs/REQUIREMENTS.md and docs/DESIGN.md from disk (and CLAUDE.md) if they aren't already in your context — then call dforge_module_plan({ action: 'validate', moduleDir, checkResults: [...] }) with your results for all ${SEMANTIC_CHECK_DESCRIPTIONS.length} checks.`,
+			nextStep: `Evaluate each semantic check against the Phase 0 docs — read docs/REQUIREMENTS.md and docs/DESIGN.md from disk (and CLAUDE.md) if they aren't already in your context — then call dforge_module_plan({ action: 'validate', moduleDir, checkResults: [...] }) with your results for all ${SEMANTIC_CHECK_DESCRIPTIONS.length} checks — one object per check: { check: <the check's 'name' from semanticChecks>, pass: true|false, detail: '<one sentence>' }.`,
 		};
 	}
 

@@ -154,6 +154,12 @@ function handleCheck(root: string): PlanResult {
 					"must it NOT see or change? (Write the answers in REQUIREMENTS.md under '## Access Needs', one " +
 					"bullet per user type: 'needs: … / must not: …', verb-led, no role codes. These become the " +
 					"Permissions Matrix rows in 0c and the checks in Phase 5.)",
+				"What must the module PRODUCE, beyond screens? Printed documents (orders, contracts, acts, invoices), " +
+					"reports (for management, tax or statutory reporting), data exports (to Excel/CSV/XML, to another " +
+					"system), feeds or notifications. For each: who receives it, in what format, how often or on what " +
+					"event, and ask for a real SAMPLE or the regulatory form it must follow. (Write them in " +
+					"REQUIREMENTS.md under '## Outputs' as O-1, O-2 …, or 'None' if it only has screens. These become " +
+					"the Outputs table in 0c; every datum on a sample must exist as a field.)",
 			],
 			followUpNote:
 				"After answers 1-2: ask any domain ambiguity questions that remain open (e.g. 'What counts as a " +
@@ -205,12 +211,13 @@ function handleCheck(root: string): PlanResult {
 				"5. Actions (name, target entity, description, params)",
 				"6. Seed data (entities needing initial rows, parent-before-child order)",
 				"7. Reports & queries",
+				"7a. Outputs (every O-n from REQUIREMENTS: kind, source fields, mechanism, who runs it, how verified)",
 				"8. Special behaviors (soft-delete, sorting, webhooks, print templates)",
 				"8a. Visibility (who sees which records, child records, how people bind to departments/roles)",
 				"8b. Rules & Constraints (each rule with its enforcing MECHANISM: CHECK / trigger / action body / " +
 					"canExecute own-record fields / text only)",
 				"8c. Notifications (event -> recipient -> channel -> text)",
-				"8d. Permissions Matrix (every role x entity and action, incl. trigger-only actions)",
+				"8d. Permissions Matrix (every role x entity and action, every report; person-run actions need an E row)",
 			],
 			gapDetection:
 				"After drafting: run gap detection pass (FK optionality, status recovery, boolean-to-status smell, " +

@@ -14,6 +14,7 @@ import {
 	readLocalTraits,
 	entityRecordContext,
 	type ToolResult,
+	DOTTED_CODE_RE,
 } from "./_helpers";
 import { readMessageTranslations } from "./validate/translations";
 import { checkDsl, readLibraryFunctions, type DslIssue } from "./dsl-check";
@@ -50,7 +51,7 @@ export const actionCheckSchema = {
 		),
 	entityCode: z
 		.string()
-		.regex(/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)?$/)
+		.regex(DOTTED_CODE_RE)
 		.optional()
 		.describe(
 			"Entity the draft body acts on. With moduleDir, this turns on the column rules ('[field]' must be a real column, traits expanded) for a dslBody that isn't registered yet. Read from ui/actions.json when actionCode is used.",

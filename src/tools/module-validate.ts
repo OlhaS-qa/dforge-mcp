@@ -27,7 +27,7 @@ import {
 	checkSetAggregates,
 } from "./validate/entities";
 import { checkDataViews, checkVisibleColumns, checkViewGrouping, checkMenus } from "./validate/views";
-import { checkRoleRights, checkSelectCoverage } from "./validate/security";
+import { checkRoleRights, checkSelectCoverage, checkPermissionsAgainstDesign, checkRoleReachability } from "./validate/security";
 import { checkConstraintTranslations, checkMessageTranslations, checkTranslationCompleteness } from "./validate/translations";
 import { checkActions, checkTriggersJobsWebhooks, checkActionDsl } from "./validate/logic";
 import { checkFolders, checkDiagrams, checkMenuFolderCoverage } from "./validate/folders";
@@ -61,6 +61,8 @@ const CHECKS: Array<(ctx: ValidateContext) => void> = [
 	checkMenus,
 	checkRoleRights,
 	checkSelectCoverage,
+	checkPermissionsAgainstDesign,
+	checkRoleReachability,
 	checkConstraintTranslations,
 	checkFieldSpecs,
 	checkToString,
@@ -121,6 +123,7 @@ function categoryOf(i: Issue): string {
 	const w = i.where;
 	if (/\.dsl\b/.test(w) || w.startsWith("logic/functions")) return "dsl";
 	if (w.startsWith("translations") || /^translations\b/.test(w)) return "translations";
+	if (i.rule?.startsWith("perm:")) return "permissions";
 	if (w.startsWith("cli")) return "cli";
 	return "other";
 }

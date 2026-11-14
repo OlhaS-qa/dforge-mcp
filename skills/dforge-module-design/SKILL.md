@@ -80,6 +80,14 @@ that a user can't?"_
 rights matrix, or a "Target user roles" section. Roles are derived from entities
 plus verbs in Phase 5 — and entities don't exist yet.
 
+**But do capture access needs.** After the user-type verbs, ask per user type:
+_"What must they be able to reach to do this work, and what must they NOT see or
+change?"_ Write the answers in `docs/REQUIREMENTS.md` under **`## Access Needs`**,
+one bullet per user type — `needs: …` / `must not: …`, verb-led, still no role
+codes. Give each bullet statement ids (`S-`/`V-`/`N-`) so a matrix row can cite it.
+This is what the Permissions Matrix in 0c and the Phase 5 check are measured
+against; `dforge_module_plan validate` warns when the section is missing.
+
 ### Requirements gap scan
 
 Run before writing `REQUIREMENTS.md`. Surface each finding inline as
@@ -127,7 +135,15 @@ check is warn-level, but Phase 3-5 read them):
   (check constraint, unique, required flag, `canExecute`, action refusal, trigger, ...).
   A rule with no mechanism is a gap.
 - **Notifications** — what notifies whom, on what event (feeds triggers / jobs / actions).
-- **Permissions Matrix** — role x object rights, derived from the user-type verbs (feeds Phase 5).
+- **Permissions Matrix** — role x object rights, derived from `## Access Needs` (feeds Phase 5).
+  One table `| Role | Object | Rights | Statements |`: Role = the full code the role
+  will have (`<module>.<type>`), Object = the key exactly as `roles.json` spells
+  it (`order`, `comm.contact`, `action:approve`, `report:summary`), Rights =
+  `SIUDC` / `E`, or `-` for an explicit denial (a "must not" from Access Needs),
+  Statements = the ids behind the row. Include **every action** — trigger-only
+  and job-only ones too — and every report. A role that writes an entity also
+  needs `S` on every lookup target it fills. `dforge_module_validate` later
+  compares `security/roles.json` to this table row by row.
 
 ## 0d validation — what it does and doesn't certify
 

@@ -29,6 +29,7 @@ import {
 	type ModulePaths,
 	type Manifest,
 	type ToolResult,
+	DOTTED_CODE_RE,
 } from "./_helpers";
 
 type Entity = Record<string, unknown>;
@@ -85,7 +86,7 @@ export const entityReferenceAddSchema = {
 		.describe("The CHILD entity — the one that gets the FK columns."),
 	targetEntity: z
 		.string()
-		.regex(/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)?$/)
+		.regex(DOTTED_CODE_RE)
 		.describe(
 			"The PARENT entity being pointed at. Cross-module dotted form ('fin.invoice') is allowed when it's a declared dependency.",
 		),

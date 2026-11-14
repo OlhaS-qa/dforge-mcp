@@ -16,6 +16,7 @@ import {
 	withTodayStamp,
 	walkFolders,
 	type ToolResult,
+	DOTTED_CODE_RE,
 } from "./_helpers";
 
 type Node = Record<string, unknown>;
@@ -50,7 +51,7 @@ export const menuAddSchema = {
 		),
 	reportCode: z
 		.string()
-		.regex(/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)?$/)
+		.regex(DOTTED_CODE_RE)
 		.optional()
 		.describe(
 			"For a LEAF item that opens a REPORT: the report code from ui/reports.json (emitted as itemType 'R' + reportCode). Mutually exclusive with dataViewCode. Omit both to create a SECTION node.",

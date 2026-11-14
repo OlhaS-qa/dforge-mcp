@@ -18,6 +18,7 @@ import {
 	type ToolResult,
 	type ModulePaths,
 	type Manifest,
+	DOTTED_CODE_RE,
 } from "./_helpers";
 import { readMessageTranslations } from "./validate/translations";
 import { checkDsl } from "./dsl-check";
@@ -30,7 +31,7 @@ export const actionAddSchema = {
 		.describe("Action code (becomes the DSL filename and registry key)."),
 	entityCode: z
 		.string()
-		.regex(/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)?$/)
+		.regex(DOTTED_CODE_RE)
 		.describe(
 			"Entity this action targets. May be cross-module via dot notation ('fin.invoice').",
 		),
@@ -184,7 +185,7 @@ export const actionModifySchema = {
 	description: z.string().optional().describe("New tooltip / description text."),
 	entityCode: z
 		.string()
-		.regex(/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)?$/)
+		.regex(DOTTED_CODE_RE)
 		.optional()
 		.describe("Re-target the action to another entity (the DSL is re-checked against it)."),
 	executionMode: z

@@ -350,13 +350,19 @@ stated trigger; every report's params sit on a dataset.
    every entity declared at scaffold time. Preserve this scaffold-generated
    baseline role; don't re-create it (`dforge_role_add` fails on an existing
    code; use `dforge_role_right_set` to amend). It is not an inferred user type.
-2. **Derive roles from the intake's user types and verbs.** Re-read the user-type
+2. **Take roles and rights from the approved Permissions Matrix** in
+   `docs/DESIGN.md` (rows `| Role | Object | Rights | Statements |`) — do not
+   invent a second matrix. If the design has none in that form, write it first
+   (`dforge_module_plan` shows the format) and get it confirmed. Derive roles
+   from the intake's user types and verbs. Re-read the user-type
    sentences in `docs/REQUIREMENTS.md`. One role per distinct user type, named
    `<code>.<user-type>`. **Forbidden:** adding generic admin/contributor/viewer
    roles or a matrix the user didn't ask for. The scaffold-generated
    `<code>.admin` baseline is the sole exception; include its existing rights
    when showing the actual rights matrix.
 3. **Reflect the role list back** before computing rights. Get confirmation.
+   A matrix row that cannot be satisfied (for example `folder:` rights) is an open
+   platform question — report it, do not silently drop the row.
 4. **Show the rights matrix as a table** (rows = entities/actions/reports,
    columns = roles, cells = rights strings), each cell explained by the verb it
    maps to. Get sign-off. Include a row for every dependency entity a lookup
@@ -371,6 +377,12 @@ stated trigger; every report's params sit on a dataset.
    the worked example: `references/security.md` → Column-level security.
 5. `dforge_role_add` for new roles; `dforge_role_right_set` per grant when
    amending an existing one.
+6. **Check the result.** Run `dforge_module_validate` and read the `permissions`
+   findings: `roles.json` must equal the design matrix (missing / extra / differing
+   rights are errors), and each role must be able to do what its rights imply
+   (write without `S`, an action or report whose entity it cannot read, an action
+   no role can run, a trigger action the writing roles hold no `E` on). Fix the
+   rights — or change the design matrix with the user — until they agree.
 
 Rights are **additive** — multiple roles UNION, never revoke. Entities take any
 subset of `SIUDC`; actions/reports take `E`. Roles cannot be bound to a folder

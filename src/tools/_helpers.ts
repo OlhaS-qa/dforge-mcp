@@ -483,7 +483,11 @@ export function isReadyToScaffold(moduleDir: string): boolean {
 // installer resolves across modules (SecurityRegistrar.AddCrossModuleSecObjects).
 // A dotted action:/folder: key resolves to nothing and is silently skipped.
 
-const RIGHTS_ENTITY = /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)?$/;
+/** `code` or `dep.code`: an entity / action reference, local or from a dependency. */
+export const DOTTED_CODE_RE = /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)?$/;
+/** `dep.code` only — a full role code such as `shop.buyer`. */
+export const ROLE_CODE_RE = /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/;
+const RIGHTS_ENTITY = DOTTED_CODE_RE;
 const RIGHTS_OBJECT = /^(action|folder):[a-z][a-z0-9_]*$/;
 const RIGHTS_OBJECT_QUALIFIABLE = /^(report|sp):[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)?$/;
 const RIGHTS_OBJECT_DOT = /^(action|report|sp|folder)\.[a-z]/;

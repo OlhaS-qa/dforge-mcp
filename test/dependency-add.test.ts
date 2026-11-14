@@ -123,8 +123,8 @@ describe("dependencyAdd", () => {
 			dependencyAdd({ moduleDir: dir, moduleCode: "fin", version: ">=0.1.0", entities: ["invoice"] }),
 		);
 		expect(existsSync(join(dir, "deps", "fin.json"))).toBe(true);
-		expect(() =>
-			dependencyAdd({ moduleDir: dir, moduleCode: "fin", version: ">=0.2.0", entities: ["invoice"] }),
-		).toThrow(/already exists/);
+		// A second add is idempotent/repairing now, not an error — see the repair tests.
+		const again = dependencyAdd({ moduleDir: dir, moduleCode: "fin", version: ">=0.2.0", entities: ["invoice"] });
+		expect(again.summary).toContain("already declared");
 	});
 });

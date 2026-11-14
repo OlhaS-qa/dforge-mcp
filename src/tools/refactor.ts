@@ -24,9 +24,217 @@ import {
 	withTodayStamp,
 	diagramFiles,
 	type ToolResult,
+	entityFilePath,
 } from "./_helpers";
 
 const code = z.string().regex(/^[a-z][a-z0-9_]*$/);
+
+// ── Reference scanner (shared by rename / remove / modify) ──────────────────
+// Finds every place a field is still mentioned that the tools cannot rewrite
+// with certainty: reports, constraints, tests, DSL, translations, formulas of
+// other entities. Text/JSON-walk based and deliberately conservative — a hit
+// means "look here", not "this is definitely broken".
+
+export type FieldReferences = Record<string, string[] | undefined>;
+
+/** The entity's own `toString` template (not Object.prototype.toString). */
+function ownToString(e: Record<string, unknown>): string | undefined {
+	const v = Object.getOwnPropertyDescriptor(e, "toString")?.value;
+	return typeof v === "string" ? v : undefined;
+}
+function setToString(e: Record<string, unknown>, v: string): void {
+	Object.defineProperty(e, "toString", { value: v, enumerable: true, writable: true, configurable: true });
+}
+
+const escapeRe = (s: string): string => s.replace(/[.*+?^${}()|[\]\\]/g, "\\$&");
+
+/** Leaf keys whose string values are prose/literals, never a column code. */
+const PROSE_KEYS = new Set(["v", "label", "title", "caption", "description", "message", "name", "text"]);
+
+function walkStrings(
+	node: unknown,
+	where: string,
+	cb: (value: string, where: string, key: string | undefined) => void,
+	key?: string,
+): void {
+	if (typeof node === "string") cb(node, where, key);
+	else if (Array.isArray(node)) node.forEach((n, i) => walkStrings(n, `${where}[${i}]`, cb, key));
+	else if (node && typeof node === "object") {
+		for (const [k, v] of Object.entries(node as Record<string, unknown>)) {
+			cb(k, `${where}.${k} (key)`, "$key");
+			walkStrings(v, `${where}.${k}`, cb, k);
+		}
+	}
+}
+
+function readDirText(dir: string, ext: RegExp): Array<{ file: string; text: string }> {
+	if (!fs.existsSync(dir)) return [];
+	const out: Array<{ file: string; text: string }> = [];
+	for (const f of fs.readdirSync(dir)) {
+		const fp = path.join(dir, f);
+		try {
+			if (fs.statSync(fp).isDirectory()) {
+				for (const sub of readDirText(fp, ext)) out.push({ file: `${f}/${sub.file}`, text: sub.text });
+			} else if (ext.test(f)) out.push({ file: f, text: fs.readFileSync(fp, "utf8") });
+		} catch {
+			/* unreadable file: skip */
+		}
+	}
+	return out;
+}
+
+export function scanFieldReferences(
+	paths: ReturnType<typeof loadManifest>["paths"],
+	manifest: { entities?: Record<string, string> },
+	entity: Record<string, unknown>,
+	entityName: string,
+	fieldNames: string[],
+): FieldReferences {
+	const refs: FieldReferences = {};
+	const add = (cat: string, line: string) => {
+		(refs[cat] ??= []).push(line);
+	};
+	for (const name of fieldNames) {
+		const word = new RegExp(`(^|[^A-Za-z0-9_])${escapeRe(name)}($|[^A-Za-z0-9_])`);
+		const ownFields = (entity.fields as Record<string, Record<string, unknown>> | undefined) ?? {};
+
+		// Same entity: constraints, toString, formulas, other field params.
+		for (const [cn, c] of Object.entries(
+			(entity.constraints as Record<string, Record<string, unknown>> | undefined) ?? {},
+		)) {
+			const cols = [...((c.fields as string[]) ?? []), ...((c.columns as string[]) ?? [])];
+			const expr = typeof c.expression === "string" ? c.expression : "";
+			if (cols.includes(name) || word.test(expr)) {
+				add("constraints", `entities/${entityName}.json constraints.${cn} (${String(c.type)}) mentions '${name}'`);
+			}
+		}
+		const ts = ownToString(entity);
+		if (ts !== undefined && ts.includes(`{${name}}`)) {
+			add("toStringTemplate", `entities/${entityName}.json toString '${ts}' uses {${name}}`);
+		}
+		for (const [fn, f] of Object.entries(ownFields)) {
+			if (fn === name) continue;
+			if (typeof f.formula === "string" && f.formula.includes(`[${name}]`)) {
+				add("formulas", `entities/${entityName}.json fields.${fn}.formula uses [${name}]`);
+			}
+			if (f.params && typeof f.params === "object") {
+				walkStrings(f.params, `fields.${fn}.params`, (v, w) => {
+					if (v === name || v.includes(`[${name}]`)) add("formulas", `entities/${entityName}.json ${w} mentions '${name}'`);
+				});
+			}
+		}
+
+		// Other entities: navigation / set aggregates `].[name]` through a link to this entity.
+		for (const [oname, orel] of Object.entries(manifest.entities ?? {})) {
+			if (oname === entityName || oname.includes(".")) continue;
+			const op = entityFilePath(paths.root, orel);
+			if (!fs.existsSync(op)) continue;
+			let oe: Record<string, unknown>;
+			try {
+				oe = readJson<Record<string, unknown>>(op);
+			} catch {
+				continue;
+			}
+			const ofields = (oe.fields as Record<string, Record<string, unknown>> | undefined) ?? {};
+			const linksHere = Object.values(ofields).some(
+				(f) => (f.link as Record<string, unknown> | undefined)?.entity === entityName,
+			);
+			if (!linksHere) continue;
+			for (const [fn, f] of Object.entries(ofields)) {
+				if (typeof f.formula === "string" && f.formula.includes(`].[${name}]`)) {
+					add("otherEntities", `entities/${oname}.json fields.${fn}.formula navigates to [${name}] (${f.formula})`);
+				}
+			}
+			const ots = ownToString(oe);
+			if (ots !== undefined && ots.includes(`.${name}}`)) {
+				add("otherEntities", `entities/${oname}.json toString uses a reference's {…${name}}`);
+			}
+		}
+
+		// ui/reports.json: datasets on this entity + the panels that read them.
+		const reports = readJsonOrDefault<Record<string, Record<string, unknown>>>(paths.reports, {});
+		const hit = (v: string) => v === name || v.startsWith(`${name}.`);
+		for (const [rn, r] of Object.entries(reports)) {
+			const datasets = (r.datasets as Record<string, Record<string, unknown>> | undefined) ?? {};
+			const mine = new Set<string>();
+			for (const [dn, d] of Object.entries(datasets)) {
+				const q = d.query as Record<string, unknown> | undefined;
+				if (q?.entityCd !== entityName) continue;
+				mine.add(dn);
+				walkStrings(d, `datasets.${dn}`, (v, w, k) => {
+					if (k !== "$key" && k !== undefined && PROSE_KEYS.has(k)) return;
+					if (hit(v)) add("reports", `ui/reports.json ${rn}.${w}`);
+				});
+			}
+			const panels = ((r.layout as Record<string, unknown> | undefined)?.panels as Array<Record<string, unknown>> | undefined) ?? [];
+			panels.forEach((p, i) => {
+				if (typeof p.datasetCd !== "string" || !mine.has(p.datasetCd)) return;
+				walkStrings(p.config, `layout.panels[${i}].config`, (v, w, k) => {
+					if (k !== undefined && k !== "$key" && PROSE_KEYS.has(k)) return;
+					if (hit(v)) add("reports", `ui/reports.json ${rn}.${w}`);
+				});
+			});
+		}
+
+		// tests/*.test.json: any quoted use of the code in a test touching this entity.
+		for (const { file, text } of readDirText(path.join(paths.root, "tests"), /\.json$/)) {
+			if (!text.includes(`"${entityName}"`)) continue;
+			const n = (text.match(new RegExp(`"${escapeRe(name)}"\\s*:|"\\$?[a-z_]*\\.?${escapeRe(name)}"`, "g")) ?? []).length;
+			if (n > 0) add("tests", `tests/${file}: ${n} use(s) of '${name}' (check those on '${entityName}')`);
+		}
+
+		// DSL: logic/actions/**, triggers/jobs and ui/actions.json.
+		const dsl = readDirText(path.join(paths.logicDir, "actions"), /\.dsl$/);
+		for (const { file, text } of dsl) {
+			if (text.includes(`[${name}]`) || new RegExp(`\\.${escapeRe(name)}\\b`).test(text)) {
+				add("dsl", `logic/actions/${file} mentions '${name}' (possible, verify it is ${entityName}'s)`);
+			}
+		}
+		for (const [label, fp] of [["logic/triggers.json", paths.triggers], ["logic/jobs.json", paths.jobs]] as const) {
+			if (fs.existsSync(fp) && fs.readFileSync(fp, "utf8").includes(`[${name}]`)) {
+				add("dsl", `${label} mentions [${name}] (possible)`);
+			}
+		}
+
+		// translations/*.json: entities.<entity>.fields.<name>
+		for (const { file, text } of readDirText(paths.translationsDir, /\.json$/)) {
+			try {
+				const t = JSON.parse(text);
+				if (t?.entities?.[entityName]?.fields && name in t.entities[entityName].fields) {
+					add("translations", `translations/${file} entities.${entityName}.fields.${name}`);
+				}
+			} catch {
+				/* not JSON */
+			}
+		}
+	}
+	return refs;
+}
+
+/** Render a references section for the human-readable `warning` text. */
+export function renderReferences(refs: FieldReferences): string {
+	return Object.entries(refs)
+		.map(([cat, lines]) => `${cat}: ${(lines ?? []).join(" | ")}`)
+		.join("; ");
+}
+
+/** Pick a sensible replacement toString for an entity whose template lost its fields. */
+function pickToStringField(
+	fields: Record<string, Record<string, unknown>>,
+	entityName: string,
+	traits: string[],
+): string | undefined {
+	const candidates = Object.entries(fields).filter(
+		([, f]) =>
+			f.columnType === undefined &&
+			typeof f.flags === "string" &&
+			f.flags.includes("V") &&
+			(f.dbDatatype === "varchar" || f.dbDatatype === "text"),
+	);
+	const pref = candidates.find(([k]) => /^(name|title|number|code|label)$/.test(k)) ?? candidates[0];
+	if (pref) return pref[0];
+	return traits.includes("identity") ? `${entityName}_id` : undefined;
+}
 
 export const entityFieldRenameSchema = {
 	moduleDir: z.string().describe("Path to the module root."),
@@ -51,7 +259,7 @@ export function entityFieldRename(
 	const { paths, manifest } = loadManifest(args.moduleDir);
 	const entityRel = (manifest.entities ?? {})[entityName];
 	if (!entityRel) throw new Error(`Entity '${entityName}' is not in the manifest.`);
-	const entityPath = path.join(paths.root, entityRel.replace(/^\.\//, ""));
+	const entityPath = entityFilePath(paths.root, entityRel);
 	const entity = readJson<Record<string, unknown>>(entityPath);
 	const fields = (entity.fields as Record<string, Record<string, unknown>> | undefined) ?? {};
 	if (!(oldName in fields)) throw new Error(`Field '${oldName}' not found on entity '${entityName}'.`);
@@ -114,12 +322,41 @@ export function entityFieldRename(
 		}
 	}
 
+	// 2c. toString template and constraints on this entity.
+	const tsOld = ownToString(entity);
+	if (tsOld !== undefined && tsOld.includes(`{${oldName}}`)) {
+		setToString(entity, tsOld.split(`{${oldName}}`).join(`{${newName}}`));
+		changes.push("toString");
+	}
+	const wordRe = new RegExp(`(^|[^A-Za-z0-9_])${escapeRe(oldName)}(?![A-Za-z0-9_])`, "g");
+	for (const [cn, c] of Object.entries(
+		(entity.constraints as Record<string, Record<string, unknown>> | undefined) ?? {},
+	)) {
+		for (const key of ["fields", "columns"] as const) {
+			if (Array.isArray(c[key]) && (c[key] as string[]).includes(oldName)) {
+				c[key] = (c[key] as string[]).map((x) => (x === oldName ? newName : x));
+				changes.push(`constraints.${cn}.${key}`);
+			}
+		}
+		if (typeof c.expression === "string") {
+			// Rewrite identifiers only — quoted SQL string literals stay untouched.
+			const next = c.expression
+				.split(/('(?:[^']|'')*')/)
+				.map((part, i) => (i % 2 === 1 ? part : part.replace(wordRe, `$1${newName}`)))
+				.join("");
+			if (next !== c.expression) {
+				c.expression = next;
+				changes.push(`constraints.${cn}.expression`);
+			}
+		}
+	}
+
 	files[rel(paths.root, entityPath)] = jsonText(entity);
 
 	// 3. OTHER entities whose FK targets this field (otherKey / references.to.field).
 	for (const [oname, orel] of Object.entries(manifest.entities ?? {})) {
 		if (oname === entityName || oname.includes(".")) continue;
-		const op = path.join(paths.root, (orel as string).replace(/^\.\//, ""));
+		const op = entityFilePath(paths.root, (orel as string));
 		if (!fs.existsSync(op)) continue;
 		const oe = readJson<Record<string, unknown>>(op);
 		let touched = false;
@@ -148,16 +385,24 @@ export function entityFieldRename(
 	for (const v of Object.values(views)) {
 		for (const s of (v.dataSources as Array<Record<string, unknown>> | undefined) ?? []) {
 			if (s.entityCode !== entityName) continue;
-			for (const c of (s.columns as Array<Record<string, unknown>> | undefined) ?? []) {
-				if (c.column_cd === oldName) {
-					c.column_cd = newName;
-					viewsTouched = true;
-				}
+			if (Array.isArray(s.columns)) {
+				s.columns = (s.columns as unknown[]).map((c) => {
+					if (c === oldName) { viewsTouched = true; return newName; }
+					if (c && typeof c === "object" && (c as Record<string, unknown>).column_cd === oldName) {
+						viewsTouched = true;
+						(c as Record<string, unknown>).column_cd = newName;
+					}
+					return c;
+				});
 			}
 			if (Array.isArray(s.order)) {
-				s.order = (s.order as string[]).map((o) => {
+				s.order = (s.order as unknown[]).map((o) => {
 					if (o === oldName) { viewsTouched = true; return newName; }
 					if (o === "-" + oldName) { viewsTouched = true; return "-" + newName; }
+					if (o && typeof o === "object" && (o as Record<string, unknown>).c === oldName) {
+						viewsTouched = true;
+						return { ...(o as object), c: newName };
+					}
 					return o;
 				});
 			}
@@ -196,11 +441,119 @@ export function entityFieldRename(
 
 	files["manifest.json"] = jsonText(withTodayStamp(manifest));
 
-	return makeResult(
+	// Whatever the rename could not rewrite with certainty (reports, tests, DSL,
+	// translations, other entities' formulas) is listed, never left silent. The
+	// scan runs against the ORIGINAL on-disk state, so the old name is still there.
+	const original = readJson<Record<string, unknown>>(entityPath);
+	const references = scanFieldReferences(paths, manifest, original, entityName, [oldName]);
+	delete references.constraints; // rewritten above
+	delete references.toStringTemplate; // rewritten above
+	for (const k of Object.keys(references)) {
+		if (!references[k]?.length) delete references[k];
+	}
+	const refText = renderReferences(references);
+
+	const result = makeResult(
 		`Renamed '${entityName}.${oldName}' → '${newName}', propagated to ${changes.length} location(s): ${changes.join("; ")}.`,
 		files,
-		"Review the returned files before writing — this rewrites every file that referenced the field. Run dforge_module_validate after writing to confirm no references were missed.",
-	);
+		"Review the returned files before writing — this rewrites every file that referenced the field. " +
+			(refText ? `NOT rewritten, update by hand (old name '${oldName}'): ${refText}. ` : "") +
+			"Run dforge_module_validate after writing to confirm no references were missed.",
+	) as ToolResult & { references?: FieldReferences };
+	if (refText) result.references = references;
+	return result;
+}
+
+// ── data-view pruning (shared by field_remove) ─────────────────────────────
+
+const colCodeOf = (c: unknown): string | undefined =>
+	typeof c === "string" ? c : c && typeof c === "object" && typeof (c as Record<string, unknown>).column_cd === "string" ? ((c as Record<string, unknown>).column_cd as string) : undefined;
+
+/** Column code behind one `order` entry: "-col", "col" or {c, d}. */
+const orderCodeOf = (o: unknown): string | undefined =>
+	typeof o === "string" ? o.replace(/^-/, "") : o && typeof o === "object" && typeof (o as Record<string, unknown>).c === "string" ? ((o as Record<string, unknown>).c as string) : undefined;
+
+/** Drop conditions on removed columns from a filter tree; returns undefined when nothing is left. */
+function pruneFilter(f: unknown, removed: Set<string>, hit: { n: number }): unknown {
+	if (!f || typeof f !== "object") return f;
+	const node = f as Record<string, unknown>;
+	if (Array.isArray(node.i)) {
+		const kept = (node.i as unknown[]).map((c) => pruneFilter(c, removed, hit)).filter((c) => c !== undefined);
+		return kept.length === 0 ? undefined : { ...node, i: kept };
+	}
+	if (typeof node.c === "string" && removed.has(node.c)) {
+		hit.n++;
+		return undefined;
+	}
+	return f;
+}
+
+/**
+ * Remove `removed` columns of `entityName` from every data view: dataSource
+ * `columns` (strings or {column_cd}), `order` (strings or {c,d}) and `filter`
+ * conditions. A view-level `order`/`filter` is touched only when every
+ * dataSource of the view reads this entity (otherwise the column is ambiguous).
+ * Mutates `views`; returns what changed.
+ */
+export function pruneDataViews(
+	views: Record<string, Record<string, unknown>>,
+	entityName: string,
+	removed: Set<string>,
+): string[] {
+	const out: string[] = [];
+	for (const [vcode, v] of Object.entries(views)) {
+		if (!v || typeof v !== "object") continue;
+		const sources = (v.dataSources as Array<Record<string, unknown>> | undefined) ?? [];
+		for (const s of sources) {
+			if (!s || s.entityCode !== entityName) continue;
+			if (Array.isArray(s.columns)) {
+				const cols = s.columns as unknown[];
+				const kept = cols.filter((c) => !removed.has(colCodeOf(c) ?? "\0"));
+				if (kept.length !== cols.length) {
+					s.columns = kept;
+					out.push(`${vcode}: columns`);
+				}
+			}
+			if (Array.isArray(s.order)) {
+				const ord = s.order as unknown[];
+				const kept = ord.filter((o) => !removed.has(orderCodeOf(o) ?? "\0"));
+				if (kept.length !== ord.length) {
+					s.order = kept;
+					out.push(`${vcode}: order`);
+				}
+			}
+			if (s.filter !== undefined) {
+				const hit = { n: 0 };
+				const next = pruneFilter(s.filter, removed, hit);
+				if (hit.n > 0) {
+					if (next === undefined) delete s.filter;
+					else s.filter = next;
+					out.push(`${vcode}: filter`);
+				}
+			}
+		}
+		const single = sources.length > 0 && sources.every((s) => s?.entityCode === entityName);
+		if (single) {
+			if (Array.isArray(v.order)) {
+				const ord = v.order as unknown[];
+				const kept = ord.filter((o) => !removed.has(orderCodeOf(o) ?? "\0"));
+				if (kept.length !== ord.length) {
+					v.order = kept;
+					out.push(`${vcode}: view order`);
+				}
+			}
+			if (v.filter !== undefined) {
+				const hit = { n: 0 };
+				const next = pruneFilter(v.filter, removed, hit);
+				if (hit.n > 0) {
+					if (next === undefined) delete v.filter;
+					else v.filter = next;
+					out.push(`${vcode}: view filter`);
+				}
+			}
+		}
+	}
+	return out;
 }
 
 // ── entity_field_remove (cascade) ───────────────────────────────────────────
@@ -222,7 +575,7 @@ export function entityFieldRemove(
 	const { paths, manifest } = loadManifest(args.moduleDir);
 	const entityRel = (manifest.entities ?? {})[entityName];
 	if (!entityRel) throw new Error(`Entity '${entityName}' is not in the manifest.`);
-	const entityPath = path.join(paths.root, entityRel.replace(/^\.\//, ""));
+	const entityPath = entityFilePath(paths.root, entityRel);
 	const entity = readJson<Record<string, unknown>>(entityPath);
 	const fields = (entity.fields as Record<string, Record<string, unknown>> | undefined) ?? {};
 	if (!(fieldName in fields)) throw new Error(`Field '${fieldName}' not found on entity '${entityName}'.`);
@@ -287,6 +640,36 @@ export function entityFieldRemove(
 		}
 	}
 
+	// toString template: a `{removed}` token would render literally / break the label.
+	if (ownToString(entity) !== undefined) {
+		let ts = ownToString(entity) as string;
+		let hit = false;
+		for (const r of removed) {
+			if (ts.includes(`{${r}}`)) {
+				ts = ts.split(`{${r}}`).join("");
+				hit = true;
+			}
+		}
+		if (hit) {
+			ts = ts.replace(/\s+/g, " ").trim();
+			if (!/\{[^}]+\}/.test(ts)) {
+				const pick = pickToStringField(
+					entity.fields as Record<string, Record<string, unknown>>,
+					entityName,
+					(entity.traits as string[] | undefined) ?? [],
+				);
+				if (pick) {
+					ts = `{${pick}}`;
+					warnings.push(`toString lost all its fields; set to '${ts}' — change it to a sensible business label if needed`);
+				} else {
+					warnings.push("toString lost all its fields and no replacement column was found — set it by hand");
+				}
+			}
+			setToString(entity, ts);
+			changes.push("toString");
+		}
+	}
+
 	files[rel(paths.root, entityPath)] = jsonText(entity);
 
 	// Formula columns (still present) that reference a removed field → warn.
@@ -299,33 +682,19 @@ export function entityFieldRemove(
 		}
 	}
 
-	// Views: drop columns + order entries for removed fields on this entity.
+	// Views: drop columns + order + filter entries for removed fields on this entity.
 	const views = readJsonOrDefault<Record<string, Record<string, unknown>>>(paths.dataViews, {});
-	let viewsTouched = false;
-	for (const v of Object.values(views)) {
-		for (const s of (v.dataSources as Array<Record<string, unknown>> | undefined) ?? []) {
-			if (s.entityCode !== entityName) continue;
-			if (Array.isArray(s.columns)) {
-				const cols = s.columns as Array<Record<string, unknown>>;
-				const filtered = cols.filter((c) => !removed.has(c.column_cd as string));
-				if (filtered.length !== cols.length) {
-					s.columns = filtered;
-					viewsTouched = true;
-				}
-			}
-			if (Array.isArray(s.order)) {
-				const ord = s.order as string[];
-				const filtered = ord.filter((o) => !removed.has(o.replace(/^-/, "")));
-				if (filtered.length !== ord.length) {
-					s.order = filtered;
-					viewsTouched = true;
+	const viewChanges = pruneDataViews(views, entityName, removed);
+	if (viewChanges.length > 0) {
+		files[rel(paths.root, paths.dataViews)] = jsonText(views);
+		changes.push(`data_views.json (${viewChanges.join("; ")})`);
+		for (const [vcode, v] of Object.entries(views)) {
+			for (const src of (v?.dataSources as Array<Record<string, unknown>> | undefined) ?? []) {
+				if (src?.entityCode === entityName && Array.isArray(src.columns) && src.columns.length === 0) {
+					warnings.push(`view '${vcode}' has no columns left after the removal — add real columns (an empty grid fails validation)`);
 				}
 			}
 		}
-	}
-	if (viewsTouched) {
-		files[rel(paths.root, paths.dataViews)] = jsonText(views);
-		changes.push("data_views.json (columns/order)");
 	}
 
 	// Seed-data: drop removed keys from this entity's records.
@@ -360,7 +729,7 @@ export function entityFieldRemove(
 	// Cross-entity FKs targeting a removed field → warn (don't touch other modules' columns).
 	for (const [oname, orel] of Object.entries(manifest.entities ?? {})) {
 		if (oname === entityName || oname.includes(".")) continue;
-		const op = path.join(paths.root, (orel as string).replace(/^\.\//, ""));
+		const op = entityFilePath(paths.root, (orel as string));
 		if (!fs.existsSync(op)) continue;
 		let oe: Record<string, unknown>;
 		try {
@@ -378,16 +747,35 @@ export function entityFieldRemove(
 
 	files["manifest.json"] = jsonText(withTodayStamp(manifest));
 
+	// Everything still mentioning a removed field that we do not rewrite. Constraints
+	// are blocking: a check/unique over a dropped column fails the install.
+	const references: FieldReferences = {};
+	{
+		const original = readJson<Record<string, unknown>>(entityPath);
+		const found = scanFieldReferences(paths, manifest, original, entityName, [...removed]);
+		delete found.toStringTemplate; // handled above
+		for (const [k, v] of Object.entries(found)) if (v?.length) references[k] = v;
+	}
+	if (references.constraints?.length) {
+		warnings.unshift(
+			`BLOCKING: constraint(s) still reference the removed field and will fail the install — ${references.constraints?.join("; ")}`,
+		);
+	}
+	const refText = renderReferences(references);
+
 	const warnText = [
 		warnings.length ? `Manual follow-up: ${warnings.join("; ")}.` : "",
+		refText ? `Remaining references (not rewritten): ${refText}.` : "",
 		"Run dforge_module_validate after writing to confirm nothing dangles.",
 	].filter(Boolean).join(" ");
 
-	return makeResult(
-		`Removed '${entityName}.${fieldName}'${removed.size > 1 ? ` (+${removed.size - 1} paired column)` : ""}; cascade-cleaned ${changes.length} location(s).`,
+	const result = makeResult(
+		`Removed '${entityName}.${fieldName}'${removed.size > 1 ? ` (+${removed.size - 1} paired column)` : ""}; cascade-cleaned ${changes.length} location(s): ${changes.join("; ")}.`,
 		files,
 		warnText,
-	);
+	) as ToolResult & { references?: FieldReferences };
+	if (refText) result.references = references;
+	return result;
 }
 
 // ── entity_rename (with PK + reference cascade) ─────────────────────────────
@@ -442,7 +830,7 @@ export function entityRename(
 	const deletes: string[] = [];
 	const changes: string[] = [];
 
-	const oldPath = path.join(paths.root, entityMap[oldE].replace(/^\.\//, ""));
+	const oldPath = entityFilePath(paths.root, entityMap[oldE]);
 	const entity = readJson<Record<string, unknown>>(oldPath);
 	const usesIdentity = ((entity.traits as string[] | undefined) ?? []).includes("identity");
 	const oldPk = `${oldE}_id`;
@@ -466,7 +854,7 @@ export function entityRename(
 	// Other entities: link.entity / references.to.entity (+ PK in otherKey/to.field).
 	for (const [oname, orel] of Object.entries(entityMap)) {
 		if (oname === oldE || oname.includes(".")) continue;
-		const op = path.join(paths.root, orel.replace(/^\.\//, ""));
+		const op = entityFilePath(paths.root, orel);
 		if (!fs.existsSync(op)) continue;
 		const oe = readJson<Record<string, unknown>>(op);
 		let touched = false;
@@ -651,7 +1039,7 @@ export function entityDelete(
 	const changes: string[] = [];
 	const warnings: string[] = [];
 
-	const ePath = path.join(paths.root, entityMap[target].replace(/^\.\//, ""));
+	const ePath = entityFilePath(paths.root, entityMap[target]);
 	if (fs.existsSync(ePath)) deletes.push(rel(paths.root, ePath));
 
 	const { [target]: _dropped, ...restEntities } = entityMap;
@@ -662,7 +1050,7 @@ export function entityDelete(
 	// Cross-entity FKs targeting it → warn (don't silently mangle other entities).
 	for (const [oname, orel] of Object.entries(entityMap)) {
 		if (oname === target || oname.includes(".")) continue;
-		const op = path.join(paths.root, orel.replace(/^\.\//, ""));
+		const op = entityFilePath(paths.root, orel);
 		if (!fs.existsSync(op)) continue;
 		let oe: Record<string, unknown>;
 		try {

@@ -5,6 +5,7 @@
 
 import { z } from "zod";
 import * as path from "node:path";
+import * as fs from "node:fs";
 import {
 	loadManifest,
 	readJsonOrDefault,
@@ -15,6 +16,8 @@ import {
 	makeResult,
 	withTodayStamp,
 	type ToolResult,
+	type ModulePaths,
+	type Manifest,
 } from "./_helpers";
 import { readMessageTranslations } from "./validate/translations";
 import { checkDsl } from "./dsl-check";
@@ -59,11 +62,16 @@ export const actionAddSchema = {
 		),
 };
 
-export function actionAdd(
-	args: z.infer<z.ZodObject<typeof actionAddSchema>>,
-): ToolResult {
-	const { paths, manifest } = loadManifest(args.moduleDir);
-
+/**
+ * Run the static DSL checks for one action body. Throws on errors (install
+ * failures), returns a formatted warnings block (or undefined). Shared by
+ * dforge_action_add and dforge_action_modify.
+ */
+export function checkActionDsl(
+	paths: ModulePaths,
+	manifest: Manifest,
+	args: { code: string; entityCode: string; executionMode: "single" | "each" | "batch"; dslBody: string },
+): string | undefined {
 	// Static DSL checks (see ./dsl-check). Errors reject the call — they're all
 	// documented install failures, and finding them here saves a pack/install
 	// round trip. Warnings ride along on the result for the agent to review.
@@ -104,6 +112,19 @@ export function actionAdd(
 		);
 	}
 	const dslWarnings = dslIssues.filter((i) => i.level === "warning");
+	return dslWarnings.length > 0
+		? `DSL warnings (not blocking):\n${dslWarnings
+				.map((i) => `  • ${i.line ? `line ${i.line}: ` : ""}${i.message}`)
+				.join("\n")}`
+		: undefined;
+}
+
+export function actionAdd(
+	args: z.infer<z.ZodObject<typeof actionAddSchema>>,
+): ToolResult {
+	const { paths, manifest } = loadManifest(args.moduleDir);
+
+	const dslWarning = checkActionDsl(paths, manifest, args);
 
 	const actionsJson = readJsonOrDefault<Record<string, unknown>>(paths.actions, {});
 	if (Object.prototype.hasOwnProperty.call(actionsJson, args.code)) {
@@ -140,10 +161,108 @@ export function actionAdd(
 			[rel(paths.root, dslPath)]: dslBody,
 			"manifest.json": jsonText(withTodayStamp(manifest)),
 		},
-		dslWarnings.length > 0
-			? `DSL warnings (not blocking):\n${dslWarnings
-					.map((i) => `  • ${i.line ? `line ${i.line}: ` : ""}${i.message}`)
-					.join("\n")}`
-			: undefined,
+		dslWarning,
 	);
+}
+
+// ── modify ──────────────────────────────────────────────────────────
+//
+// action_add refuses an existing code, so before this tool the only way to fix
+// a DSL body or a registry entry was to edit logic/actions/<code>.dsl and
+// ui/actions.json by hand. Every parameter is optional; only the ones passed
+// change. The DSL gets the same static check as action_add — and is re-checked
+// from disk when only executionMode / entityCode change, because both alter
+// which DSL rules apply.
+
+export const actionModifySchema = {
+	moduleDir: z.string(),
+	code: z
+		.string()
+		.regex(/^[a-z][a-z0-9_]*$/)
+		.describe("Code of an EXISTING action (its key in ui/actions.json)."),
+	label: z.string().min(1).optional().describe("New display label."),
+	description: z.string().optional().describe("New tooltip / description text."),
+	entityCode: z
+		.string()
+		.regex(/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)?$/)
+		.optional()
+		.describe("Re-target the action to another entity (the DSL is re-checked against it)."),
+	executionMode: z
+		.enum(["single", "each", "batch"])
+		.optional()
+		.describe("New execution mode (the DSL is re-checked against it)."),
+	icon: z
+		.string()
+		.optional()
+		.describe("Bootstrap icon name; the `bi-` prefix is added if missing (action icons keep it)."),
+	isAsync: z.boolean().optional().describe("Run asynchronously in the background."),
+	isTransacted: z
+		.boolean()
+		.optional()
+		.describe("Registry entry `isTransacted` (whole run = one transaction; platform default true)."),
+	orderNum: z.number().int().optional().describe("Registry entry `orderNum` (display order in the action menu)."),
+	dslBody: z
+		.string()
+		.optional()
+		.describe(
+			"Full replacement DSL source for logic/actions/<script>.dsl (not a patch). Omit to keep the file as is.",
+		),
+};
+
+export function actionModify(args: z.infer<z.ZodObject<typeof actionModifySchema>>): ToolResult {
+	const { paths, manifest } = loadManifest(args.moduleDir);
+	const actionsJson = readJsonOrDefault<Record<string, Record<string, unknown>>>(paths.actions, {});
+	const entry = actionsJson[args.code];
+	if (!entry || typeof entry !== "object") {
+		throw new Error(
+			`Action '${args.code}' not found in ui/actions.json. Existing actions: ${Object.keys(actionsJson).join(", ") || "(none)"}. Use dforge_action_add to create it.`,
+		);
+	}
+	const changed: string[] = [];
+	const set = (k: string, v: unknown): void => {
+		if (v === undefined) return;
+		entry[k] = v;
+		changed.push(k);
+	};
+	set("label", args.label);
+	set("description", args.description);
+	set("entityCode", args.entityCode);
+	set("executionMode", args.executionMode);
+	set("isAsync", args.isAsync);
+	set("isTransacted", args.isTransacted);
+	set("orderNum", args.orderNum);
+	if (args.icon) set("icon", args.icon.startsWith("bi-") ? args.icon : `bi-${args.icon}`);
+
+	const script = typeof entry.script === "string" && entry.script ? entry.script : args.code;
+	const dslPath = path.join(paths.logicDir, "actions", `${script}.dsl`);
+	const mode = (entry.executionMode as "single" | "each" | "batch" | undefined) ?? "single";
+	const entityCode = String(entry.entityCode ?? "");
+
+	let body = args.dslBody;
+	const files: Record<string, string> = {};
+	let warning: string | undefined;
+	if (body !== undefined) {
+		warning = checkActionDsl(paths, manifest, { code: args.code, entityCode, executionMode: mode, dslBody: body });
+		body = body.endsWith("\n") ? body : body + "\n";
+		files[rel(paths.root, dslPath)] = body;
+		changed.push("dslBody");
+	} else if (args.executionMode !== undefined || args.entityCode !== undefined) {
+		if (fs.existsSync(dslPath)) {
+			warning = checkActionDsl(paths, manifest, {
+				code: args.code,
+				entityCode,
+				executionMode: mode,
+				dslBody: fs.readFileSync(dslPath, "utf8"),
+			});
+		} else {
+			warning = `logic/actions/${script}.dsl does not exist on disk, so the DSL could not be re-checked against the new executionMode/entityCode.`;
+		}
+	}
+	if (changed.length === 0) {
+		throw new Error("Nothing to change: pass at least one of label, description, entityCode, executionMode, icon, isAsync, isTransacted, orderNum, dslBody.");
+	}
+	actionsJson[args.code] = entry;
+	files[rel(paths.root, paths.actions)] = jsonText(actionsJson);
+	files["manifest.json"] = jsonText(withTodayStamp(manifest));
+	return makeResult(`Modified action '${args.code}' (${changed.join(", ")}).`, files, warning);
 }

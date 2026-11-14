@@ -192,7 +192,7 @@ describe("the validator re-runs the rules across the whole module", () => {
 			name: { fieldTypeCd: "text", dbDatatype: "varchar", flags: "VEM" },
 			total: {
 				columnType: "F",
-				baseDatatypeCd: "decimal",
+				baseDatatypeCd: "number",
 				flags: "V",
 				formula: "SUM([lines].[amount])",
 			},

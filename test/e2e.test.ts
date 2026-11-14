@@ -30,12 +30,13 @@ import { moduleValidate } from "../src/tools/module-validate";
 import { moduleInspect } from "../src/tools/module-inspect";
 import { planModule } from "../src/tools/plan-module";
 import { applyToDisk } from "../src/tools/apply";
+import { guardSchemas } from "../src/tools/schema-guard";
 import type { ToolResult } from "../src/tools/_helpers";
 
 let dir: string;
 
 /** Write a tool's file map straight to disk, the way `apply: true` does. */
-const apply = (r: ToolResult) => applyToDisk(dir, r);
+const apply = (r: ToolResult) => applyToDisk(dir, guardSchemas(dir, r));
 
 /** Write the four Phase 0 artifacts so the scaffold gate opens. */
 function completePhase0(root: string): void {

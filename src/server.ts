@@ -36,7 +36,8 @@ import {
 	entityDeleteSchema,
 	entityDelete,
 } from "./tools/refactor";
-import { actionAddSchema, actionAdd } from "./tools/action-add";
+import { actionAddSchema, actionAdd, actionModifySchema, actionModify } from "./tools/action-add";
+import { entityConfigureSchema, entityConfigure, manifestSetSchema, manifestSet } from "./tools/configure";
 import { actionCheckSchema, actionCheck } from "./tools/action-check";
 import { viewAddSchema, viewAdd, viewModifySchema, viewModify } from "./tools/view";
 import { menuAddSchema, menuAdd } from "./tools/menu";
@@ -47,16 +48,16 @@ import {
 	reportAdd,
 	settingAddSchema,
 	settingAdd,
-	roleAddSchema,
-	roleAdd,
 	folderAddSchema,
 	folderAdd,
+	folderModifySchema,
+	folderModify,
 	diagramAddSchema,
 	diagramAdd,
 	dependencyAddSchema,
 	dependencyAdd,
 } from "./tools/adds";
-import { roleRightSetSchema, roleRightSet } from "./tools/role-right";
+import { roleRightSetSchema, roleRightSet, roleAddChecked, roleAddCheckedSchema } from "./tools/role-right";
 import { moduleInspectSchema, moduleInspect } from "./tools/module-inspect";
 import { moduleValidateSchema, moduleValidate } from "./tools/module-validate";
 import {
@@ -67,8 +68,9 @@ import {
 	webhookAddSchema,
 	webhookAdd,
 } from "./tools/behavior";
-import { makeResult, type ToolResult } from "./tools/_helpers";
-import { applyInput, applyToDisk } from "./tools/apply";
+import { makeResult } from "./tools/_helpers";
+import { applyInput } from "./tools/apply";
+import { envelope, type PatchArgs } from "./tools/envelope";
 import { resources } from "./resources";
 
 const server = new McpServer({
@@ -81,42 +83,6 @@ const server = new McpServer({
 // Every tool returns a ToolResult; these wrap it as MCP content
 // (JSON-in-text) so the LLM can parse it, and keep the registration wiring
 // below to one line per tool.
-
-/** Args every patch tool shares — the module it targets, and the write flag. */
-type PatchArgs = { moduleDir?: string; apply?: boolean };
-
-/**
- * Patch tools: return the file map for the client to write, OR — with
- * `apply: true` — write it here and return only the paths touched. The apply
- * path also guarantees `deletes` are honoured, which a client that forgets to
- * read them would otherwise silently drop.
- */
-function envelope<T extends PatchArgs>(fn: (a: T) => ToolResult) {
-	return async (args: T) => {
-		try {
-			// Never silently downgrade an explicit `apply: true` to a preview — a
-			// client relying on apply semantics would see a success response and
-			// assume the write happened. Every apply-capable tool requires
-			// moduleDir in its own schema, so this only fires if that ever drifts.
-			if (args.apply && !args.moduleDir) {
-				throw new Error(
-					"apply: true requires `moduleDir` — it's the root the file map is written relative to. " +
-						"Pass moduleDir, or omit `apply` to get the file map back for the client to write.",
-				);
-			}
-			const result = fn(args);
-			const payload = args.apply ? applyToDisk(args.moduleDir as string, result) : result;
-			return {
-				content: [{ type: "text" as const, text: JSON.stringify(payload, null, 2) }],
-			};
-		} catch (e) {
-			return {
-				content: [{ type: "text" as const, text: `Error: ${(e as Error).message}` }],
-				isError: true,
-			};
-		}
-	};
-}
 
 /**
  * Tools whose result shape is their OWN contract rather than a ToolResult, and
@@ -151,7 +117,7 @@ server.registerTool(
 	{
 		title: "Plan module (lifecycle orchestrator)",
 		description:
-			"Lifecycle owner — CALL THIS FIRST for any new or resumed module task. 'check' returns the current phase, the exact next steps, and which authoring skill to run next (design → build → ship). Phase 0: 'write_identity' (0a) writes CLAUDE.md; 'write_requirements' (0b) confirms docs/REQUIREMENTS.md (already written to disk by the agent) after the user confirms YES and ticks CLAUDE.md; 'write_design' (0c) confirms docs/DESIGN.md the same way; 'validate' (0d) runs pre-scaffold checks and writes docs/VALIDATION.md when all pass. Phases 1-6: 'complete_phase' records a phase as done or deliberately skipped, so a resumed session never re-proposes finished work. dforge_module_create is blocked until this tool reports readyToScaffold: true.",
+			"Lifecycle owner — CALL THIS FIRST for any new or resumed module task. 'check' returns the current phase, the exact next steps, and which authoring skill to run next (design → build → ship). Phase 0: 'write_identity' (0a) writes CLAUDE.md; 'write_requirements' (0b) confirms docs/REQUIREMENTS.md (already written to disk by the agent) after the user confirms YES and ticks CLAUDE.md; 'write_design' (0c) confirms docs/DESIGN.md the same way; 'validate' (0d) runs pre-scaffold checks and writes docs/VALIDATION.md when all pass. Phases 1-6: 'complete_phase' records a phase as done or deliberately skipped, so a resumed session never re-proposes finished work. Pass apply:true to have the tool write docs/phase.json and CLAUDE.md itself; without it the caller MUST write the returned files before the next call, and complete_phase calls must never run in parallel. 'check' also reports a ledger that lags behind the module on disk. On a finished module 'begin_change' (note required, optional statements) / 'end_change' open and close an iteration, recorded in `iterations` in docs/phase.json; `statements` passed to complete_phase or to 'note_change' are appended (deduped) to the open iteration. The DESIGN.md template has Visibility, Rules & Constraints (with the enforcing mechanism per rule), Notifications and Permissions Matrix sections; structured statement IDs (S-/N-/V-/U-/R-/P-n) are checked for duplicates and undefined references. dforge_module_create is blocked until this tool reports readyToScaffold: true.",
 		inputSchema: planModuleSchema,
 	},
 	serialize(planModule),
@@ -162,7 +128,7 @@ server.registerTool(
 	{
 		title: "Scaffold a new module",
 		description:
-			"Scaffold a new dForge module (Phase 1). ⛔ REQUIRES Phase 0 complete — call dforge_module_plan first. Blocked until CLAUDE.md, docs/REQUIREMENTS.md, docs/DESIGN.md, and docs/VALIDATION.md (all-pass) exist in moduleDir. Returns { files: { '<relPath>': '<contents>' } } — preview with the user before writing, or pass apply: true to write directly.",
+			"Scaffold a new dForge module (Phase 1). ⛔ REQUIRES Phase 0 complete — call dforge_module_plan first. Blocked until CLAUDE.md, docs/REQUIREMENTS.md, docs/DESIGN.md, and docs/VALIDATION.md (all-pass) exist in moduleDir. `dependencies` items are {module, version?, entities}: each writes deps/<module>.json together with its manifest entry (a bare non-system code is refused). `supportedLocales` sets the translation locales. No empty seed stubs or column-less views are generated. Each entity gets a stub `name` field and toString '{name}' unless it sets `nameField: false` (no stub field; toString is `toStringTemplate` or the PK; add the first visible field with dforge_entity_field_add before validating). Returns { files: { '<relPath>': '<contents>' } } — preview with the user before writing, or pass apply: true to write directly.",
 		inputSchema: { ...createModuleSchema, ...applyInput },
 	},
 	envelope((args: Parameters<typeof createModuleFiles>[0] & PatchArgs) => {
@@ -191,7 +157,7 @@ server.registerTool(
 	{
 		title: "Validate module (offline)",
 		description:
-			"Validate the whole module OFFLINE before packing/installing. Runs every check the per-field tools can't see: dangling FK/reference targets, a missing hidden-FK column, view dataSources/columns pointing at unknown entities/fields, menu dataViewCode → missing view, role rights on unknown objects, entities with no Select grant, field-spec rules re-run across EVERY field (catching anything that entered via import or a hand edit), toString templates, Formula-vs-Generated set aggregates over virtual child columns, action script files missing from disk, triggers/jobs firing actions that don't exist, DSL static checks, translation completeness (role labels are install-blocking), and the CLI's own static checks — the same set dforge_module_pack runs (errors under 'cli: <check>'). Returns errors + warnings in _validate.json. Fix every error BEFORE dforge_module_pack — it saves a slow pack/install round trip.",
+			"Validate the whole module OFFLINE before packing/installing. Runs every check the per-field tools can't see: dangling FK/reference targets, a missing hidden-FK column, view dataSources/columns pointing at unknown entities/fields, menu dataViewCode → missing view, role rights on unknown objects, entities with no Select grant, field-spec rules re-run across EVERY field (catching anything that entered via import or a hand edit), toString templates, Formula-vs-Generated set aggregates over virtual child columns, action script files missing from disk, triggers/jobs firing actions that don't exist, DSL static checks, translation completeness (role labels are install-blocking), and the CLI's own static checks — the same set dforge_module_pack runs (errors under 'cli: <check>'). Also validates tests/*.test.json, runs every module JSON file against the vendored schemas (schema findings are WARNINGS; the CLI's validate/pack does NOT run schema validation), and flags empty seed stubs, views with `columns: []`, `folder:` keys in role rights, manifest dependencies without deps/<code>.json, and menu/folder/entity coverage gaps (grouped per folder; fix by restricting the menu with `folders` or adding the entity to the folder). Known false warnings 'X() is not a DSL host function' for functions from logic/functions/*.dsl remain until the metadata package accepts a library-function list. The summary line carries the warning count and its families, e.g. '0 error(s), 364 warning(s) (schema: 234 in 27 files; dsl: 129)': '0 errors' does not mean clean, read the schema count. Returns errors + warnings in _validate.json; `format: 'summary'` groups repeated findings and writes the full list to a file. Fix every error BEFORE dforge_module_pack — it saves a slow pack/install round trip.",
 		inputSchema: moduleValidateSchema,
 		annotations: READ_ONLY,
 	},
@@ -242,7 +208,7 @@ server.registerTool(
 	{
 		title: "Add an entity",
 		description:
-			"PHASE 1: Add an entity to an existing module. Reads manifest from disk, returns the updated file map (manifest + new entity + regenerated UI/security). Other files on disk are NOT touched.",
+			"PHASE 1: Add an entity to an existing module. Reads manifest from disk, returns the updated file map. ADDITIVE: the entity is merged into ui/*.json and security/roles.json, existing content is never regenerated. Formula columns never get dbDatatype; a baseDatatypeCd outside the entity-schema enum is rejected (use string, timestamp, number, bool; NOT text/datetime). Other files on disk are NOT touched. `adminRights` (default 'SIUDC') sets what the module admin role gets on the new entity. `entity.nameField: false` skips the stub `name` field (then toString is `entity.toStringTemplate` or the PK).",
 		inputSchema: { ...addEntitySchema, ...applyInput },
 	},
 	envelope((args: Parameters<typeof addEntityFiles>[0] & PatchArgs) => {
@@ -256,7 +222,7 @@ server.registerTool(
 	{
 		title: "Import a table-spec as entities",
 		description:
-			"Import a normalized table-spec (tables → columns → relationships) into an existing module as entities. Infers each column's fieldTypeCd from an explicit code, a source SQL type (sqlType), sample values, and name heuristics (validated against the metadata registry; dbDatatype derived), and generates the FK+Reference two-column pattern for each relationship. The front-end that produces the table-spec can be DBML/SQL, an Excel/CSV upload, or hand-authored. Scaffold a minimal module first; this ADDS entities and regenerates default views/menus/roles. Review inferred types and run dforge_module_validate after.",
+			"Import a normalized table-spec (tables → columns → relationships) into an existing module as entities. Infers each column's fieldTypeCd from an explicit code, a source SQL type (sqlType), sample values, and name heuristics (validated against the metadata registry; dbDatatype derived), and generates the FK+Reference two-column pattern for each relationship. The front-end that produces the table-spec can be DBML/SQL, an Excel/CSV upload, or hand-authored. Scaffold a minimal module first; this is ADDITIVE: it merges new entities into ui/*.json and security/roles.json and never regenerates existing content. `onExisting: error|skip|replace` decides what happens with an entity that already exists. Review inferred types and run dforge_module_validate after.",
 		inputSchema: { ...moduleImportSchema, ...applyInput },
 	},
 	envelope(moduleImport),
@@ -291,7 +257,7 @@ server.registerTool(
 	{
 		title: "Add a field",
 		description:
-			"PHASE 1 / backtrack: Add a single new field to an existing entity. Use this (not entity_add) when refining an existing entity — it preserves the rest of the definition. For a RELATION, a ROLL-UP total, or a STATUS column, prefer the composite tools (dforge_entity_reference_add / _rollup_add / _status_add): each of those concepts spans several coordinated keys, and the composite tools emit the whole shape so the broken variants aren't representable.",
+			"PHASE 1 / backtrack: Add a single new field to an existing entity. Use this (not entity_add) when refining an existing entity — it preserves the rest of the definition. `orderNum` (next free: max+10) and `description` (from the code) are filled in when omitted because entity.schema.json requires both. For a RELATION, a ROLL-UP total, or a STATUS column, prefer the composite tools (dforge_entity_reference_add / _rollup_add / _status_add): each of those concepts spans several coordinated keys, and the composite tools emit the whole shape so the broken variants aren't representable.",
 		inputSchema: { ...entityFieldAddSchema, ...applyInput },
 	},
 	envelope(entityFieldAdd),
@@ -302,7 +268,7 @@ server.registerTool(
 	{
 		title: "Modify a field",
 		description:
-			"PHASE 1 / backtrack: Replace an existing field's spec on an entity. Pass the full desired field shape, not a partial diff.",
+			"PHASE 1 / backtrack: Replace an existing field's spec on an entity. Pass the full desired field shape; `params` is MERGED into the existing params (a null value removes a key). Warns about data/dbSchemaVersion/migrations implications of a type change. A formula column never gets dbDatatype and a baseDatatypeCd outside the entity-schema enum is rejected.",
 		inputSchema: { ...entityFieldModifySchema, ...applyInput },
 	},
 	envelope(entityFieldModify),
@@ -313,7 +279,7 @@ server.registerTool(
 	{
 		title: "Remove a field (refactor-safe)",
 		description:
-			"Refactor-safe field removal. Removes the field AND cascade-cleans the safe dependents: the paired Reference column when you remove its hidden FK, the references entry, view columns + order, and seed-data keys. Formula references and other entities' FKs pointing at the field are surfaced as warnings (not auto-deleted). Run dforge_module_validate after.",
+			"Refactor-safe field removal. Removes the field AND cascade-cleans the safe dependents: the paired Reference column when you remove its hidden FK, the references entry, entity-view columns, every ui/data_views.json dataSource column/order/filter that names the field (the result lists each view touched), and seed-data keys. Formula references and other entities' FKs pointing at the field are surfaced as warnings (not auto-deleted); the result lists the remaining `references` to the removed field. Run dforge_module_validate after.",
 		inputSchema: { ...entityFieldRemoveSchema, ...applyInput },
 		annotations: DESTRUCTIVE,
 	},
@@ -325,7 +291,7 @@ server.registerTool(
 	{
 		title: "Rename a field (refactor-safe)",
 		description:
-			"Refactor-safe rename of a field. Unlike field_modify, this PROPAGATES the new name to every reference: the paired Reference column's link.thisKey + references block, same-entity formula columns ([oldName] → [newName]), data view columns + order arrays, seed-data records for the entity, and OTHER entities' FKs that target this field. Returns the full set of changed files; review then write, and run dforge_module_validate after to confirm nothing dangles.",
+			"Refactor-safe rename of a field. Unlike field_modify, this PROPAGATES the new name to every reference: the paired Reference column's link.thisKey + references block, same-entity formula columns ([oldName] → [newName]), data view columns + order arrays, seed-data records for the entity, and OTHER entities' FKs that target this field. Returns the full set of changed files plus the remaining `references` it could not rewrite; review then write, and run dforge_module_validate after to confirm nothing dangles.",
 		inputSchema: { ...entityFieldRenameSchema, ...applyInput },
 	},
 	envelope(entityFieldRename),
@@ -352,7 +318,7 @@ server.registerTool(
 	{
 		title: "Add a roll-up total",
 		description:
-			"PHASE 1: Add a roll-up total over child rows (SUM/COUNT/AVG/MIN/MAX) in ONE call. Emits a GENERATED ('G') column — never a Formula ('F'), whose set-aggregates silently render empty — and creates the parent's Set column if it doesn't exist yet. Refuses to aggregate a virtual F/R/S child column, the documented `column old.<field> does not exist` install failure.",
+			"PHASE 1: Add a roll-up total over child rows (SUM/COUNT/AVG/MIN/MAX) in ONE call. Emits a GENERATED ('G') column — never a Formula ('F'), whose set-aggregates silently render empty — and creates the parent's Set column if it doesn't exist yet. Refuses to aggregate a virtual F/R/S child column, the documented `column old.<field> does not exist` install failure. COUNT over the child's primary key is allowed.",
 		inputSchema: { ...entityRollupAddSchema, ...applyInput },
 	},
 	envelope(entityRollupAdd),
@@ -363,7 +329,7 @@ server.registerTool(
 	{
 		title: "Add a status column",
 		description:
-			"PHASE 1: Add a status/stage column in ONE call. Emits a dropdown with params.options ({value,label} objects, never bare strings at the field root) and the initial value as a `formula` — entity fields have NO defaultValue key, which the entity schema rejects outright. An entity with a 3+ value status is also the objective trigger for a kanban view in Phase 3.",
+			"PHASE 1: Add a status/stage column in ONE call. Emits a dropdown with params.options ({value,label} objects, never bare strings at the field root) and the initial value as a `formula` — entity fields have NO defaultValue key, which the entity schema rejects outright. Pass `editable: false` for a status changed only by actions. An entity with a 3+ value status is also the objective trigger for a kanban view in Phase 3.",
 		inputSchema: { ...entityStatusAddSchema, ...applyInput },
 	},
 	envelope(entityStatusAdd),
@@ -376,10 +342,21 @@ server.registerTool(
 	{
 		title: "Add a DSL action",
 		description:
-			"PHASE 2: Add a DSL action targeting an entity. Writes logic/actions/<code>.dsl plus an entry in ui/actions.json, and runs the DSL static checker first — errors reject the call. **Load dforge://docs/dsl before authoring.**",
+			"PHASE 2: Add a DSL action targeting an entity. Writes logic/actions/<code>.dsl plus an entry in ui/actions.json, and runs the DSL static checker first — errors reject the call. An existing code is refused: use dforge_action_modify. **Load dforge://docs/dsl before authoring.** Each call reads ui/actions.json from disk: PREVIEWS issued in parallel each return an actions.json WITHOUT the other's action (the file map is a snapshot), so call action_add sequentially, and with apply:true one call at a time (never in parallel).",
 		inputSchema: { ...actionAddSchema, ...applyInput },
 	},
 	envelope(actionAdd),
+);
+
+server.registerTool(
+	"dforge_action_modify",
+	{
+		title: "Modify an existing action",
+		description:
+			"PHASE 2 / backtrack: Update an EXISTING action instead of hand-editing logic/actions/<script>.dsl or ui/actions.json. Pass only what changes: label, description, entityCode, executionMode, icon, isAsync, isTransacted, orderNum, and/or dslBody (FULL replacement source, not a patch). The DSL gets the same static check as dforge_action_add (errors reject the call; warnings ride along) — also when only executionMode/entityCode change, in which case the .dsl on disk is re-checked. Each call reads ui/actions.json from disk and the returned map is a snapshot: do not run action_add / action_modify previews in parallel, and with apply:true call them one at a time.",
+		inputSchema: { ...actionModifySchema, ...applyInput },
+	},
+	envelope(actionModify),
 );
 
 server.registerTool(
@@ -427,6 +404,28 @@ server.registerTool(
 	envelope(webhookAdd),
 );
 
+server.registerTool(
+	"dforge_entity_configure",
+	{
+		title: "Configure entity-level keys",
+		description:
+			"PHASE 1 / backtrack: Set entity-level keys that no other tool owns, instead of editing entities/<code>.json by hand: `toStringTemplate` (writes `toString`; every {placeholder} must be an existing, non-set column, trait columns included; refused on extension entities), `numberSequence` ({column, defaultPrefix, prefixSettingCd?, pattern?, resetPeriod?} — defaultPrefix is REQUIRED by entity.schema.json although the reference omits it; pattern placeholders are checked; null removes it), `constraints` ({add: {name: {type:'unique'|'check', fields, expression (check), message}}, remove: [names]} — unique needs existing physical columns, check needs an expression; remove+add replaces) and `description`. Validated against the vendored entity schema; no invented keys.",
+		inputSchema: { ...entityConfigureSchema, ...applyInput },
+	},
+	envelope(entityConfigure),
+);
+
+server.registerTool(
+	"dforge_manifest_set",
+	{
+		title: "Set manifest metadata",
+		description:
+			"Set manifest.json metadata instead of hand-editing it: displayName, description, shortDescription (<=1000 chars), version, dbSchemaVersion, category, tags, icon, license, author, auditHistory, comments, supportedLocales (non-English only — 'en'/'en-*' are refused; warns when translations/<locale>.json is missing), features (only 'report-security'; warns when a report has no role granting report:<code> 'E'), security ({roles, folders} paths) and `unset` to drop optional keys. Identity and content keys (code, moduleId, packageFormat, entities, dependencies) are NOT settable — use the dedicated tools. Unknown keys are rejected by the input schema.",
+		inputSchema: { ...manifestSetSchema, ...applyInput },
+	},
+	envelope(manifestSet),
+);
+
 // ── Views, menus + reports (PHASE 3) ────────────────────────────────
 
 server.registerTool(
@@ -434,7 +433,7 @@ server.registerTool(
 	{
 		title: "Add a data view",
 		description:
-			"PHASE 3: Add a data view to ui/data_views.json. viewType-specific viewConfig is supplied verbatim — pull dforge://schema/data-views first to know the shape. Every entity needs a default grid before any specialized view.",
+			"PHASE 3: Add a data view to ui/data_views.json. viewType-specific viewConfig is supplied verbatim — pull dforge://schema/data-views first to know the shape. Every entity needs a default grid before any specialized view. An empty dataSources[].entityCode is rejected; a grid source with `columns: []` is filled with the entity's visible scalar columns (or a warning is returned when they can't be derived).",
 		inputSchema: { ...viewAddSchema, ...applyInput },
 	},
 	envelope(viewAdd),
@@ -455,7 +454,7 @@ server.registerTool(
 	{
 		title: "Add a menu item",
 		description:
-			"PHASE 3: Add a leaf or section to ui/menus.json. Pass dataViewCode for a leaf (validated against ui/data_views.json, and emitted with itemType 'V'); omit it for a section node (which correctly omits itemType). Bootstrap icon names are normalized to the bare form menus require — a leading 'bi-' is stripped, unlike action icons which keep it.",
+			"PHASE 3: Add a leaf or section to ui/menus.json. Pass dataViewCode for a view leaf (validated against ui/data_views.json, itemType 'V') OR reportCode for a report leaf (validated against ui/reports.json, itemType 'R'); omit both for a section node (which correctly omits itemType). `folders` scopes the ROOT menu to folder codes (menu-level `folders`, validated against ui/folders.json; omit to link every folder). Bootstrap icon names are normalized to the bare form menus require — a leading 'bi-' is stripped, unlike action icons which keep it.",
 		inputSchema: { ...menuAddSchema, ...applyInput },
 	},
 	envelope(menuAdd),
@@ -479,7 +478,7 @@ server.registerTool(
 	{
 		title: "Add a module setting",
 		description:
-			"PHASE 4 (polish): Add a configurable module-level setting to settings.json. Settings are folder-scoped at runtime — values inherit through the folder tree.",
+			"PHASE 4 (polish): Add a configurable module-level setting to settings.json. Settings are folder-scoped at runtime — values inherit through the folder tree. The setting is checked against the vendored settings.schema.json: baseDatatypeCd must be one of string, number, bool, date, dateTime, time, json (cuid is rejected; typing a user-picker setting is an open question, use string).",
 		inputSchema: { ...settingAddSchema, ...applyInput },
 	},
 	envelope(settingAdd),
@@ -490,7 +489,7 @@ server.registerTool(
 	{
 		title: "Sync translation files",
 		description:
-			"PHASE 4: Generate or refresh translations/<locale>.json from what the module actually contains — entity + field labels (including trait-provided columns), views, menus, roles, actions, folders, settings. Existing translated text is NEVER overwritten; missing keys are seeded with the English source so the file is immediately installable. Defaults to every manifest.supportedLocales entry — exactly the set install requires. Writes no English file: install never reads translations/en*.json, English text lives in the definitions (entity/field/role/setting `description`, menu/action/report `label`). Run it after any entity/view/role change: role labels are completeness-enforced and a missing one FAILS install.",
+			"PHASE 4: Generate or refresh translations/<locale>.json from what the module actually contains — entity + field labels (including trait-provided columns), views, menus, roles, actions (including action param labels), reports (label, param labels, dataset captions), registers, constraint messages, dropdown option labels, folders, settings. Menu items are FLAT `menus.<menu>.items.<code>.label` keys; reports never carry `description` in translations. `prune` removes only orphaned keys. Seeds `messages` for the info/warn/error/exit texts of action scripts AND of logic/functions/*.dsl libraries. Lists action messages that join text and values (they cannot be translated as one string). Existing translated text is NEVER overwritten; missing keys are seeded with the English source so the file is immediately installable. Defaults to every manifest.supportedLocales entry — exactly the set install requires. Writes no English file: install never reads translations/en*.json, English text lives in the definitions (entity/field/role/setting `description`, menu/action/report `label`). Run it after any entity/view/role change: role labels are completeness-enforced and a missing one FAILS install.",
 		inputSchema: { ...translationSyncSchema, ...applyInput },
 	},
 	envelope(translationSync),
@@ -514,10 +513,10 @@ server.registerTool(
 	{
 		title: "Add a role",
 		description:
-			"PHASE 5: Add a role to security/roles.json. Roles are namespaced (e.g. 'crm.admin'). Rights are S/I/U/D/C for entities, E for actions/reports/folders (which use a COLON prefix). Derive roles from the intake's user types — never a generic admin/contributor/viewer taxonomy the user didn't ask for.",
-		inputSchema: { ...roleAddSchema, ...applyInput },
+			"PHASE 5: Add a role to security/roles.json. Roles are namespaced (e.g. 'crm.admin'). Rights are S/I/U/D/C for entities, E for actions/reports/SPs (which use a COLON prefix). 'folder:<code>' keys are REFUSED: role-to-folder access is NOT expressible through role rights (the CLI rejects that prefix and no replacement is documented), so never write it — folder access is configured by the tenant administrator unless the platform owners confirm the folder `roles` map. Derive roles from the intake's user types — never a generic admin/contributor/viewer taxonomy the user didn't ask for.",
+		inputSchema: { ...roleAddCheckedSchema, ...applyInput },
 	},
-	envelope(roleAdd),
+	envelope(roleAddChecked),
 );
 
 server.registerTool(
@@ -525,7 +524,7 @@ server.registerTool(
 	{
 		title: "Grant or revoke one right",
 		description:
-			"PHASE 5 / backtrack: Grant or revoke a single right on a single object for a role. Cheaper than role_add when iterating on the rights matrix, and the correct tool for amending the scaffolded admin role (role_add fails on an existing code).",
+			"PHASE 5 / backtrack: Grant or revoke a single right on a single object for a role. Cheaper than role_add when iterating on the rights matrix, and the correct tool for amending the scaffolded admin role (role_add fails on an existing code). A 'folder:<code>' object is REFUSED when granting: role-to-folder access is NOT expressible through role rights (the CLI rejects the prefix); folder access is configured by the tenant administrator. Revoking '' an existing folder: key is still allowed, for cleanup.",
 		inputSchema: { ...roleRightSetSchema, ...applyInput },
 	},
 	envelope(roleRightSet),
@@ -542,6 +541,17 @@ server.registerTool(
 	envelope(folderAdd),
 );
 
+server.registerTool(
+	"dforge_folder_modify",
+	{
+		title: "Modify a security folder",
+		description:
+			"PHASE 5 / backtrack: Edit an EXISTING folder in ui/folders.json (dforge_folder_add only creates). Address it with `parentPath` + `code` (omit `code` for the root). `addEntities` binds entities to the folder ({entity: {viewName?, quickAdd?, rowFilter?}}, merged into an existing binding) — this is how you satisfy the menu/folder coverage rule; `removeEntities` drops bindings; set label/description/icon/color/inheritSecurity, `unset` removes optional keys. The result is checked against folders.schema.json (no `roles` key exists there — folder access is not expressible). Unknown folders/entities, undeclared viewName and no-op calls are refused.",
+		inputSchema: { ...folderModifySchema, ...applyInput },
+	},
+	envelope(folderModify),
+);
+
 // ── Cross-cutting ───────────────────────────────────────────────────
 
 server.registerTool(
@@ -549,7 +559,7 @@ server.registerTool(
 	{
 		title: "Add a module dependency",
 		description:
-			"Add a dependency on another dForge module. Writes BOTH halves the platform requires: the manifest.json entry and the deps/<module>.json contract declaring what this module consumes — a manifest dependency without a contract fails validate, pack and install. Name the consumed entities in `entities`; do not declare a dependency you cannot name one for, and do not depend on the system modules (admin, metadata, workspace, sys-billing) except to gate a minimum platform version — a gate for a feature that introduced no entity passes `entities: []`.",
+			"Add a dependency on another dForge module. Writes BOTH halves the platform requires: the manifest.json entry and the deps/<module>.json contract declaring what this module consumes — a manifest dependency without a contract fails validate, pack and install. Name the consumed entities in `entities`; do not declare a dependency you cannot name one for, and do not depend on the system modules (admin, metadata, workspace, sys-billing) except to gate a minimum platform version — a gate for a feature that introduced no entity passes `entities: []`. Idempotent: a repeat call is a no-op and a missing contract file is repaired.",
 		inputSchema: { ...dependencyAddSchema, ...applyInput },
 	},
 	envelope(dependencyAdd),
@@ -571,7 +581,7 @@ server.registerTool(
 	{
 		title: "Import entities from DBML",
 		description:
-			"Generate entities from DBML schema text (a front-end to dforge_module_import). Parses Table blocks, typed columns with [settings], inline [ref: > t.c] and top-level Ref: lines; drops the source PK (the identity trait provides {entity}_id), infers field types via the metadata registry, and builds the FK+Reference pair per relationship. Pass `module` when the dir has no manifest (greenfield). Review inferred types + run dforge_module_validate after.",
+			"Generate entities from DBML schema text (a front-end to dforge_module_import). Parses Table blocks, typed columns with [settings], inline [ref: > t.c] and top-level Ref: lines; drops the source PK (the identity trait provides {entity}_id), infers field types via the metadata registry, and builds the FK+Reference pair per relationship. Carries Enum (dropdown), unique, default (formula), varchar length, numeric(p,s), int/bigint, simple CHECK and notes; the otherKey of a relationship is `<entity>_id`. Returns a loss report of what could not be carried. ADDITIVE like module_import; `onExisting: error|skip|replace`. Pass `module` when the dir has no manifest (greenfield). Review inferred types + run dforge_module_validate after.",
 		inputSchema: { ...dbmlImportSchema, ...applyInput },
 	},
 	envelope(dbmlImport),

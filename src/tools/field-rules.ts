@@ -64,6 +64,21 @@ const DB_DATATYPE_ALIASES: Record<string, string | string[]> = {
 	uuid: "cuid",
 };
 
+/** baseDatatypeCd values the vendored entity.schema.json accepts. */
+export const BASE_DATATYPE_CDS = [
+	"binary", "bool", "cuid", "culture", "date", "guid", "link", "number", "project", "string", "time", "timestamp", "xml", "json",
+] as const;
+
+/** fieldTypeCd-ish / SQL-ish codes people type into baseDatatypeCd → the real one. */
+const BASE_DATATYPE_ALIASES: Record<string, string> = {
+	text: "string", varchar: "string", textarea: "string", email: "string", phone: "string", url: "string",
+	datetime: "timestamp", timestamptz: "timestamp",
+	boolean: "bool", checkbox: "bool",
+	integer: "number", int: "number", bigint: "number", numeric: "number", decimal: "number", float: "number",
+	currency: "number", percent: "number", money: "number",
+	lookup: "cuid", uuid: "guid",
+};
+
 /** Quote one suggestion, or a list of them, for an error message. */
 function formatSuggestion(fix: string | string[]): string {
 	return Array.isArray(fix) ? fix.map((f) => `'${f}'`).join(" / ") : `'${fix}'`;
@@ -146,6 +161,16 @@ export function checkFieldSpec(where: string, field: unknown): FieldIssue[] {
 			`columnType '${columnType}' is invalid. Use 'R' (reference), 'S' (set/child list), ` +
 				"'F' (formula) or 'Q' (a list of rows the record reads) — or omit it for a plain data column. " +
 				"(A/L/G exist for register columns.)",
+		);
+	}
+
+	// baseDatatypeCd is a closed enum in the entity schema; a fieldTypeCd typed in by hand
+	// ('text', 'datetime') fails schema validation in the editor and at install.
+	if (typeof v.baseDatatypeCd === "string" && !(BASE_DATATYPE_CDS as readonly string[]).includes(v.baseDatatypeCd)) {
+		const alias = BASE_DATATYPE_ALIASES[v.baseDatatypeCd.toLowerCase()];
+		err(
+			`baseDatatypeCd '${v.baseDatatypeCd}' is not allowed.${alias ? ` Did you mean '${alias}'?` : ""} ` +
+				`Allowed: ${BASE_DATATYPE_CDS.join(", ")}. (baseDatatypeCd is the value type, fieldTypeCd the UI control.)`,
 		);
 	}
 

@@ -13,10 +13,11 @@ import { seedAdd } from "../src/tools/seed";
 import { translationSync } from "../src/tools/translations";
 import { moduleValidate } from "../src/tools/module-validate";
 import { applyToDisk } from "../src/tools/apply";
+import { guardSchemas } from "../src/tools/schema-guard";
 import type { ToolResult } from "../src/tools/_helpers";
 
 let dir: string;
-const apply = (r: ToolResult) => applyToDisk(dir, r);
+const apply = (r: ToolResult) => applyToDisk(dir, guardSchemas(dir, r));
 const readJson = (rel: string) => JSON.parse(readFileSync(join(dir, rel), "utf8"));
 const validate = () => JSON.parse(moduleValidate({ moduleDir: dir }).files["_validate.json"]);
 

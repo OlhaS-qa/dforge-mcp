@@ -24,6 +24,8 @@ import {
 	rel,
 	makeResult,
 	withTodayStamp,
+	readLocalTraits,
+	expandedEntity,
 	type ModulePaths,
 	type Manifest,
 	type ToolResult,
@@ -349,12 +351,22 @@ export function entityRollupAdd(
 
 	// ── Validate the child column is PHYSICAL ──
 	const { entity: child } = loadEntity(args.moduleDir, args.childEntity);
-	const childFields = fieldsOf(child);
-	const childCol = childFields[args.childField];
+	// Trait columns (the identity PK '{entity}_id', audit columns…) are not listed in
+	// `fields` but are real physical columns — COUNT over the PK is the usual child count.
+	const childExpanded = expandedEntity(child, args.childEntity, readLocalTraits(paths.root).traits);
+	const childCol = childExpanded.fieldDefs[args.childField];
 	if (!childCol) {
 		throw new Error(
 			`'${args.childField}' is not a column on child entity '${args.childEntity}'. ` +
-				`Its columns: ${Object.keys(childFields).join(", ") || "(none)"}.`,
+				`Its columns: ${[...childExpanded.columns].join(", ") || "(none)"}. ` +
+				"Note: a conditional total (only rows matching a condition) is not supported by the platform — " +
+				"maintain a helper numeric column on the child by actions and aggregate that column instead.",
+		);
+	}
+	const isChildPk = childCol.isPk === true || args.childField === pkOf(args.childEntity);
+	if (isChildPk && args.agg !== "COUNT") {
+		throw new Error(
+			`'${args.childField}' is the primary key of '${args.childEntity}' — only COUNT makes sense over it (agg: "COUNT").`,
 		);
 	}
 	const childType = typeof childCol.columnType === "string" ? childCol.columnType : "D";
@@ -385,7 +397,7 @@ export function entityRollupAdd(
 		}
 	} else {
 		const childFk = args.childFkField ?? `${args.entity}_id`;
-		if (!childFields[childFk]) {
+		if (!childExpanded.columns.has(childFk)) {
 			throw new Error(
 				`Can't create the set column '${setField}': the child '${args.childEntity}' has no FK column ` +
 					`'${childFk}' pointing back at '${args.entity}'. Add the relation first with ` +
@@ -473,7 +485,14 @@ export const entityStatusAddSchema = {
 			"The value new records start at — emitted as a `formula` (entity fields have NO defaultValue key). Must be one of options. Default: the first option.",
 		),
 	label: z.string().optional().describe("Display label. Default: derived from name."),
-	required: z.boolean().default(true).describe("true → flags 'VEM'; false → 'VE'."),
+	required: z.boolean().default(true).describe("true → flags 'VEM'; false → 'VE' (ignored when editable is false)."),
+	editable: z
+		.boolean()
+		.optional()
+		.describe(
+			"true (default) → the user may edit the status by hand (flags VEM/VE). false → read-only flags 'V': the status is " +
+				"driven by actions/DSL only (the usual workflow case) and the initial value formula still applies to new records.",
+		),
 	orderNum: z.number().int().optional(),
 };
 
@@ -518,7 +537,7 @@ export function entityStatusAdd(
 	fields[args.name] = {
 		dbDatatype: "varchar",
 		fieldTypeCd: "dropdown",
-		flags: args.required ? "VEM" : "VE",
+		flags: args.editable === false ? "V" : args.required ? "VEM" : "VE",
 		maxLen,
 		orderNum: args.orderNum ?? nextOrderNum(fields),
 		description: label,
@@ -536,6 +555,9 @@ export function entityStatusAdd(
 			[rel(paths.root, entityPath)]: jsonText(entity),
 			"manifest.json": jsonText(withTodayStamp(manifest)),
 		},
-		`Status values are now fixed in the entity. Any action's canExecute: guard must reference one of: ${values.join(", ")}.`,
+		`Status values are now fixed in the entity. Any action's canExecute: guard must reference one of: ${values.join(", ")}.` +
+				(args.editable === false
+					? " The column is read-only (flags 'V'): only actions/DSL can change it."
+					: " The column is user-editable (flags include 'E'); pass editable:false if only actions should move it."),
 	);
 }

@@ -58,6 +58,12 @@ export const seedAddSchema = {
 };
 
 export function seedAdd(args: z.infer<z.ZodObject<typeof seedAddSchema>>): ToolResult {
+	if (typeof args.entity !== "string" || args.entity.trim() === "") {
+		throw new Error(
+			"`entity` must not be empty — a seed file with an empty entityCode installs nothing and fails the install. " +
+				"Name the entity these records belong to.",
+		);
+	}
 	const { paths, manifest } = loadManifest(args.moduleDir);
 
 	const entityPath = path.join(paths.entitiesDir, `${args.entity}.json`);

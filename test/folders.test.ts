@@ -13,10 +13,11 @@ import { translationSync } from "../src/tools/translations";
 import { moduleValidate } from "../src/tools/module-validate";
 import { walkFolders, duplicateFolderCodes } from "../src/tools/_helpers";
 import { applyToDisk } from "../src/tools/apply";
+import { guardSchemas } from "../src/tools/schema-guard";
 import type { ToolResult } from "../src/tools/_helpers";
 
 let dir: string;
-const apply = (r: ToolResult) => applyToDisk(dir, r);
+const apply = (r: ToolResult) => applyToDisk(dir, guardSchemas(dir, r));
 
 function makeModule(folders?: Record<string, unknown>): void {
 	mkdirSync(join(dir, "entities"), { recursive: true });

@@ -14,6 +14,7 @@ import {
 } from "../src/tools/entity-compose";
 import { moduleValidate } from "../src/tools/module-validate";
 import { applyToDisk } from "../src/tools/apply";
+import { guardSchemas } from "../src/tools/schema-guard";
 import type { ToolResult } from "../src/tools/_helpers";
 
 let dir: string;
@@ -53,7 +54,7 @@ function makeModule(lineFields: Record<string, unknown> = {}): void {
 	);
 }
 
-const apply = (r: ToolResult) => applyToDisk(dir, r);
+const apply = (r: ToolResult) => applyToDisk(dir, guardSchemas(dir, r));
 const entity = (name: string) => JSON.parse(readFileSync(join(dir, "entities", `${name}.json`), "utf8"));
 
 beforeEach(() => {

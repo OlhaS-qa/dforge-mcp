@@ -27,10 +27,7 @@ export const menuAddSchema = {
 		.string()
 		.regex(/^[a-z][a-z0-9_]*$/)
 		.describe("Root menu key in ui/menus.json, e.g. 'crm_menu'. Created if it doesn't exist yet."),
-	menuLabel: z
-		.string()
-		.optional()
-		.describe("Label for the root menu — only used when the root is being created."),
+	menuLabel: z.string().optional().describe("Label for the root menu — only used when the root is being created."),
 	parentPath: z
 		.string()
 		.default("")
@@ -47,26 +44,32 @@ export const menuAddSchema = {
 		.regex(/^[a-z][a-z0-9_]*$/)
 		.optional()
 		.describe(
-			"For a LEAF item: the view code from ui/data_views.json this item opens. Omit to create a SECTION node (a container for children). Note the key is dataViewCode, never viewCode.",
+			"For a LEAF item: the view code from ui/data_views.json this item opens. Omit to create a SECTION " +
+				"node (a container for children). Note the key is dataViewCode, never viewCode.",
 		),
 	reportCode: z
 		.string()
 		.regex(DOTTED_CODE_RE)
 		.optional()
 		.describe(
-			"For a LEAF item that opens a REPORT: the report code from ui/reports.json (emitted as itemType 'R' + reportCode). Mutually exclusive with dataViewCode. Omit both to create a SECTION node.",
+			"For a LEAF item that opens a REPORT: the report code from ui/reports.json (emitted as itemType 'R' " +
+				"+ reportCode). Mutually exclusive with dataViewCode. Omit both to create a SECTION node.",
 		),
 	folders: z
 		.array(z.string())
 		.optional()
 		.describe(
-			"Restricts the ROOT menu to these folder codes (the schema's menu-level `folders`; flat codes: module code for the root folder, '<module>_<nested_segments>' for children). Applied to the root menu named by `menu` (set on creation, or replaced if the root exists). Omit to link the menu to every folder. Each code must resolve against ui/folders.json — an unknown code fails the install.",
+			"Restricts the ROOT menu to these folder codes (the schema's menu-level `folders`; flat codes: " +
+				"module code for the root folder, '<module>_<nested_segments>' for children). Applied to the root " +
+				"menu named by `menu` (set on creation, or replaced if the root exists). Omit to link the menu to " +
+				"every folder. Each code must resolve against ui/folders.json — an unknown code fails the install.",
 		),
 	icon: z
 		.string()
 		.optional()
 		.describe(
-			"Bootstrap icon name. A leading 'bi-' is STRIPPED — menu icons are bare names ('list-ul'), unlike action icons which keep the prefix.",
+			"Bootstrap icon name. A leading 'bi-' is STRIPPED — menu icons are bare names ('list-ul'), unlike " +
+				"action icons which keep the prefix.",
 		),
 	orderNum: z
 		.number()
@@ -189,9 +192,7 @@ export function menuAdd(args: z.infer<z.ZodObject<typeof menuAddSchema>>): ToolR
 	const key = childKey(cursor, isRoot);
 	const children = (cursor[key] as Record<string, Node> | undefined) ?? {};
 	if (children[args.code]) {
-		throw new Error(
-			`Menu item '${args.code}' already exists under '${walked.join("/") || args.menu}'.`,
-		);
+		throw new Error(`Menu item '${args.code}' already exists under '${walked.join("/") || args.menu}'.`);
 	}
 
 	const node: Node = { label: args.label, orderNum: args.orderNum ?? nextOrder(children) };

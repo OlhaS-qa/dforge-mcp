@@ -238,9 +238,7 @@ export function loadManifest(moduleDir: string): {
 } {
 	const paths = modulePaths(moduleDir);
 	if (!fs.existsSync(paths.manifest)) {
-		throw new Error(
-			`No manifest.json at ${paths.manifest} — is this a dForge module directory?`,
-		);
+		throw new Error(`No manifest.json at ${paths.manifest} — is this a dForge module directory?`);
 	}
 	const manifest = readJson<Manifest>(paths.manifest);
 	if (!manifest.code) {
@@ -729,14 +727,8 @@ export const traitsInput = z
  * first. (`traitsInput` covers the authoring tools; this covers entities that
  * arrived via import or a hand edit.)
  */
-export function unknownTraits(
-	traitCodes: readonly string[],
-	localTraits?: TraitsFile,
-): string[] {
-	return traitCodes.filter(
-		(cd) => !TRAIT_CODE_SET.has(cd) && localTraits?.[cd] === undefined,
-	);
-}
+export const unknownTraits = (traitCodes: readonly string[], localTraits?: TraitsFile): string[] =>
+	traitCodes.filter((cd) => !TRAIT_CODE_SET.has(cd) && localTraits?.[cd] === undefined);
 
 /** The outcome of reading a module's own `traits.json`. */
 export interface LocalTraits {
@@ -858,10 +850,7 @@ export function expandedEntity(
 } {
 	const fields = (entity.fields as Record<string, Record<string, unknown>> | undefined) ?? {};
 	const traitCodes = (entity.traits as string[] | undefined) ?? [];
-	const traitFields = expandTraits(traitCodes, entityName, localTraits) as Record<
-		string,
-		Record<string, unknown>
-	>;
+	const traitFields = expandTraits(traitCodes, entityName, localTraits) as Record<string, Record<string, unknown>>;
 	return {
 		columns: new Set([...Object.keys(fields), ...Object.keys(traitFields)]),
 		fieldDefs: { ...traitFields, ...fields },
@@ -945,11 +934,7 @@ export function entityRecordContext(
 }
 
 /** Throw if any trait code is unknown, naming them and the valid set. */
-export function assertKnownTraits(
-	traitCodes: readonly string[],
-	entityName: string,
-	localTraits?: TraitsFile,
-): void {
+export function assertKnownTraits(traitCodes: readonly string[], entityName: string, localTraits?: TraitsFile): void {
 	const bad = unknownTraits(traitCodes, localTraits);
 	if (bad.length === 0) return;
 	const local = Object.keys(localTraits ?? {});
@@ -962,10 +947,7 @@ export function assertKnownTraits(
 }
 
 /** Override a built entity's `traits` array with a validated code list. */
-export function withTraits<T extends object>(
-	entity: T,
-	traitCodes: readonly string[],
-): T & { traits: string[] } {
+export function withTraits<T extends object>(entity: T, traitCodes: readonly string[]): T & { traits: string[] } {
 	return { ...entity, traits: [...traitCodes] };
 }
 

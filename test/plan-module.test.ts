@@ -204,7 +204,10 @@ describe("validate structural checks", () => {
 		expect(row().detail).toMatch(/not a table/);
 
 		// product covered via a dep.entity key; category missing; second row cites no statement
-		write("docs/DESIGN.md", design(T(["| mod_x.buyer | mod_x.product | SIU | S-1 |", "| mod_x.buyer | other | S | |"])));
+		write(
+			"docs/DESIGN.md",
+			design(T(["| mod_x.buyer | mod_x.product | SIU | S-1 |", "| mod_x.buyer | other | S | |"])),
+		);
 		expect(row().status).toBe("warn");
 		expect(row().detail).toMatch(/no matrix row for entity: category/);
 		expect(row().detail).not.toMatch(/no matrix row for entity:.*product/);
@@ -213,14 +216,22 @@ describe("validate structural checks", () => {
 		// action listed in ## Actions without an action:<code> row
 		write(
 			"docs/DESIGN.md",
-			design(T(["| mod_x.buyer | category | S | S-1 |", "| mod_x.buyer | product | S | S-1 |"]), "\n## Actions\n| approve | x |\n| ship | y |\n"),
+			design(
+				T(["| mod_x.buyer | category | S | S-1 |", "| mod_x.buyer | product | S | S-1 |"]),
+				"\n## Actions\n| approve | x |\n| ship | y |\n",
+			),
 		);
 		expect(row().detail).toMatch(/Actions section with no 'action:<code>' row: approve, ship/);
 
 		write(
 			"docs/DESIGN.md",
 			design(
-				T(["| mod_x.buyer | category | S | S-1 |", "| mod_x.buyer | product | S | S-1 |", "| mod_x.buyer | action:approve | E | S-2 |", "| mod_x.buyer | action:ship | - | S-2 |"]),
+				T([
+					"| mod_x.buyer | category | S | S-1 |",
+					"| mod_x.buyer | product | S | S-1 |",
+					"| mod_x.buyer | action:approve | E | S-2 |",
+					"| mod_x.buyer | action:ship | - | S-2 |",
+				]),
 				"\n## Actions\n| approve | x |\n| ship | y |\n",
 			),
 		);

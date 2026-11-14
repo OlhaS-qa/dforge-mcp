@@ -81,14 +81,30 @@ describe("envelope: `apply` never leaks into a tool's own args", () => {
 	// through the same zod parse the MCP SDK does (defaults included).
 	const calls: Array<[string, (a: any) => any, Record<string, z.ZodTypeAny>, (d: string) => any]> = [
 		["manifest_set", manifestSet, manifestSetSchema, (moduleDir) => ({ moduleDir, description: "x" })],
-		["entity_configure", entityConfigure, entityConfigureSchema, (moduleDir) => ({ moduleDir, entity: "order", description: "x" })],
+		[
+			"entity_configure",
+			entityConfigure,
+			entityConfigureSchema,
+			(moduleDir) => ({ moduleDir, entity: "order", description: "x" }),
+		],
 		[
 			"action_add",
 			actionAdd,
 			actionAddSchema,
-			(moduleDir) => ({ moduleDir, code: "ping", entityCode: "order", label: "Ping", dslBody: "execute:\n\tlet x = 1\n" }),
+			(moduleDir) => ({
+				moduleDir,
+				code: "ping",
+				entityCode: "order",
+				label: "Ping",
+				dslBody: "execute:\n\tlet x = 1\n",
+			}),
 		],
-		["menu_add", menuAdd, menuAddSchema, (moduleDir) => ({ moduleDir, menu: "shop_menu", code: "orders", label: "Orders", dataViewCode: "order" })],
+		[
+			"menu_add",
+			menuAdd,
+			menuAddSchema,
+			(moduleDir) => ({ moduleDir, menu: "shop_menu", code: "orders", label: "Orders", dataViewCode: "order" }),
+		],
 		["folder_modify", folderModify, folderModifySchema, (moduleDir) => ({ moduleDir, code: "east", label: "East 2" })],
 	];
 	for (const [name, fn, schema, mk] of calls) {
@@ -106,7 +122,9 @@ describe("envelope: `apply` never leaks into a tool's own args", () => {
 	}
 	it("manifest_set apply:true actually writes", async () => {
 		const dir = make();
-		await envelope(manifestSet)(z.object({ ...manifestSetSchema, ...applyInput }).parse({ moduleDir: dir, description: "hello", apply: true }));
+		await envelope(manifestSet)(
+			z.object({ ...manifestSetSchema, ...applyInput }).parse({ moduleDir: dir, description: "hello", apply: true }),
+		);
 		expect(read(dir, "manifest.json").description).toBe("hello");
 	});
 });
@@ -122,7 +140,11 @@ describe("dforge_folder_modify", () => {
 			label: "East region",
 		});
 		const f = JSON.parse(r.files["ui/folders.json"]);
-		expect(f.children.east.entities.item).toEqual({ viewName: "default", quickAdd: true, rowFilter: { c: "name", o: "=", v: "x" } });
+		expect(f.children.east.entities.item).toEqual({
+			viewName: "default",
+			quickAdd: true,
+			rowFilter: { c: "name", o: "=", v: "x" },
+		});
 		expect(f.children.east.entities.order).toBeTruthy();
 		expect(f.children.east.label).toBe("East region");
 		expect(JSON.stringify(f)).not.toContain('"roles"');
@@ -130,11 +152,21 @@ describe("dforge_folder_modify", () => {
 	it("merges, removes, modifies the root", () => {
 		const dir = make();
 		const f = JSON.parse(
-			folderModify({ moduleDir: dir, parentPath: "", addEntities: { order: { quickAdd: false } }, icon: "bi-shop", removeEntities: [] }).files["ui/folders.json"],
+			folderModify({
+				moduleDir: dir,
+				parentPath: "",
+				addEntities: { order: { quickAdd: false } },
+				icon: "bi-shop",
+				removeEntities: [],
+			}).files["ui/folders.json"],
 		);
 		expect(f.entities.order).toEqual({ viewName: "default", quickAdd: false });
 		expect(f.icon).toBe("bi-shop");
-		const g = JSON.parse(folderModify({ moduleDir: dir, parentPath: "", code: "east", removeEntities: ["order"] }).files["ui/folders.json"]);
+		const g = JSON.parse(
+			folderModify({ moduleDir: dir, parentPath: "", code: "east", removeEntities: ["order"] }).files[
+				"ui/folders.json"
+			],
+		);
 		expect(g.children.east.entities).toBeUndefined();
 	});
 	it("refuses silently-wrong input", () => {
@@ -143,7 +175,9 @@ describe("dforge_folder_modify", () => {
 		expect(() => folderModify({ ...base, code: "west", label: "x" })).toThrow(/not found/);
 		expect(() => folderModify({ ...base, code: "east", addEntities: { ghost: {} } })).toThrow(/not in manifest/);
 		expect(() => folderModify({ ...base, code: "east", removeEntities: ["item"] })).toThrow(/no binding/);
-		expect(() => folderModify({ ...base, code: "east", addEntities: { order: { viewName: "nope" } } })).toThrow(/not declared/);
+		expect(() => folderModify({ ...base, code: "east", addEntities: { order: { viewName: "nope" } } })).toThrow(
+			/not declared/,
+		);
 		expect(() => folderModify({ ...base, code: "east" })).toThrow(/Nothing to change/);
 		expect(() => folderModify({ ...base, parentPath: "east", label: "x" })).toThrow(/without 'code'/);
 		expect(() => folderModify({ ...base, code: "east", addEntities: { order: { viewName: "slim" } } })).not.toThrow();
@@ -179,14 +213,25 @@ describe("change iteration statements", () => {
 describe("adminRights", () => {
 	it("entity_add default stays SIUDC, override honoured", () => {
 		const dir = make();
-		const def = addEntityFiles({ moduleDir: dir, entity: z.object(addEntitySchema).shape.entity.parse({ name: "box", label: "Box" }) });
+		const def = addEntityFiles({
+			moduleDir: dir,
+			entity: z.object(addEntitySchema).shape.entity.parse({ name: "box", label: "Box" }),
+		});
 		expect(JSON.parse(def.files["security/roles.json"])["shop.admin"].rights.box).toBe("SIUDC");
-		const o = addEntityFiles({ moduleDir: dir, entity: z.object(addEntitySchema).shape.entity.parse({ name: "box", label: "Box" }), adminRights: "SIUC" });
+		const o = addEntityFiles({
+			moduleDir: dir,
+			entity: z.object(addEntitySchema).shape.entity.parse({ name: "box", label: "Box" }),
+			adminRights: "SIUC",
+		});
 		expect(JSON.parse(o.files["security/roles.json"])["shop.admin"].rights.box).toBe("SIUC");
 	});
 	it("module_import and dbml_import honour it", () => {
 		const dir = make();
-		const r = moduleImport({ moduleDir: dir, tables: [{ name: "tag", label: "Tag", columns: [{ name: "title" }] }] as never, adminRights: "SIU" } as never);
+		const r = moduleImport({
+			moduleDir: dir,
+			tables: [{ name: "tag", label: "Tag", columns: [{ name: "title" }] }] as never,
+			adminRights: "SIU",
+		} as never);
 		expect(JSON.parse(r.files["security/roles.json"])["shop.admin"].rights.tag).toBe("SIU");
 		const d = dbmlImport({ moduleDir: dir, dbml: "Table label { name varchar }", adminRights: "SIU" } as never);
 		expect(JSON.parse(d.files["security/roles.json"])["shop.admin"].rights.label).toBe("SIU");
@@ -195,7 +240,11 @@ describe("adminRights", () => {
 
 describe("check constraint expressions are raw PostgreSQL", () => {
 	const add = (expression: string, dir = make()) =>
-		entityConfigure({ moduleDir: dir, entity: "order", constraints: { add: { ck_q: { type: "check", expression, message: "m" } } } });
+		entityConfigure({
+			moduleDir: dir,
+			entity: "order",
+			constraints: { add: { ck_q: { type: "check", expression, message: "m" } } },
+		});
 	it("refuses formula bracket syntax with the fix", () => {
 		expect(() => add("[quantity] > 0")).toThrow(/formula bracket syntax.*write "quantity > 0"/);
 	});

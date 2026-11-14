@@ -12,11 +12,7 @@
 
 import * as fs from "node:fs";
 import * as path from "node:path";
-import {
-	checkDsl as checkDslPackage,
-	type DslContext,
-	type DslIssue as PackageIssue,
-} from "@dforge-core/metadata/dsl";
+import { checkDsl as checkDslPackage, type DslContext, type DslIssue as PackageIssue } from "@dforge-core/metadata/dsl";
 
 export type DslIssueLevel = "error" | "warning";
 
@@ -86,6 +82,16 @@ export function readLibraryFunctions(logicDir: string): string[] {
 	return [...names].sort();
 }
 
+const toIssue = (issue: PackageIssue): DslIssue => ({
+	level: issue.severity === "error" ? "error" : "warning",
+	rule: issue.rule,
+	message:
+		issue.rule === "dsl/unqualified-entity"
+			? `${issue.message} (This applies only to entity codes passed as strings to DSL data built-ins such as select/insert/update/delete; entity keys in manifest.json, security/roles.json, ui/folders.json, views and menus stay bare for this module's own entities.)`
+			: issue.message,
+	line: issue.line,
+});
+
 /**
  * Check a DSL body. Returns [] for a clean script.
  *
@@ -100,8 +106,7 @@ export function checkDsl(src: string, opts: DslCheckOpts = {}): DslIssue[] {
 	// record-context rules down on the one mode that most needs them.
 	const raw = opts.executionMode?.trim();
 	const mode = raw?.toLowerCase();
-	const executionMode =
-		mode === "single" || mode === "each" || mode === "batch" ? mode : undefined;
+	const executionMode = mode === "single" || mode === "each" || mode === "batch" ? mode : undefined;
 
 	const ctx: DslContext = {
 		moduleCode: opts.moduleCode,
@@ -112,9 +117,7 @@ export function checkDsl(src: string, opts: DslCheckOpts = {}): DslIssue[] {
 		currentEntity: opts.entity ?? null,
 		messageTranslations: opts.messageTranslations,
 		// Forward-compatible: not part of the installed DslContext type yet.
-		...(opts.libraryFunctions && opts.libraryFunctions.length > 0
-			? { libraryFunctions: opts.libraryFunctions }
-			: {}),
+		...(opts.libraryFunctions && opts.libraryFunctions.length > 0 ? { libraryFunctions: opts.libraryFunctions } : {}),
 	} as DslContext;
 
 	const issues = checkDslPackage(src, ctx).map(toIssue);
@@ -134,16 +137,4 @@ export function checkDsl(src: string, opts: DslCheckOpts = {}): DslIssue[] {
 	}
 
 	return issues;
-}
-
-function toIssue(issue: PackageIssue): DslIssue {
-	return {
-		level: issue.severity === "error" ? "error" : "warning",
-		rule: issue.rule,
-		message:
-			issue.rule === "dsl/unqualified-entity"
-				? `${issue.message} (This applies only to entity codes passed as strings to DSL data built-ins such as select/insert/update/delete; entity keys in manifest.json, security/roles.json, ui/folders.json, views and menus stay bare for this module's own entities.)`
-				: issue.message,
-		line: issue.line,
-	};
 }

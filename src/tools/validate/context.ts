@@ -63,8 +63,10 @@ export interface ValidateContext {
 export function loadContext(moduleDir: string): ValidateContext {
 	const { paths, manifest } = loadManifest(moduleDir);
 	const issues: Issue[] = [];
-	const err = (where: string, message: string, rule?: string) => issues.push({ level: "error", where, message, ...(rule ? { rule } : {}) });
-	const warn = (where: string, message: string, rule?: string) => issues.push({ level: "warning", where, message, ...(rule ? { rule } : {}) });
+	const err = (where: string, message: string, rule?: string) =>
+		issues.push({ level: "error", where, message, ...(rule ? { rule } : {}) });
+	const warn = (where: string, message: string, rule?: string) =>
+		issues.push({ level: "warning", where, message, ...(rule ? { rule } : {}) });
 
 	// ── Load same-module entities + compute each one's valid column set ──
 	const entityMap = (manifest.entities ?? {}) as Record<string, string>;

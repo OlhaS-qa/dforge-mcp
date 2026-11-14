@@ -11,8 +11,7 @@ import { fileExists, readFile, tickChecklist } from "./helpers";
 const SEMANTIC_CHECK_DESCRIPTIONS = [
 	{
 		name: "Locale coverage",
-		description:
-			"Do the locales listed in CLAUDE.md match the translation scope implied in REQUIREMENTS.md?",
+		description: "Do the locales listed in CLAUDE.md match the translation scope implied in REQUIREMENTS.md?",
 	},
 	{
 		name: "Persona → entity coverage",
@@ -22,7 +21,8 @@ const SEMANTIC_CHECK_DESCRIPTIONS = [
 	{
 		name: "Core process coverage",
 		description:
-			"Does every process in REQUIREMENTS.md Core Processes have a corresponding entity, action, or status machine in DESIGN.md?",
+			"Does every process in REQUIREMENTS.md Core Processes have a corresponding entity, action, or status " +
+			"machine in DESIGN.md?",
 	},
 	{
 		name: "Entity traceability",
@@ -32,12 +32,14 @@ const SEMANTIC_CHECK_DESCRIPTIONS = [
 	{
 		name: "Status machine completeness",
 		description:
-			"Does every entity with a status field have a fully documented machine (all values, transitions, guards, recovery path)?",
+			"Does every entity with a status field have a fully documented machine (all values, transitions, " +
+			"guards, recovery path)?",
 	},
 	{
 		name: "Action completeness",
 		description:
-			"Does every verb in REQUIREMENTS.md Core Processes that implies a user-triggered operation appear in DESIGN.md Actions table?",
+			"Does every verb in REQUIREMENTS.md Core Processes that implies a user-triggered operation appear in " +
+			"DESIGN.md Actions table?",
 	},
 	{
 		name: "Seed data coverage",
@@ -47,17 +49,22 @@ const SEMANTIC_CHECK_DESCRIPTIONS = [
 	{
 		name: "Visibility & permissions completeness",
 		description:
-			"Does DESIGN.md say who sees which records (including child records and how people bind to departments/roles) and give a Permissions Matrix covering every role x entity and every action, trigger-only actions included?",
+			"Does DESIGN.md say who sees which records (including child records and how people bind to " +
+			"departments/roles) and give a Permissions Matrix covering every role x entity and every action, " +
+			"trigger-only actions included?",
 	},
 	{
 		name: "Rules enforcement mechanism",
 		description:
-			"Does every business rule in REQUIREMENTS.md appear in DESIGN.md Rules & Constraints with the mechanism that enforces it (CHECK constraint / trigger / action body / canExecute on own-record fields / text only) — and is 'text only' a deliberate, stated choice?",
+			"Does every business rule in REQUIREMENTS.md appear in DESIGN.md Rules & Constraints with the " +
+			"mechanism that enforces it (CHECK constraint / trigger / action body / canExecute on own-record " +
+			"fields / text only) — and is 'text only' a deliberate, stated choice?",
 	},
 	{
 		name: "Notification coverage",
 		description:
-			"Does every notification or alert in REQUIREMENTS.md have a DESIGN.md Notifications row (event -> recipient -> channel -> text)?",
+			"Does every notification or alert in REQUIREMENTS.md have a DESIGN.md Notifications row (event -> " +
+			"recipient -> channel -> text)?",
 	},
 ];
 
@@ -217,20 +224,31 @@ function runStructuralChecks(root: string): CheckResult[] {
 			} else {
 				problems.push(...m.problems);
 				const objects = new Set(m.rows.map((r) => r.object));
-				const uncovered = [...entityListCodes(designContent)].filter((e) => !objects.has(e) && ![...objects].some((o) => o.endsWith(`.${e}`)));
-				if (uncovered.length) problems.push(`no matrix row for entity: ${uncovered.join(", ")} (add a row, or '-' to deny)`);
+				const uncovered = [...entityListCodes(designContent)].filter(
+					(e) => !objects.has(e) && ![...objects].some((o) => o.endsWith(`.${e}`)),
+				);
+				if (uncovered.length)
+					problems.push(`no matrix row for entity: ${uncovered.join(", ")} (add a row, or '-' to deny)`);
 				const noWhy = m.rows.filter((r) => r.rights !== "-" && r.statements.length === 0 && !/\.admin$/.test(r.role));
-				if (noWhy.length) problems.push(`${noWhy.length} row(s) cite no statement id (Statements column), e.g. ${noWhy[0].role} / ${noWhy[0].object}`);
+				if (noWhy.length)
+					problems.push(
+						`${noWhy.length} row(s) cite no statement id (Statements column), e.g. ${noWhy[0].role} / ${noWhy[0].object}`,
+					);
 				if (m.rows.length > 0) {
 					const actions = [...sectionCodes(designContent, "Actions")].filter((a) => !objects.has(`action:${a}`));
-					if (actions.length) problems.push(`action(s) in the Actions section with no 'action:<code>' row: ${actions.join(", ")} (a trigger-only action still needs a row naming who may run it, or '-')`);
+					if (actions.length)
+						problems.push(
+							`action(s) in the Actions section with no 'action:<code>' row: ${actions.join(", ")} (a trigger-only action still needs a row naming who may run it, or '-')`,
+						);
 				}
 			}
 			results.push({
 				check: "Permissions Matrix (machine-readable, covers entities and actions)",
 				pass: true,
 				...(problems.length ? { status: "warn" as const } : {}),
-				detail: problems.length ? `WARN: ${problems.join("; ")}.` : `${m.rows.length} row(s), ${new Set(m.rows.map((r) => r.role)).size} role(s).`,
+				detail: problems.length
+					? `WARN: ${problems.join("; ")}.`
+					: `${m.rows.length} row(s), ${new Set(m.rows.map((r) => r.role)).size} role(s).`,
 			});
 		}
 	}
@@ -242,7 +260,9 @@ function runStructuralChecks(root: string): CheckResult[] {
 			pass: true,
 			status: "warn" as const,
 			detail:
-				"WARN: REQUIREMENTS.md has no '## Access Needs' section. For each user type write what it must be able to reach and what it must NOT see or change (verb-led, no role codes) — the Permissions Matrix and Phase 5 are checked against it.",
+				"WARN: REQUIREMENTS.md has no '## Access Needs' section. For each user type write what it must be " +
+				"able to reach and what it must NOT see or change (verb-led, no role codes) — the Permissions Matrix " +
+				"and Phase 5 are checked against it.",
 		});
 	}
 
@@ -283,7 +303,13 @@ function runStructuralChecks(root: string): CheckResult[] {
 		});
 	} else {
 		const gapsText = gapsMatch[1];
-		const openPatterns = [/\bTBD\b/i, /\bto be determined\b/i, /\bunresolved\b/i, /\bopen:\b/i, /\bneeds clarification\b/i];
+		const openPatterns = [
+			/\bTBD\b/i,
+			/\bto be determined\b/i,
+			/\bunresolved\b/i,
+			/\bopen:\b/i,
+			/\bneeds clarification\b/i,
+		];
 		const found = openPatterns.filter((p) => p.test(gapsText)).map((p) => p.source);
 		results.push({
 			check: "Gap resolution",
@@ -309,17 +335,18 @@ export function handleValidate(root: string, args: Args): PlanResult {
 				summary: `Structural pre-check: ${structuralFailed.length} check(s) failed. Fix before proceeding.`,
 				structuralChecks: structuralResults,
 				nextStep:
-					"Fix the structural failures listed above, update the relevant document(s), then call dforge_module_plan({ action: 'validate', moduleDir }) again.",
+					"Fix the structural failures listed above, update the relevant document(s), then call " +
+					"dforge_module_plan({ action: 'validate', moduleDir }) again.",
 			};
 		}
 
 		return {
 			summary:
-				"Structural checks passed. Evaluate the semantic checks below against the Phase 0 docs, then call validate with checkResults.",
+				"Structural checks passed. Evaluate the semantic checks below against the Phase 0 docs, then call " +
+				"validate with checkResults.",
 			structuralChecks: structuralResults,
 			semanticChecks: SEMANTIC_CHECK_DESCRIPTIONS,
-			nextStep:
-				`Evaluate each semantic check against the Phase 0 docs — read docs/REQUIREMENTS.md and docs/DESIGN.md from disk (and CLAUDE.md) if they aren't already in your context — then call dforge_module_plan({ action: 'validate', moduleDir, checkResults: [...] }) with your results for all ${SEMANTIC_CHECK_DESCRIPTIONS.length} checks.`,
+			nextStep: `Evaluate each semantic check against the Phase 0 docs — read docs/REQUIREMENTS.md and docs/DESIGN.md from disk (and CLAUDE.md) if they aren't already in your context — then call dforge_module_plan({ action: 'validate', moduleDir, checkResults: [...] }) with your results for all ${SEMANTIC_CHECK_DESCRIPTIONS.length} checks.`,
 		};
 	}
 
@@ -339,7 +366,8 @@ export function handleValidate(root: string, args: Args): PlanResult {
 			summary: `Validation failed: ${failedAll.length} check(s) did not pass.`,
 			failures: failedAll,
 			nextStep:
-				"Fix the issues above in the relevant Phase 0 documents. Then call validate again (starting from the first call, without checkResults, to re-run structural checks).",
+				"Fix the issues above in the relevant Phase 0 documents. Then call validate again (starting from the " +
+				"first call, without checkResults, to re-run structural checks).",
 		};
 	}
 
@@ -347,7 +375,13 @@ export function handleValidate(root: string, args: Args): PlanResult {
 	const today = new Date().toISOString().slice(0, 10);
 	const rows = allResults
 		.map((r, i) => {
-			const res = !r.pass ? "❌ FAIL" : r.status === "skipped" ? "⚠️ SKIPPED" : r.status === "warn" ? "⚠️ WARN" : "✅ PASS";
+			const res = !r.pass
+				? "❌ FAIL"
+				: r.status === "skipped"
+					? "⚠️ SKIPPED"
+					: r.status === "warn"
+						? "⚠️ WARN"
+						: "✅ PASS";
 			return `| ${i + 1} | ${r.check} | ${res} | ${r.detail.replace(/\|/g, "\\|")} |`;
 		})
 		.join("\n");
@@ -376,12 +410,13 @@ readyToScaffold: true
 	const updatedClaude = tickChecklist(
 		readFile(claudePath),
 		"0d",
-		"Phase 0 complete — call `dforge_module_create({ moduleDir: \"...\", ... })` to scaffold the module.",
+		'Phase 0 complete — call `dforge_module_create({ moduleDir: "...", ... })` to scaffold the module.',
 	);
 
 	return {
 		summary:
-			"Phase 0d complete — design docs validated (readyToScaffold: true). Note: this validates the design docs only; generated artifacts are checked by the platform at install.",
+			"Phase 0d complete — design docs validated (readyToScaffold: true). Note: this validates the design " +
+			"docs only; generated artifacts are checked by the platform at install.",
 		readyToScaffold: true,
 		files: {
 			[P0.identity]: updatedClaude,
@@ -391,6 +426,7 @@ readyToScaffold: true
 			[P0.phaseState]: phaseStateJson({ phase: "0d", readyToScaffold: true, validatedAt: today }),
 		},
 		nextStep:
-			"Write both files to disk. Phase 0 is complete. Now call dforge_module_create({ moduleDir, code, displayName, entities, preset }) to scaffold the module.",
+			"Write both files to disk. Phase 0 is complete. Now call dforge_module_create({ moduleDir, code, " +
+			"displayName, entities, preset }) to scaffold the module.",
 	};
 }

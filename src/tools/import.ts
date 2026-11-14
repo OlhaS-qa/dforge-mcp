@@ -22,6 +22,9 @@ import {
 } from "./_helpers";
 import { additiveNotice, adminRightsInput, ensureToString, mergeUiAndSecurity } from "./add-entity";
 
+// codeRe is declared below; this defers the reference so order doesn't matter.
+const codeReLazy = () => z.string().regex(/^[a-z][a-z0-9_]*$/);
+
 // Identity for a NEW module — supplied only when importing into an empty dir
 // (greenfield). When a manifest already exists it's ignored.
 const moduleIdentitySchema = z
@@ -34,18 +37,15 @@ const moduleIdentitySchema = z
 	})
 	.optional();
 
-// codeRe is declared below; this defers the reference so order doesn't matter.
-function codeReLazy() {
-	return z.string().regex(/^[a-z][a-z0-9_]*$/);
-}
-
 /** Load the module's manifest, or synthesize a minimal one for a greenfield import. */
 function ensureManifest(moduleDir: string, identity?: z.infer<typeof moduleIdentitySchema>): Manifest {
 	try {
 		return loadManifest(moduleDir).manifest;
 	} catch {
 		if (!identity?.code) {
-			throw new Error(`No manifest.json in '${moduleDir}'. Pass module.code (and module.displayName) to start a new module from this import.`);
+			throw new Error(
+				`No manifest.json in '${moduleDir}'. Pass module.code (and module.displayName) to start a new module from this import.`,
+			);
 		}
 		return {
 			packageFormat: 1,
@@ -85,7 +85,9 @@ function diskPk(moduleDir: string, entity: string): string | undefined {
 	try {
 		const e = JSON.parse(fs.readFileSync(path.join(moduleDir, "entities", `${entity}.json`), "utf8"));
 		const { fieldDefs } = expandedEntity(e, entity);
-		const pks = Object.entries(fieldDefs).filter(([, f]) => f.isPk === true).map(([k]) => k);
+		const pks = Object.entries(fieldDefs)
+			.filter(([, f]) => f.isPk === true)
+			.map(([k]) => k);
 		return pks.length === 1 ? pks[0] : undefined;
 	} catch {
 		return undefined;
@@ -184,7 +186,10 @@ function buildImportFiles(
 	Object.assign(files, merged.files);
 	files["manifest.json"] = jsonText(withTodayStamp(manifest));
 
-	const otherFiles = [`manifest.json entit${added.length === 1 ? "y" : "ies"} ${added.join(", ") || "(none)"}`, ...added.map((n) => `entities/${n}.json`)];
+	const otherFiles = [
+		`manifest.json entit${added.length === 1 ? "y" : "ies"} ${added.join(", ") || "(none)"}`,
+		...added.map((n) => `entities/${n}.json`),
+	];
 	let notice = additiveNotice(merged, otherFiles);
 	if (replaced.length) {
 		notice += `\nREPLACED on request (onExisting: 'replace'): ${replaced.map((n) => `entities/${n}.json`).join(", ")} — the previous definition was discarded; their views/menus/roles were left as they are, so re-check the view columns.`;
@@ -211,14 +216,40 @@ const columnSpec = z.object({
 	name: codeRe.describe("Column code (snake_case)."),
 	label: z.string().optional(),
 	fieldTypeCd: z.string().optional().describe("Explicit field type; omit to infer."),
-	sqlType: z.string().optional().describe("Source SQL type hint, e.g. varchar(50), int, numeric(18,2), timestamptz, bool. varchar(n) sets maxLen, numeric(p,s) sets the numeric precision/scale, int/bigint keep their integer dbDatatype."),
-	sampleValues: z.array(z.union([z.string(), z.number(), z.boolean()])).optional().describe("A few example cell values — used to infer the type when no sqlType is given."),
+	sqlType: z
+		.string()
+		.optional()
+		.describe(
+			"Source SQL type hint, e.g. varchar(50), int, numeric(18,2), timestamptz, bool. varchar(n) sets " +
+				"maxLen, numeric(p,s) sets the numeric precision/scale, int/bigint keep their integer dbDatatype.",
+		),
+	sampleValues: z
+		.array(z.union([z.string(), z.number(), z.boolean()]))
+		.optional()
+		.describe("A few example cell values — used to infer the type when no sqlType is given."),
 	required: z.boolean().optional(),
 	unique: z.boolean().optional().describe("Single-column UNIQUE → a unique constraint on the entity."),
-	default: z.string().optional().describe("Source default expression: 'draft' (quoted string), 0, true, or a backticked `now()` / `current_date`. Becomes the column's `formula` (entity fields have no defaultValue key). Anything else is reported in the loss report."),
+	default: z
+		.string()
+		.optional()
+		.describe(
+			"Source default expression: 'draft' (quoted string), 0, true, or a backticked `now()` / " +
+				"`current_date`. Becomes the column's `formula` (entity fields have no defaultValue key). Anything " +
+				"else is reported in the loss report.",
+		),
 	enumValues: z.array(z.string()).optional().describe("Allowed values (a DBML Enum) → a dropdown with params.options."),
-	check: z.string().optional().describe("Source CHECK expression over this table's columns. Carried as a check constraint only when it is a simple boolean expression (comparisons, AND/OR/NOT, IN, BETWEEN, IS NULL, arithmetic); otherwise it goes to the loss report."),
-	note: z.string().optional().describe("Source column note → the field's description (when short; a long note is reported)."),
+	check: z
+		.string()
+		.optional()
+		.describe(
+			"Source CHECK expression over this table's columns. Carried as a check constraint only when it is a " +
+				"simple boolean expression (comparisons, AND/OR/NOT, IN, BETWEEN, IS NULL, arithmetic); otherwise it " +
+				"goes to the loss report.",
+		),
+	note: z
+		.string()
+		.optional()
+		.describe("Source column note → the field's description (when short; a long note is reported)."),
 });
 
 const tableSpec = z.object({
@@ -230,7 +261,12 @@ const tableSpec = z.object({
 			z.object({
 				column: codeRe.describe("FK column on THIS table (a hidden cuid column is generated for it)."),
 				toTable: codeRe.describe("Target entity code."),
-				toColumn: codeRe.optional().describe("Target PK column; defaults to the target's PK ({toTable}_id, or the PK of an entity already on disk). 'id' is treated as the default."),
+				toColumn: codeRe
+					.optional()
+					.describe(
+						"Target PK column; defaults to the target's PK ({toTable}_id, or the PK of an entity already on " +
+							"disk). 'id' is treated as the default.",
+					),
 				required: z
 					.boolean()
 					.optional()
@@ -246,7 +282,13 @@ const tableSpec = z.object({
 		.optional()
 		.describe("Composite (or extra) UNIQUE keys → unique constraints."),
 	indexes: z
-		.array(z.object({ name: codeRe.optional(), fields: z.array(codeRe).min(1), using: z.enum(["btree", "hash"]).optional() }))
+		.array(
+			z.object({
+				name: codeRe.optional(),
+				fields: z.array(codeRe).min(1),
+				using: z.enum(["btree", "hash"]).optional(),
+			}),
+		)
 		.optional()
 		.describe("Plain (non-unique) indexes → entity `indexes`."),
 });
@@ -255,12 +297,22 @@ const onExistingInput = z
 	.enum(["error", "skip", "replace"])
 	.optional()
 	.describe(
-		"Default 'error'. What to do with a table whose entity already exists in the module: 'error' (default, nothing written), 'skip' (keep the entity on disk) or 'replace' (overwrite entities/<name>.json with the imported definition — e.g. the stub dforge_module_create made; UI and security files are never overwritten).",
+		"Default 'error'. What to do with a table whose entity already exists in the module: 'error' " +
+			"(default, nothing written), 'skip' (keep the entity on disk) or 'replace' (overwrite " +
+			"entities/<name>.json with the imported definition — e.g. the stub dforge_module_create made; UI and " +
+			"security files are never overwritten).",
 	);
 
 export const moduleImportSchema = {
-	moduleDir: z.string().describe("Path to the module dir. If it has no manifest, pass `module` to start a new module (greenfield import)."),
-	tables: z.array(tableSpec).min(1).describe("Normalized table-spec, produced from DBML/SQL, an Excel/CSV upload (read by the AI), or hand-authored."),
+	moduleDir: z
+		.string()
+		.describe(
+			"Path to the module dir. If it has no manifest, pass `module` to start a new module (greenfield import).",
+		),
+	tables: z
+		.array(tableSpec)
+		.min(1)
+		.describe("Normalized table-spec, produced from DBML/SQL, an Excel/CSV upload (read by the AI), or hand-authored."),
 	module: moduleIdentitySchema.describe("New-module identity — required only when moduleDir has no manifest yet."),
 	onExisting: onExistingInput,
 	adminRights: adminRightsInput.optional(),
@@ -271,17 +323,48 @@ type Table = z.infer<typeof tableSpec>;
 
 // Source SQL type (lowercased, params stripped) → fieldTypeCd.
 const SQL_TYPE_MAP: Record<string, string> = {
-	varchar: "text", nvarchar: "text", char: "text", bpchar: "text", string: "text", character: "text", varying: "text", nchar: "text",
-	text: "textarea", ntext: "textarea", clob: "textarea",
-	int: "number", integer: "number", int2: "number", int4: "number", int8: "number",
-	bigint: "number", smallint: "number", tinyint: "number", serial: "number", bigserial: "number", smallserial: "number",
-	numeric: "number", decimal: "number", float: "number", float4: "number", float8: "number", double: "number", real: "number",
+	varchar: "text",
+	nvarchar: "text",
+	char: "text",
+	bpchar: "text",
+	string: "text",
+	character: "text",
+	varying: "text",
+	nchar: "text",
+	text: "textarea",
+	ntext: "textarea",
+	clob: "textarea",
+	int: "number",
+	integer: "number",
+	int2: "number",
+	int4: "number",
+	int8: "number",
+	bigint: "number",
+	smallint: "number",
+	tinyint: "number",
+	serial: "number",
+	bigserial: "number",
+	smallserial: "number",
+	numeric: "number",
+	decimal: "number",
+	float: "number",
+	float4: "number",
+	float8: "number",
+	double: "number",
+	real: "number",
 	money: "currency",
-	bool: "checkbox", boolean: "checkbox", bit: "checkbox",
+	bool: "checkbox",
+	boolean: "checkbox",
+	bit: "checkbox",
 	date: "date",
-	timestamp: "datetime", timestamptz: "datetime", datetime: "datetime", datetime2: "datetime",
-	time: "time", timetz: "time",
-	json: "json", jsonb: "json",
+	timestamp: "datetime",
+	timestamptz: "datetime",
+	datetime: "datetime",
+	datetime2: "datetime",
+	time: "time",
+	timetz: "time",
+	json: "json",
+	jsonb: "json",
 	uuid: "text",
 };
 
@@ -314,7 +397,10 @@ function inferFieldType(col: Column): { fieldTypeCd: string; params?: Record<str
 
 	// A DBML Enum (or explicit allowed values) → a dropdown with those options.
 	if (col.enumValues?.length) {
-		return { fieldTypeCd: "dropdown", params: { options: col.enumValues.map((v) => ({ value: v, label: optionLabel(v) })) } };
+		return {
+			fieldTypeCd: "dropdown",
+			params: { options: col.enumValues.map((v) => ({ value: v, label: optionLabel(v) })) },
+		};
 	}
 
 	let base: string | undefined;
@@ -375,7 +461,10 @@ const SQL_KW = new Set(["and", "or", "not", "in", "is", "null", "between", "true
  * not — they go to the loss report instead of becoming a CHECK that fails install.
  */
 function simpleCheck(raw: string, cols: Set<string>): { ok: true; expr: string } | { ok: false; why: string } {
-	let e = raw.trim().replace(/^check\b\s*/i, "").trim();
+	let e = raw
+		.trim()
+		.replace(/^check\b\s*/i, "")
+		.trim();
 	// Strip ONE pair of wrapping parentheses when they enclose the whole expression.
 	while (e.startsWith("(") && e.endsWith(")")) {
 		let depth = 0;
@@ -444,9 +533,15 @@ function buildImportedEntity(
 		const where = `${table.name}.${col.name}`;
 		const inf = inferFieldType(col);
 		if (!isFieldTypeCd(inf.fieldTypeCd)) {
-			throw new Error(`Inferred an invalid fieldTypeCd '${inf.fieldTypeCd}' for ${table.name}.${col.name} — pass an explicit fieldTypeCd.`);
+			throw new Error(
+				`Inferred an invalid fieldTypeCd '${inf.fieldTypeCd}' for ${table.name}.${col.name} — pass an explicit fieldTypeCd.`,
+			);
 		}
-		if (inf.unknownType) losses.push({ where, what: `source type '${inf.unknownType}' is not known — imported as text; set the right field type.` });
+		if (inf.unknownType)
+			losses.push({
+				where,
+				what: `source type '${inf.unknownType}' is not known — imported as text; set the right field type.`,
+			});
 
 		const sb = sqlBase(col.sqlType);
 		const params = col.sqlType?.match(/\(\s*(\d+)\s*(?:,\s*(\d+)\s*)?\)/);
@@ -461,16 +556,30 @@ function buildImportedEntity(
 		if (inf.fieldTypeCd === "number" && sb) {
 			if (BIGINT_TYPES.has(sb)) db = "bigint";
 			else if (INT_TYPES.has(sb)) db = "int";
-			else if (FLOAT_TYPES.has(sb)) losses.push({ where, what: `${col.sqlType} imported as numeric (arbitrary precision, not binary floating point).` });
+			else if (FLOAT_TYPES.has(sb))
+				losses.push({
+					where,
+					what: `${col.sqlType} imported as numeric (arbitrary precision, not binary floating point).`,
+				});
 		}
 		// numeric(p,s) / decimal(p,s) → numeric(p,s).
-		if (params && params[2] !== undefined && (sb === "numeric" || sb === "decimal") && ["number", "currency", "percent"].includes(inf.fieldTypeCd)) {
+		if (
+			params &&
+			params[2] !== undefined &&
+			(sb === "numeric" || sb === "decimal") &&
+			["number", "currency", "percent"].includes(inf.fieldTypeCd)
+		) {
 			db = `numeric(${params[1]},${params[2]})`;
 			carried.lengths++;
 		}
 		if (db) field.dbDatatype = db;
 		// varchar(n) / char(n) → maxLen.
-		if (params && params[2] === undefined && ["varchar", "nvarchar", "char", "bpchar", "nchar", "character", "string"].includes(sb ?? "") && ["text", "email", "phone", "url", "dropdown"].includes(inf.fieldTypeCd)) {
+		if (
+			params &&
+			params[2] === undefined &&
+			["varchar", "nvarchar", "char", "bpchar", "nchar", "character", "string"].includes(sb ?? "") &&
+			["text", "email", "phone", "url", "dropdown"].includes(inf.fieldTypeCd)
+		) {
 			field.maxLen = Number(params[1]);
 			carried.lengths++;
 		}
@@ -484,7 +593,10 @@ function buildImportedEntity(
 				field.description = col.note;
 				carried.notes++;
 			} else {
-				losses.push({ where, what: `note is too long for a field description (${col.note.length} chars) — not carried: "${col.note.slice(0, 60)}…"` });
+				losses.push({
+					where,
+					what: `note is too long for a field description (${col.note.length} chars) — not carried: "${col.note.slice(0, 60)}…"`,
+				});
 			}
 		}
 		if (col.default !== undefined) {
@@ -497,13 +609,22 @@ function buildImportedEntity(
 			}
 		}
 		if (col.unique) {
-			constraints[`uq_${table.name}_${col.name}`] = { type: "unique", fields: [col.name], message: `${titleCase(col.name)} must be unique.` };
+			constraints[`uq_${table.name}_${col.name}`] = {
+				type: "unique",
+				fields: [col.name],
+				message: `${titleCase(col.name)} must be unique.`,
+			};
 			carried.unique++;
 		}
 		if (col.check) {
 			const c = simpleCheck(col.check, colNames);
 			if (c.ok) {
-				constraints[`ck_${table.name}_${col.name}`] = { type: "check", expression: c.expr, fields: [col.name], message: `${titleCase(col.name)} must satisfy: ${c.expr}` };
+				constraints[`ck_${table.name}_${col.name}`] = {
+					type: "check",
+					expression: c.expr,
+					fields: [col.name],
+					message: `${titleCase(col.name)} must satisfy: ${c.expr}`,
+				};
 				carried.checks++;
 			} else {
 				losses.push({ where, what: `CHECK ${col.check.replace(/^check\s*/i, "")} not carried — ${c.why}.` });
@@ -523,8 +644,7 @@ function buildImportedEntity(
 		// every relation is required: 'M' resolves to isNullable:false at install,
 		// so a blanket 'EM' would emit NOT NULL for FKs the source declares
 		// optional — and the import would then contradict itself on the Reference.
-		const required =
-			ref.required === true || table.columns.find((c) => c.name === ref.column)?.required === true;
+		const required = ref.required === true || table.columns.find((c) => c.name === ref.column)?.required === true;
 		fields[ref.column] = {
 			dbDatatype: "cuid",
 			flags: required ? "EM" : "E",
@@ -554,20 +674,33 @@ function buildImportedEntity(
 	for (const u of table.uniques ?? []) {
 		const missing = u.fields.filter((f) => !known.has(f));
 		if (missing.length) {
-			losses.push({ where: table.name, what: `unique key (${u.fields.join(", ")}) not carried — column(s) ${missing.join(", ")} are not on the entity.` });
+			losses.push({
+				where: table.name,
+				what: `unique key (${u.fields.join(", ")}) not carried — column(s) ${missing.join(", ")} are not on the entity.`,
+			});
 			continue;
 		}
 		const name = u.name ?? `uq_${table.name}_${u.fields.join("_")}`;
-		constraints[name] = { type: "unique", fields: u.fields, message: `${u.fields.map(titleCase).join(" + ")} must be unique.` };
+		constraints[name] = {
+			type: "unique",
+			fields: u.fields,
+			message: `${u.fields.map(titleCase).join(" + ")} must be unique.`,
+		};
 		carried.unique++;
 	}
 	for (const ix of table.indexes ?? []) {
 		const missing = ix.fields.filter((f) => !known.has(f));
 		if (missing.length) {
-			losses.push({ where: table.name, what: `index (${ix.fields.join(", ")}) not carried — column(s) ${missing.join(", ")} are not on the entity.` });
+			losses.push({
+				where: table.name,
+				what: `index (${ix.fields.join(", ")}) not carried — column(s) ${missing.join(", ")} are not on the entity.`,
+			});
 			continue;
 		}
-		indexes[ix.name ?? `idx_${table.name}_${ix.fields.join("_")}`] = { fields: ix.fields, ...(ix.using ? { using: ix.using } : {}) };
+		indexes[ix.name ?? `idx_${table.name}_${ix.fields.join("_")}`] = {
+			fields: ix.fields,
+			...(ix.using ? { using: ix.using } : {}),
+		};
 		carried.indexes++;
 	}
 
@@ -611,20 +744,25 @@ function importResult(verb: string, out: ImportOutcome): ToolResult {
 	const warning = [
 		out.notice,
 		formatLosses(out.losses),
-		"Review the inferred field types (dropdown vs text, currency vs number) and the default grids. Cross-table references resolve only if both tables are in this import or already in the module. Run dforge_module_validate after writing.",
+		"Review the inferred field types (dropdown vs text, currency vs number) and the default grids. " +
+			"Cross-table references resolve only if both tables are in this import or already in the module. Run " +
+			"dforge_module_validate after writing.",
 	].join("\n\n");
 	const summary =
 		`${verb} ${out.added.length} entit${out.added.length === 1 ? "y" : "ies"} (${out.added.join(", ") || "none"}); ` +
 		`${out.losses.length} source construct(s) not carried${out.losses.length ? " — see the loss report in `warning`" : ""}. ${carriedLine(out.carried)} ` +
 		"Existing UI/security files were merged additively, nothing existing was overwritten.";
 	const result = makeResult(summary.trim(), out.files, warning);
-	result.files["_import_report.json"] = jsonText({ added: out.added, skipped: out.skipped, replaced: out.replaced, losses: out.losses });
+	result.files["_import_report.json"] = jsonText({
+		added: out.added,
+		skipped: out.skipped,
+		replaced: out.replaced,
+		losses: out.losses,
+	});
 	return result;
 }
 
-export function moduleImport(
-	args: z.infer<z.ZodObject<typeof moduleImportSchema>>,
-): ToolResult {
+export function moduleImport(args: z.infer<z.ZodObject<typeof moduleImportSchema>>): ToolResult {
 	const manifest = ensureManifest(args.moduleDir, args.module);
 	const out = buildImportFiles(args.moduleDir, manifest, args.tables, args.onExisting ?? "error", [], args.adminRights);
 	return importResult("Imported", out);
@@ -660,7 +798,10 @@ function snake(name: string): string {
 /** Remove // and block comments, quote-aware (a `'http://x'` default is not a comment). */
 function stripDbmlComments(src: string): string {
 	// '''multi-line notes''' → one line, so line-based parsing stays simple.
-	src = src.replace(/'''([\s\S]*?)'''/g, (_m, t: string) => "'" + t.replace(/\s+/g, " ").trim().replace(/'/g, "\\'") + "'");
+	src = src.replace(
+		/'''([\s\S]*?)'''/g,
+		(_m, t: string) => "'" + t.replace(/\s+/g, " ").trim().replace(/'/g, "\\'") + "'",
+	);
 	let out = "";
 	let i = 0;
 	let q: string | null = null;
@@ -853,7 +994,8 @@ function parseColumnLine(
 	const where = `${t.name}.${colName}`;
 	const isArray = /\[\d*\]$/.test(sqlType);
 	const { items, after } = takeSettings(m[3]);
-	if (after.trim() && !/^[;,]?$/.test(after.trim())) losses.push({ where, what: `trailing text ignored: "${after.trim().slice(0, 40)}"` });
+	if (after.trim() && !/^[;,]?$/.test(after.trim()))
+		losses.push({ where, what: `trailing text ignored: "${after.trim().slice(0, 40)}"` });
 
 	const col: DbmlColumn = { name: colName, sqlType };
 	let isPk = false;
@@ -886,7 +1028,15 @@ function parseColumnLine(
 			else col.note = note;
 		} else if (key === "ref") {
 			const rm = val.match(/^(<>|[<>-])\s*"?([\w.]+)"?\s*\.\s*"?(\w+)"?/);
-			if (rm) pending.push({ table: t.name, column: colName, op: rm[1], toTable: snake(rm[2]), toColumn: snake(rm[3]), where });
+			if (rm)
+				pending.push({
+					table: t.name,
+					column: colName,
+					op: rm[1],
+					toTable: snake(rm[2]),
+					toColumn: snake(rm[3]),
+					where,
+				});
 			else losses.push({ where, what: `ref setting not understood: "${item}"` });
 		} else losses.push({ where, what: `setting "${item}" not carried.` });
 	}
@@ -894,7 +1044,10 @@ function parseColumnLine(
 		t.pkCols.push(colName);
 		t.pkType = col.sqlType;
 		if (/(^|[^a-z])(varchar|char|text|string|nvarchar|bpchar|character)/i.test(col.sqlType ?? "") && !ev) {
-			losses.push({ where, what: `natural primary key (${col.sqlType}) replaced by the identity PK ${t.name}_id — its values and uniqueness are not carried; keep it as a unique field if it matters.` });
+			losses.push({
+				where,
+				what: `natural primary key (${col.sqlType}) replaced by the identity PK ${t.name}_id — its values and uniqueness are not carried; keep it as a unique field if it matters.`,
+			});
 		}
 	}
 	t.columns.push({ ...col, pk: isPk });
@@ -931,13 +1084,22 @@ function parseIndexLine(line: string, t: DbmlTable, losses: Loss[]): void {
 		} else losses.push({ where: t.name, what: `index setting "${item}" not carried.` });
 	}
 	if (pk) {
-		losses.push({ where: t.name, what: `composite primary key (${fields.join(", ")}) replaced by the identity PK ${t.name}_id; kept as a unique constraint.` });
+		losses.push({
+			where: t.name,
+			what: `composite primary key (${fields.join(", ")}) replaced by the identity PK ${t.name}_id; kept as a unique constraint.`,
+		});
 		t.uniques.push({ ...(name ? { name } : {}), fields });
 	} else if (unique) t.uniques.push({ ...(name ? { name } : {}), fields });
 	else t.indexes.push({ ...(name ? { name } : {}), fields, ...(using ? { using } : {}) });
 }
 
-function parseDbmlTableBody(rawName: string, body: string, enums: Map<string, string[]>, losses: Loss[], pending: PendingRef[]): DbmlTable {
+function parseDbmlTableBody(
+	rawName: string,
+	body: string,
+	enums: Map<string, string[]>,
+	losses: Loss[],
+	pending: PendingRef[],
+): DbmlTable {
 	const t: DbmlTable = { name: snake(rawName), pkCols: [], columns: [], refs: [], uniques: [], indexes: [] };
 	const { blocks, rest } = splitBlocks(body);
 	for (const b of blocks) {
@@ -989,7 +1151,8 @@ export function parseDbmlDetailed(dbml: string): DbmlParse {
 				continue;
 			}
 			values.push(stripName(vm[1]));
-			if (vm[2] && /note\s*:/i.test(vm[2])) losses.push({ where: `enum ${lastSegment(h[1])}.${stripName(vm[1])}`, what: "value note not carried." });
+			if (vm[2] && /note\s*:/i.test(vm[2]))
+				losses.push({ where: `enum ${lastSegment(h[1])}.${stripName(vm[1])}`, what: "value note not carried." });
 		}
 		const nm = lastSegment(h[1]);
 		enums.set(nm.toLowerCase(), values);
@@ -998,7 +1161,9 @@ export function parseDbmlDetailed(dbml: string): DbmlParse {
 
 	const tables: DbmlTable[] = [];
 	for (const b of blocks) {
-		const th = b.header.match(/^Table\s+((?:"[^"]+"|[\w]+)(?:\s*\.\s*(?:"[^"]+"|[\w]+))*)\s*(?:as\s+\w+\s*)?(?:\[[^\]]*\])?\s*$/i);
+		const th = b.header.match(
+			/^Table\s+((?:"[^"]+"|[\w]+)(?:\s*\.\s*(?:"[^"]+"|[\w]+))*)\s*(?:as\s+\w+\s*)?(?:\[[^\]]*\])?\s*$/i,
+		);
 		if (th) {
 			tables.push(parseDbmlTableBody(lastSegment(th[1].replace(/\s+/g, "")), b.body, enums, losses, pending));
 		} else if (/^Ref\b/i.test(b.header)) {
@@ -1006,7 +1171,10 @@ export function parseDbmlDetailed(dbml: string): DbmlParse {
 		} else if (/^Enum\b/i.test(b.header)) {
 			/* handled above */
 		} else if (b.header) {
-			losses.push({ where: b.header.split(/\s+/).slice(0, 2).join(" "), what: "block not carried (only Table, Enum and Ref are imported)." });
+			losses.push({
+				where: b.header.split(/\s+/).slice(0, 2).join(" "),
+				what: "block not carried (only Table, Enum and Ref are imported).",
+			});
 		}
 	}
 	for (const raw of rest.split("\n")) {
@@ -1018,21 +1186,33 @@ export function parseDbmlDetailed(dbml: string): DbmlParse {
 	// Resolve refs, inline and top-level: `>` many-to-one (left is FK), `<` one-to-many
 	// (right is FK), `-` one-to-one (left treated as FK).
 	for (const r of pending) {
-		const aTable = r.table, aCol = r.column, bTable = r.toTable, bCol = r.toColumn;
+		const aTable = r.table,
+			aCol = r.column,
+			bTable = r.toTable,
+			bCol = r.toColumn;
 		const fkOnLeft = r.op === ">" || r.op === "-";
-		const fk = fkOnLeft ? { table: aTable, col: aCol, toTable: bTable, toCol: bCol } : { table: bTable, col: bCol, toTable: aTable, toCol: aCol };
+		const fk = fkOnLeft
+			? { table: aTable, col: aCol, toTable: bTable, toCol: bCol }
+			: { table: bTable, col: bCol, toTable: aTable, toCol: aCol };
 		const owner = byName.get(fk.table);
 		if (!owner) {
-			losses.push({ where: r.where, what: `reference ${fk.table}.${fk.col} -> ${fk.toTable}.${fk.toCol} not carried — table '${fk.table}' is not in this DBML.` });
+			losses.push({
+				where: r.where,
+				what: `reference ${fk.table}.${fk.col} -> ${fk.toTable}.${fk.toCol} not carried — table '${fk.table}' is not in this DBML.`,
+			});
 			continue;
 		}
-		if (!owner.refs.some((x) => x.column === fk.col)) owner.refs.push({ column: fk.col, toTable: fk.toTable, toColumn: fk.toCol });
+		if (!owner.refs.some((x) => x.column === fk.col))
+			owner.refs.push({ column: fk.col, toTable: fk.toTable, toColumn: fk.toCol });
 	}
 
 	const out: Table[] = tables.map((t) => {
 		const composite = t.pkCols.length > 1;
 		if (composite) {
-			losses.push({ where: t.name, what: `composite primary key (${t.pkCols.join(", ")}) replaced by the identity PK ${t.name}_id; kept as a unique constraint.` });
+			losses.push({
+				where: t.name,
+				what: `composite primary key (${t.pkCols.join(", ")}) replaced by the identity PK ${t.name}_id; kept as a unique constraint.`,
+			});
 			t.uniques.push({ fields: [...t.pkCols] });
 		}
 		const refColNames = new Set(t.refs.map((r) => r.column));
@@ -1041,13 +1221,17 @@ export function parseDbmlDetailed(dbml: string): DbmlParse {
 			// A ref at the source PK ('id' or the declared PK) targets the identity PK, whatever it is named.
 			const toColumn = r.toColumn === "id" || (targetPk && r.toColumn === targetPk) ? undefined : r.toColumn;
 			if (toColumn && byName.has(r.toTable)) {
-				losses.push({ where: `${t.name}.${r.column}`, what: `references non-PK column ${r.toTable}.${toColumn}; kept as the link target — check it is the entity's key.` });
+				losses.push({
+					where: `${t.name}.${r.column}`,
+					what: `references non-PK column ${r.toTable}.${toColumn}; kept as the link target — check it is the entity's key.`,
+				});
 			}
 			// The FK column is dropped from `columns` just below, so carry its
 			// `[not null]` onto the reference — otherwise every DBML relation would
 			// import as optional, and 'M' is what makes the FK column NOT NULL.
 			const fkCol = t.columns.find((c) => c.name === r.column);
-			if (fkCol?.default !== undefined) losses.push({ where: `${t.name}.${r.column}`, what: `default ${fkCol.default} on a foreign key not carried.` });
+			if (fkCol?.default !== undefined)
+				losses.push({ where: `${t.name}.${r.column}`, what: `default ${fkCol.default} on a foreign key not carried.` });
 			if (fkCol?.unique) {
 				t.uniques.push({ fields: [r.column] });
 			}
@@ -1080,21 +1264,33 @@ function handleRefLine(text: string, pending: PendingRef[], losses: Loss[], orig
 	const [, aT, aC, op, bT, bC] = m;
 	const trailing = text.slice(m[0].length);
 	if (op === "<>") {
-		losses.push({ where: `${snake(aT)}.${snake(aC)}`, what: `many-to-many ref to ${snake(bT)}.${snake(bC)} not carried — model it with a link entity.` });
+		losses.push({
+			where: `${snake(aT)}.${snake(aC)}`,
+			what: `many-to-many ref to ${snake(bT)}.${snake(bC)} not carried — model it with a link entity.`,
+		});
 		return;
 	}
 	const { items } = takeSettings(trailing);
-	for (const it of items) losses.push({ where: `${snake(aT)}.${snake(aC)} > ${snake(bT)}.${snake(bC)}`, what: `ref setting "${it}" not carried (referential actions are not modelled).` });
-	pending.push({ table: snake(aT), column: snake(aC), op, toTable: snake(bT), toColumn: snake(bC), where: `${snake(aT)}.${snake(aC)}` });
+	for (const it of items)
+		losses.push({
+			where: `${snake(aT)}.${snake(aC)} > ${snake(bT)}.${snake(bC)}`,
+			what: `ref setting "${it}" not carried (referential actions are not modelled).`,
+		});
+	pending.push({
+		table: snake(aT),
+		column: snake(aC),
+		op,
+		toTable: snake(bT),
+		toColumn: snake(bC),
+		where: `${snake(aT)}.${snake(aC)}`,
+	});
 }
 
 export function parseDbml(dbml: string): Table[] {
 	return parseDbmlDetailed(dbml).tables;
 }
 
-export function dbmlImport(
-	args: z.infer<z.ZodObject<typeof dbmlImportSchema>>,
-): ToolResult {
+export function dbmlImport(args: z.infer<z.ZodObject<typeof dbmlImportSchema>>): ToolResult {
 	const { tables, losses } = parseDbmlDetailed(args.dbml);
 	if (!tables.length) throw new Error("No `Table` blocks found in the DBML source.");
 	const manifest = ensureManifest(args.moduleDir, args.module);

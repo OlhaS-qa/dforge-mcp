@@ -13,7 +13,10 @@ export function checkEmptySeedData(ctx: ValidateContext): void {
 		const dir = dirName === "seed-data" ? paths.seedDataDir : path.join(paths.root, dirName);
 		let files: string[];
 		try {
-			files = fs.readdirSync(dir).filter((f) => f.endsWith(".json")).sort();
+			files = fs
+				.readdirSync(dir)
+				.filter((f) => f.endsWith(".json"))
+				.sort();
 		} catch {
 			continue;
 		}
@@ -27,7 +30,10 @@ export function checkEmptySeedData(ctx: ValidateContext): void {
 			}
 			if (!doc || typeof doc !== "object" || Array.isArray(doc)) continue;
 			if (typeof doc.entityCode !== "string" || doc.entityCode.trim() === "") {
-				warn(where, "has an empty 'entityCode' — the file targets no entity and seeds nothing. Set the entity code, or delete the file.");
+				warn(
+					where,
+					"has an empty 'entityCode' — the file targets no entity and seeds nothing. Set the entity code, or delete the file.",
+				);
 			}
 			if (Array.isArray(doc.records) && doc.records.length === 0) {
 				warn(where, "has no records — an empty scaffold stub. Add records, or delete the file.");

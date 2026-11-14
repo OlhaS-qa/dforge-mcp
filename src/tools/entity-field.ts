@@ -10,15 +10,7 @@
 import { z } from "zod";
 import * as path from "node:path";
 import { deriveDbDatatype } from "@dforge-core/metadata";
-import {
-	loadManifest,
-	readJson,
-	jsonText,
-	rel,
-	makeResult,
-	withTodayStamp,
-	type ToolResult,
-} from "./_helpers";
+import { loadManifest, readJson, jsonText, rel, makeResult, withTodayStamp, type ToolResult } from "./_helpers";
 import { scanFieldReferences, renderReferences, type FieldReferences } from "./refactor";
 import { checkFieldSpec } from "./field-rules";
 
@@ -108,7 +100,7 @@ const fieldSchema = z
 			"• dbDatatype is AUTO-DERIVED from fieldTypeCd when omitted (e.g. currency → numeric(18,2), text → varchar) — only set it to override. Values: bool, varchar, text, int, bigint, numeric, timestamptz, date, time, cuid, json. NOT boolean/string/datetime/integer/timestamp/number — 'number' is a fieldTypeCd, not a dbDatatype.\n" +
 			"• A relation is TWO fields: hidden FK (dbDatatype:'cuid', flags:'EM' if required else 'E', NO fieldTypeCd) + a Reference (columnType:'R', fieldTypeCd:'lookup', flags:'VEM'/'VE' to match, link:{entity,thisKey,otherKey}). Keep the two halves in step. otherKey = the target entity's PK ('{entity}_id'), never 'id'. Prefer dforge_entity_reference_add, which emits both.\n" +
 			"• Formula column: columnType:'F', baseDatatypeCd set, NO dbDatatype (never derived for F), flags:'V'.\n" +
-				"• baseDatatypeCd is a CLOSED enum: binary, bool, cuid, culture, date, guid, link, number, project, string, time, timestamp, xml, json — NOT a fieldTypeCd ('text'→string, 'datetime'→timestamp, 'checkbox'→bool, 'currency'→number).\n" +
+			"• baseDatatypeCd is a CLOSED enum: binary, bool, cuid, culture, date, guid, link, number, project, string, time, timestamp, xml, json — NOT a fieldTypeCd ('text'→string, 'datetime'→timestamp, 'checkbox'→bool, 'currency'→number).\n" +
 			"• Column DEFAULTS use 'formula' (e.g. \"'draft'\" or \"TODAY()\"), NOT 'defaultValue' (settings-only).\n" +
 			"• dropdown options go under params.options = [{value,label}] objects, never at the field root and never bare strings.",
 	);
@@ -128,9 +120,7 @@ export const entityFieldAddSchema = {
 	field: fieldSchema,
 };
 
-export function entityFieldAdd(
-	args: z.infer<z.ZodObject<typeof entityFieldAddSchema>>,
-): ToolResult {
+export function entityFieldAdd(args: z.infer<z.ZodObject<typeof entityFieldAddSchema>>): ToolResult {
 	const { paths, manifest } = loadManifest(args.moduleDir);
 	const entityPath = path.join(paths.entitiesDir, `${args.entityName}.json`);
 	const entity = readJson<Record<string, unknown>>(entityPath);
@@ -152,7 +142,8 @@ export function entityFieldAdd(
 		filled.push(`description '${incoming.description}'`);
 	}
 	const fin = finalizeField(incoming);
-	if (filled.length) fin.notes.push(`Filled in the required ${filled.join(" and ")} (entity schema); change them if needed.`);
+	if (filled.length)
+		fin.notes.push(`Filled in the required ${filled.join(" and ")} (entity schema); change them if needed.`);
 	entity.fields = { ...fields, [args.fieldName]: fin.field };
 	const files: Record<string, string> = {
 		[rel(paths.root, entityPath)]: jsonText(entity),
@@ -184,7 +175,8 @@ function mergeParams(
 	newParams: unknown,
 ): { params: Record<string, unknown> | undefined; kept: string[] } {
 	const isObj = (x: unknown): x is Record<string, unknown> => !!x && typeof x === "object" && !Array.isArray(x);
-	if (!isObj(newParams)) return { params: isObj(oldParams) ? oldParams : undefined, kept: isObj(oldParams) ? Object.keys(oldParams) : [] };
+	if (!isObj(newParams))
+		return { params: isObj(oldParams) ? oldParams : undefined, kept: isObj(oldParams) ? Object.keys(oldParams) : [] };
 	if (!isObj(oldParams)) {
 		const clean = Object.fromEntries(Object.entries(newParams).filter(([, v]) => v !== null));
 		return { params: clean, kept: [] };
@@ -197,17 +189,13 @@ function mergeParams(
 	return { params: out, kept: Object.keys(oldParams).filter((k) => !(k in newParams)) };
 }
 
-export function entityFieldModify(
-	args: z.infer<z.ZodObject<typeof entityFieldModifySchema>>,
-): ToolResult {
+export function entityFieldModify(args: z.infer<z.ZodObject<typeof entityFieldModifySchema>>): ToolResult {
 	const { paths, manifest } = loadManifest(args.moduleDir);
 	const entityPath = path.join(paths.entitiesDir, `${args.entityName}.json`);
 	const entity = readJson<Record<string, unknown>>(entityPath);
 	const fields = (entity.fields as Record<string, Record<string, unknown>> | undefined) ?? {};
 	if (!Object.prototype.hasOwnProperty.call(fields, args.fieldName)) {
-		throw new Error(
-			`Field '${args.fieldName}' not found on entity '${args.entityName}'.`,
-		);
+		throw new Error(`Field '${args.fieldName}' not found on entity '${args.entityName}'.`);
 	}
 	const old = fields[args.fieldName];
 	const incoming = { ...(args.field as Record<string, unknown>) };
@@ -235,7 +223,9 @@ export function entityFieldModify(
 
 	const dropped = Object.keys(old).filter((k) => !(k in next));
 	if (dropped.length > 0) {
-		warnings.push(`keys of the old spec dropped because the new spec omits them: ${dropped.join(", ")} (re-add them if unintended).`);
+		warnings.push(
+			`keys of the old spec dropped because the new spec omits them: ${dropped.join(", ")} (re-add them if unintended).`,
+		);
 	}
 
 	// Data-affecting change.
@@ -259,9 +249,17 @@ export function entityFieldModify(
 
 	// Dependants that mention the field and may break under the change.
 	let references: FieldReferences = {};
-	const touchesShape = changed("fieldTypeCd") || changed("dbDatatype") || changed("baseDatatypeCd") || changed("columnType") || changed("params") || changed("formula");
+	const touchesShape =
+		changed("fieldTypeCd") ||
+		changed("dbDatatype") ||
+		changed("baseDatatypeCd") ||
+		changed("columnType") ||
+		changed("params") ||
+		changed("formula");
 	if (touchesShape) {
-		references = scanFieldReferences(paths, manifest, readJson<Record<string, unknown>>(entityPath), args.entityName, [args.fieldName]);
+		references = scanFieldReferences(paths, manifest, readJson<Record<string, unknown>>(entityPath), args.entityName, [
+			args.fieldName,
+		]);
 		for (const k of Object.keys(references)) if (!references[k]?.length) delete references[k];
 		if (Object.keys(references).length > 0) {
 			warnings.push(`dependants that mention '${args.fieldName}' — re-check them: ${renderReferences(references)}.`);

@@ -50,9 +50,9 @@ export function checkFolders(ctx: ValidateContext): void {
 			const e = entities[entityCd];
 			if (!e) continue; // unknown entity is reported by the folder/entity checks
 
-			const declared = Object.keys(
-				(e.views as Record<string, unknown> | undefined) ?? {},
-			).map((v) => v.trim().toLowerCase());
+			const declared = Object.keys((e.views as Record<string, unknown> | undefined) ?? {}).map((v) =>
+				v.trim().toLowerCase(),
+			);
 			if (!declared.includes(viewName.trim().toLowerCase())) {
 				err(
 					`ui/folders.json → ${fpath} → entities.${entityCd}`,
@@ -114,10 +114,12 @@ export function checkDiagrams(ctx: ValidateContext): void {
 				if (unresolved) warn(at, unresolved);
 			}
 			const p = (placement && typeof placement === "object" ? placement : {}) as Record<string, unknown>;
-			if (("x" in p) !== ("y" in p)) {
+			const hasX = "x" in p;
+			const hasY = "y" in p;
+			if (hasX !== hasY) {
 				warn(
 					at,
-					`sets '${"x" in p ? "x" : "y"}' without '${"x" in p ? "y" : "x"}'. Give both to pin the ` +
+					`sets '${hasX ? "x" : "y"}' without '${hasX ? "y" : "x"}'. Give both to pin the ` +
 						"entity, or neither to let the diagram place it.",
 				);
 			}
@@ -143,7 +145,8 @@ export function checkMenuFolderCoverage(ctx: ValidateContext): void {
 		key: string;
 		entities: Set<string>;
 	}
-	const own = (code: string): string => (code.startsWith(`${manifest.code}.`) ? code.slice(manifest.code.length + 1) : code);
+	const own = (code: string): string =>
+		code.startsWith(`${manifest.code}.`) ? code.slice(manifest.code.length + 1) : code;
 	const entitySet = (node: Record<string, unknown>): Set<string> =>
 		new Set(Object.keys((node.entities as Record<string, unknown> | undefined) ?? {}).map(own));
 	const folders: F[] = [{ flat: manifest.code, path: manifest.code, key: manifest.code, entities: entitySet(root) }];
@@ -172,16 +175,20 @@ export function checkMenuFolderCoverage(ctx: ValidateContext): void {
 		const label = trail;
 		if (typeof item.dataViewCode === "string") {
 			const v = views[item.dataViewCode];
-			for (const s of ((v?.dataSources as Array<Record<string, unknown>> | undefined) ?? [])) add(s.entityCode, `${label} (view ${item.dataViewCode})`);
+			for (const s of (v?.dataSources as Array<Record<string, unknown>> | undefined) ?? [])
+				add(s.entityCode, `${label} (view ${item.dataViewCode})`);
 		}
 		if (typeof item.reportCode === "string") {
 			const r = (reports[item.reportCode] ?? {}) as Record<string, unknown>;
-			for (const ent of Object.keys((r.entities as Record<string, unknown> | undefined) ?? {})) add(ent, `${label} (report ${item.reportCode})`);
+			for (const ent of Object.keys((r.entities as Record<string, unknown> | undefined) ?? {}))
+				add(ent, `${label} (report ${item.reportCode})`);
 			for (const ds of Object.values((r.datasets as Record<string, Record<string, unknown>> | undefined) ?? {})) {
 				add(ds?.entityCode ?? ds?.entity, `${label} (report ${item.reportCode})`);
 			}
 		}
-		for (const [k, child] of Object.entries((item.children as Record<string, Record<string, unknown>> | undefined) ?? {})) {
+		for (const [k, child] of Object.entries(
+			(item.children as Record<string, Record<string, unknown>> | undefined) ?? {},
+		)) {
 			if (child && typeof child === "object") itemEntities(child, into, `${trail} → ${k}`);
 		}
 	};
@@ -191,7 +198,9 @@ export function checkMenuFolderCoverage(ctx: ValidateContext): void {
 	for (const [mcode, menu] of Object.entries(menus)) {
 		if (!menu || typeof menu !== "object") continue;
 		const need = new Map<string, Set<string>>();
-		for (const [icode, item] of Object.entries((menu.items as Record<string, Record<string, unknown>> | undefined) ?? {})) {
+		for (const [icode, item] of Object.entries(
+			(menu.items as Record<string, Record<string, unknown>> | undefined) ?? {},
+		)) {
 			if (item && typeof item === "object") itemEntities(item, need, icode);
 		}
 		if (need.size === 0) continue;
@@ -201,7 +210,11 @@ export function checkMenuFolderCoverage(ctx: ValidateContext): void {
 			for (const c of menu.folders) {
 				const f = typeof c === "string" ? resolve(c) : undefined;
 				if (f) linked.push(f);
-				else warn(`menus → ${mcode}`, `'folders' names '${String(c)}', which matches no folder in ui/folders.json (the install fails on it).`);
+				else
+					warn(
+						`menus → ${mcode}`,
+						`'folders' names '${String(c)}', which matches no folder in ui/folders.json (the install fails on it).`,
+					);
 			}
 		} else linked = folders;
 		for (const f of linked) {
@@ -224,9 +237,7 @@ export function checkMenuFolderCoverage(ctx: ValidateContext): void {
 		for (const [mcode, byEnt] of byMenu) {
 			const ents = [...byEnt.keys()];
 			parts.push(`menu '${mcode}' needs ${ents.map((e) => `'${e}'`).join(", ")}`);
-			fixes.push(
-				`restrict menu '${mcode}' with "folders": [...] to the folders that hold its entities`,
-			);
+			fixes.push(`restrict menu '${mcode}' with "folders": [...] to the folders that hold its entities`);
 		}
 		const total = [...byMenu.values()].reduce((n, m) => n + m.size, 0);
 		warn(

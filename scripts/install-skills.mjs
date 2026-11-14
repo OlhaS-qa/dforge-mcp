@@ -28,11 +28,17 @@ import * as path from "node:path";
 import { fileURLToPath } from "node:url";
 
 const SKILLS = [
-	["dforge-mcp-author", "router — start here; also holds the shared\n                        references/ and examples/ the MCP server serves"],
+	[
+		"dforge-mcp-author",
+		"router — start here; also holds the shared\n                        references/ and examples/ the MCP server serves",
+	],
 	["dforge-module-design", "Phase 0  — identity, intake, design, validation"],
 	["dforge-module-build", "Phases 1-5 — entities, behavior, views, security"],
 	["dforge-module-ship", "Phase 6  — validate, pack, install-fix loop"],
-	["dforge-1c-import", "porting a 1C infobase — decisions, loading, print forms,\n                        and the Python toolkit that does the mechanical half"],
+	[
+		"dforge-1c-import",
+		"porting a 1C infobase — decisions, loading, print forms,\n                        and the Python toolkit that does the mechanical half",
+	],
 ];
 
 const PKG = "@dforge-core/dforge-mcp";
@@ -145,9 +151,7 @@ function main() {
 
 		if (installed === 0) throw new Error(`No skills were installed from ${src}.`);
 
-		process.stdout.write(
-			`\nInstalled ${installed} skill${installed === 1 ? "" : "s"} to ${dest}\n\n`,
-		);
+		process.stdout.write(`\nInstalled ${installed} skill${installed === 1 ? "" : "s"} to ${dest}\n\n`);
 		for (const [skill, blurb] of SKILLS) {
 			process.stdout.write(`  ${skill.padEnd(21)} ${blurb}\n`);
 		}

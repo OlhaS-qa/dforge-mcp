@@ -1,8 +1,5 @@
 import { z } from "zod";
-import {
-	BUILD_PHASES,
-	type FileMap,
-} from "../_helpers";
+import { BUILD_PHASES, type FileMap } from "../_helpers";
 
 // ─── Schema ───────────────────────────────────────────────────────────────────
 
@@ -20,25 +17,22 @@ export const planModuleSchema = {
 			"note_change",
 		])
 		.describe(
-			"Sub-command: 'check' = current lifecycle state (Phase 0 sub-phase, or the build/ship phase once Phase 0 is done) + which skill to run next; 'write_identity' = Phase 0a; 'write_requirements' = Phase 0b; 'write_design' = Phase 0c; 'validate' = Phase 0d; 'complete_phase' = record a build phase (1-6) as done or deliberately skipped; 'begin_change' = open a new change iteration on a finished module (note required) so check/complete_phase work against it without overwriting history; 'end_change' = close the open iteration explicitly; 'note_change' = append `statements` (deduped) and/or a `note` to the open iteration without recording a phase.",
+			"Sub-command: 'check' = current lifecycle state (Phase 0 sub-phase, or the build/ship phase once " +
+				"Phase 0 is done) + which skill to run next; 'write_identity' = Phase 0a; 'write_requirements' = " +
+				"Phase 0b; 'write_design' = Phase 0c; 'validate' = Phase 0d; 'complete_phase' = record a build phase " +
+				"(1-6) as done or deliberately skipped; 'begin_change' = open a new change iteration on a finished " +
+				"module (note required) so check/complete_phase work against it without overwriting history; " +
+				"'end_change' = close the open iteration explicitly; 'note_change' = append `statements` (deduped) " +
+				"and/or a `note` to the open iteration without recording a phase.",
 		),
-	moduleDir: z
-		.string()
-		.describe(
-			"Absolute path to the module directory. Ask the user for this before the first call.",
-		),
+	moduleDir: z.string().describe("Absolute path to the module directory. Ask the user for this before the first call."),
 	// ── write_identity fields (Phase 0a) ────────────────────────────────
-	displayName: z
-		.string()
-		.optional()
-		.describe("[write_identity] Human-readable module name, e.g. 'Purchase Orders'."),
+	displayName: z.string().optional().describe("[write_identity] Human-readable module name, e.g. 'Purchase Orders'."),
 	code: z
 		.string()
 		.regex(/^[a-z][a-z0-9_]*$/)
 		.optional()
-		.describe(
-			"[write_identity] snake_case module code, e.g. 'purchase_orders'. Becomes the DB schema name.",
-		),
+		.describe("[write_identity] snake_case module code, e.g. 'purchase_orders'. Becomes the DB schema name."),
 	dependencies: z
 		.array(z.string())
 		.optional()
@@ -48,7 +42,12 @@ export const planModuleSchema = {
 	locales: z
 		.array(z.string())
 		.optional()
-		.describe("[write_identity] Locales besides English, e.g. ['uk-UA', 'de-DE'] — recorded in CLAUDE.md only; declare them in manifest.supportedLocales and run dforge_translation_sync to create the files. English is the base: its text lives in the definitions and needs no file. Default: [] (English only)."),
+		.describe(
+			"[write_identity] Locales besides English, e.g. ['uk-UA', 'de-DE'] — recorded in CLAUDE.md only; " +
+				"declare them in manifest.supportedLocales and run dforge_translation_sync to create the files. " +
+				"English is the base: its text lives in the definitions and needs no file. Default: [] (English " +
+				"only).",
+		),
 	preset: z
 		.enum(["minimal", "minimal-plus", "full"])
 		.optional()
@@ -60,7 +59,9 @@ export const planModuleSchema = {
 		.boolean()
 		.optional()
 		.describe(
-			"[write_requirements, write_design] MUST be true — only set after the user has reviewed the on-disk draft (docs/REQUIREMENTS.md / docs/DESIGN.md, already written by you) and explicitly confirmed (replied YES / 'looks good' / 'confirmed').",
+			"[write_requirements, write_design] MUST be true — only set after the user has reviewed the on-disk " +
+				"draft (docs/REQUIREMENTS.md / docs/DESIGN.md, already written by you) and explicitly confirmed " +
+				"(replied YES / 'looks good' / 'confirmed').",
 		),
 	// ── validate fields (Phase 0d) ───────────────────────────────────────
 	checkResults: z
@@ -73,38 +74,48 @@ export const planModuleSchema = {
 		)
 		.optional()
 		.describe(
-			"[validate] Semantic check results from agent evaluation. Omit on the first call (structural pre-check only). Provide after evaluating the returned semanticChecks.",
+			"[validate] Semantic check results from agent evaluation. Omit on the first call (structural " +
+				"pre-check only). Provide after evaluating the returned semanticChecks.",
 		),
 	// ── complete_phase fields (Phases 1-6) ───────────────────────────────
 	phase: z
 		.enum(BUILD_PHASES)
 		.optional()
 		.describe(
-			"[complete_phase] Which build phase finished: '1' domain, '2' behavior, '3' views/reports, '4' polish, '5' security, '6' verify.",
+			"[complete_phase] Which build phase finished: '1' domain, '2' behavior, '3' views/reports, '4' " +
+				"polish, '5' security, '6' verify.",
 		),
 	skipped: z
 		.boolean()
 		.optional()
 		.describe(
-			"[complete_phase] True when the phase was deliberately skipped rather than done (only valid for the optional phases 2 and 4). Recording it stops a resumed session from re-proposing work the user already declined.",
+			"[complete_phase] True when the phase was deliberately skipped rather than done (only valid for the " +
+				"optional phases 2 and 4). Recording it stops a resumed session from re-proposing work the user " +
+				"already declined.",
 		),
 	note: z
 		.string()
 		.optional()
 		.describe(
-			"[complete_phase, end_change] One-line record of what was done or why it was skipped. [begin_change] REQUIRED: what the change is.",
+			"[complete_phase, end_change] One-line record of what was done or why it was skipped. [begin_change] " +
+				"REQUIRED: what the change is.",
 		),
 	statements: z
 		.array(z.string())
 		.optional()
 		.describe(
-			"[begin_change, complete_phase, note_change] Spec statement ids this change affects (e.g. ['S-3','R-4']). Recorded on the iteration; later calls append (deduped) the ones found to be affected afterwards.",
+			"[begin_change, complete_phase, note_change] Spec statement ids this change affects (e.g. " +
+				"['S-3','R-4']). Recorded on the iteration; later calls append (deduped) the ones found to be " +
+				"affected afterwards.",
 		),
 	apply: z
 		.boolean()
 		.optional()
 		.describe(
-			"When true, WRITE the resulting files (docs/phase.json, CLAUDE.md, ...) to disk here instead of returning them for the client to write. Recommended for complete_phase / begin_change / end_change: the ledger is a read-modify-write of the file on disk, so a client that skips a write (or writes two results out of order) loses phases.",
+			"When true, WRITE the resulting files (docs/phase.json, CLAUDE.md, ...) to disk here instead of " +
+				"returning them for the client to write. Recommended for complete_phase / begin_change / end_change: " +
+				"the ledger is a read-modify-write of the file on disk, so a client that skips a write (or writes " +
+				"two results out of order) loses phases.",
 		),
 };
 

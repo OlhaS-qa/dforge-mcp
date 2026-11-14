@@ -121,7 +121,8 @@ export function checkViewGrouping(ctx: ValidateContext): void {
 		const resolve = (key: string, cd: string): Record<string, unknown> | undefined => {
 			const f = defs[cd];
 			if (!f) err(where, `names '${cd}' in '${key}', which entity '${ent}' does not define`);
-			else if (!isGroupable(f)) err(where, `names '${cd}' in '${key}', which is not a dropdown, reference or user column`);
+			else if (!isGroupable(f))
+				err(where, `names '${cd}' in '${key}', which is not a dropdown, reference or user column`);
 			else return f;
 			return undefined;
 		};

@@ -32,34 +32,29 @@ export const actionAddSchema = {
 	entityCode: z
 		.string()
 		.regex(DOTTED_CODE_RE)
-		.describe(
-			"Entity this action targets. May be cross-module via dot notation ('fin.invoice').",
-		),
+		.describe("Entity this action targets. May be cross-module via dot notation ('fin.invoice')."),
 	label: z.string().min(1).describe("Display label in the action menu."),
-	description: z
-		.string()
-		.optional()
-		.describe("Tooltip / description text. Defaults to the label if omitted."),
+	description: z.string().optional().describe("Tooltip / description text. Defaults to the label if omitted."),
 	executionMode: z
 		.enum(["single", "each", "batch"])
 		.default("single")
 		.describe(
-			"Execution mode (emitted as `executionMode`). 'single' = whole selection at once, 'each' = per-record, 'batch' = explicit `for x in records` loop in DSL.",
+			"Execution mode (emitted as `executionMode`). 'single' = whole selection at once, 'each' = " +
+				"per-record, 'batch' = explicit `for x in records` loop in DSL.",
 		),
 	icon: z
 		.string()
 		.optional()
 		.describe(
-			"Bootstrap icon name. The `bi-` prefix is added automatically if missing (e.g. 'check-circle' → 'bi-check-circle'). NOTE: action icons keep the prefix; menu icons drop it.",
+			"Bootstrap icon name. The `bi-` prefix is added automatically if missing (e.g. 'check-circle' → " +
+				"'bi-check-circle'). NOTE: action icons keep the prefix; menu icons drop it.",
 		),
-	isAsync: z
-		.boolean()
-		.default(false)
-		.describe("Run asynchronously in the background (emitted as `isAsync`)."),
+	isAsync: z.boolean().default(false).describe("Run asynchronously in the background (emitted as `isAsync`)."),
 	dslBody: z
 		.string()
 		.describe(
-			"Full DSL source. Should contain `params:`, optional `canExecute:`, optional `onBeforeStart:` (async only), and required `execute:` blocks.",
+			"Full DSL source. Should contain `params:`, optional `canExecute:`, optional `onBeforeStart:` (async " +
+				"only), and required `execute:` blocks.",
 		),
 };
 
@@ -120,9 +115,7 @@ export function checkActionDsl(
 		: undefined;
 }
 
-export function actionAdd(
-	args: z.infer<z.ZodObject<typeof actionAddSchema>>,
-): ToolResult {
+export function actionAdd(args: z.infer<z.ZodObject<typeof actionAddSchema>>): ToolResult {
 	const { paths, manifest } = loadManifest(args.moduleDir);
 
 	const dslWarning = checkActionDsl(paths, manifest, args);
@@ -205,9 +198,7 @@ export const actionModifySchema = {
 	dslBody: z
 		.string()
 		.optional()
-		.describe(
-			"Full replacement DSL source for logic/actions/<script>.dsl (not a patch). Omit to keep the file as is.",
-		),
+		.describe("Full replacement DSL source for logic/actions/<script>.dsl (not a patch). Omit to keep the file as is."),
 };
 
 export function actionModify(args: z.infer<z.ZodObject<typeof actionModifySchema>>): ToolResult {
@@ -260,7 +251,10 @@ export function actionModify(args: z.infer<z.ZodObject<typeof actionModifySchema
 		}
 	}
 	if (changed.length === 0) {
-		throw new Error("Nothing to change: pass at least one of label, description, entityCode, executionMode, icon, isAsync, isTransacted, orderNum, dslBody.");
+		throw new Error(
+			"Nothing to change: pass at least one of label, description, entityCode, executionMode, icon, " +
+				"isAsync, isTransacted, orderNum, dslBody.",
+		);
 	}
 	actionsJson[args.code] = entry;
 	files[rel(paths.root, paths.actions)] = jsonText(actionsJson);

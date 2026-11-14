@@ -19,17 +19,24 @@ const sync = (prune = false) => {
 	return { tx: JSON.parse(r.files["translations/ru-RU.json"]!), r };
 };
 const flatKeys = (o: unknown, trail: string[] = []): string[] =>
-	o && typeof o === "object"
-		? Object.entries(o).flatMap(([k, v]) => flatKeys(v, [...trail, k]))
-		: [trail.join(".")];
+	o && typeof o === "object" ? Object.entries(o).flatMap(([k, v]) => flatKeys(v, [...trail, k])) : [trail.join(".")];
 
 // Minimal draft-07 walker (no ajv in the dependency tree): type, properties,
 // additionalProperties (false | schema), $ref, oneOf.
-const schema = JSON.parse(readFileSync(join(__dirname, "..", "resources", "schemas", "translations.schema.json"), "utf8"));
+const schema = JSON.parse(
+	readFileSync(join(__dirname, "..", "resources", "schemas", "translations.schema.json"), "utf8"),
+);
 function schemaErrors(node: any, value: unknown, at: string): string[] {
-	if (node.$ref) return schemaErrors(node.$ref.split("/").reduce((a: any, k: string) => (k === "#" ? schema : a[k]), schema), value, at);
+	if (node.$ref)
+		return schemaErrors(
+			node.$ref.split("/").reduce((a: any, k: string) => (k === "#" ? schema : a[k]), schema),
+			value,
+			at,
+		);
 	if (node.oneOf) {
-		return node.oneOf.some((n: any) => schemaErrors(n, value, at).length === 0) ? [] : [`${at}: matches no oneOf branch`];
+		return node.oneOf.some((n: any) => schemaErrors(n, value, at).length === 0)
+			? []
+			: [`${at}: matches no oneOf branch`];
 	}
 	if (node.type === "string") return typeof value === "string" ? [] : [`${at}: not a string`];
 	if (node.type !== "object") return [];
@@ -58,7 +65,12 @@ beforeEach(() => {
 			status: {
 				description: "Status",
 				fieldTypeCd: "dropdown",
-				params: { options: [{ value: "draft", label: "Draft" }, { value: "done", label: "Done" }] },
+				params: {
+					options: [
+						{ value: "draft", label: "Draft" },
+						{ value: "done", label: "Done" },
+					],
+				},
 			},
 			qty: { description: "Quantity", fieldTypeCd: "int" },
 		},

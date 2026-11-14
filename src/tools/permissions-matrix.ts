@@ -39,7 +39,13 @@ const cells = (line: string): string[] =>
 		.trim()
 		.replace(/^\||\|$/g, "")
 		.split("|")
-		.map((c) => c.trim().replace(/^`+|`+$/g, "").replace(/^\*\*|\*\*$/g, "").trim());
+		.map((c) =>
+			c
+				.trim()
+				.replace(/^`+|`+$/g, "")
+				.replace(/^\*\*|\*\*$/g, "")
+				.trim(),
+		);
 
 const isSeparator = (line: string): boolean => /^\s*\|?\s*:?-{2,}:?\s*(\|\s*:?-{2,}:?\s*)*\|?\s*$/.test(line);
 
@@ -96,4 +102,7 @@ export function parsePermissionsMatrix(sectionBody: string | null): ParsedMatrix
 export const sortRights = (r: string): string => [...new Set(r.split(""))].sort().join("");
 
 export const MATRIX_FORMAT_HINT =
-	"Use one table `| Role | Object | Rights | Statements |` — Role = full role code (shop.buyer), Object = the rights key as it will appear in roles.json (entity, dep.entity, action:x, report:x), Rights = S/I/U/D/C (entities) or E (action/report), `-` = explicitly denied, Statements = the S-/V-/N-/R- ids behind the row.";
+	"Use one table `| Role | Object | Rights | Statements |` — Role = full role code (shop.buyer), " +
+	"Object = the rights key as it will appear in roles.json (entity, dep.entity, action:x, report:x), " +
+	"Rights = S/I/U/D/C (entities) or E (action/report), `-` = explicitly denied, Statements = the " +
+	"S-/V-/N-/R- ids behind the row.";

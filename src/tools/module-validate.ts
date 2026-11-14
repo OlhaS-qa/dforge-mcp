@@ -27,8 +27,17 @@ import {
 	checkSetAggregates,
 } from "./validate/entities";
 import { checkDataViews, checkVisibleColumns, checkViewGrouping, checkMenus } from "./validate/views";
-import { checkRoleRights, checkSelectCoverage, checkPermissionsAgainstDesign, checkRoleReachability } from "./validate/security";
-import { checkConstraintTranslations, checkMessageTranslations, checkTranslationCompleteness } from "./validate/translations";
+import {
+	checkRoleRights,
+	checkSelectCoverage,
+	checkPermissionsAgainstDesign,
+	checkRoleReachability,
+} from "./validate/security";
+import {
+	checkConstraintTranslations,
+	checkMessageTranslations,
+	checkTranslationCompleteness,
+} from "./validate/translations";
 import { checkActions, checkTriggersJobsWebhooks, checkActionDsl } from "./validate/logic";
 import { checkFolders, checkDiagrams, checkMenuFolderCoverage } from "./validate/folders";
 import { checkJsonSchemas } from "./validate/schemas";
@@ -46,7 +55,11 @@ export const moduleValidateSchema = {
 		.enum(["full", "summary"])
 		.optional()
 		.describe(
-			"'full' (default): every error and warning listed one by one in _validate.json. 'summary': repeated messages are grouped by rule with a count and 3 examples, which keeps the response small on a large module (a 26-entity module can produce 60K+ characters in full); the complete list is written to a file whose path is returned in `fullReport`. The `summary` line carries the error/warning counts in both formats.",
+			"'full' (default): every error and warning listed one by one in _validate.json. 'summary': repeated " +
+				"messages are grouped by rule with a count and 3 examples, which keeps the response small on a large " +
+				"module (a 26-entity module can produce 60K+ characters in full); the complete list is written to a " +
+				"file whose path is returned in `fullReport`. The `summary` line carries the error/warning counts in " +
+				"both formats.",
 		),
 };
 
@@ -144,14 +157,13 @@ function warningBreakdown(warnings: Issue[]): string {
 	const parts = [...byCat.entries()]
 		.sort((a, b) => b[1].n - a[1].n)
 		.slice(0, 4)
-		.map(([c, e]) => (c === "schema" ? `schema: ${e.n} in ${e.files.size} file${e.files.size === 1 ? "" : "s"}` : `${c}: ${e.n}`));
+		.map(([c, e]) =>
+			c === "schema" ? `schema: ${e.n} in ${e.files.size} file${e.files.size === 1 ? "" : "s"}` : `${c}: ${e.n}`,
+		);
 	return ` (${parts.join("; ")})`;
 }
 
-export function moduleValidate(
-	args: z.infer<z.ZodObject<typeof moduleValidateSchema>>,
-	cli?: CliValidate,
-): ToolResult {
+export function moduleValidate(args: z.infer<z.ZodObject<typeof moduleValidateSchema>>, cli?: CliValidate): ToolResult {
 	const ctx = loadContext(args.moduleDir);
 	for (const check of CHECKS) check(ctx);
 	const { manifest, issues, err, warn, entities, viewCodes, roles } = ctx;
@@ -204,7 +216,10 @@ export function moduleValidate(
 					/* best effort */
 				}
 			}
-			fullReport = path.join(dir, `${manifest.code}-${Date.now()}-${process.pid}-${crypto.randomUUID().slice(0, 8)}.json`);
+			fullReport = path.join(
+				dir,
+				`${manifest.code}-${Date.now()}-${process.pid}-${crypto.randomUUID().slice(0, 8)}.json`,
+			);
 			fs.writeFileSync(fullReport, fullJson);
 		} catch {
 			fullReport = undefined;

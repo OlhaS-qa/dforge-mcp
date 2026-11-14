@@ -67,7 +67,9 @@ describe("dforge_entity_configure", () => {
 		expect(r.warning).toBeUndefined();
 	});
 	it("rejects toString with unknown column or a set", () => {
-		expect(() => entityConfigure({ moduleDir: dir, entity: "order", toStringTemplate: "{nope}" })).toThrow(/not a column/);
+		expect(() => entityConfigure({ moduleDir: dir, entity: "order", toStringTemplate: "{nope}" })).toThrow(
+			/not a column/,
+		);
 		expect(() => entityConfigure({ moduleDir: dir, entity: "order", toStringTemplate: "{lines}" })).toThrow(/set/);
 	});
 	it("rejects numberSequence on a missing/virtual column and bad pattern", () => {
@@ -78,28 +80,61 @@ describe("dforge_entity_configure", () => {
 			entityConfigure({ moduleDir: dir, entity: "order", numberSequence: { column: "label", defaultPrefix: "" } }),
 		).toThrow(/virtual/);
 		expect(() =>
-			entityConfigure({ moduleDir: dir, entity: "order", numberSequence: { column: "number", defaultPrefix: "", pattern: "{foo}" } }),
+			entityConfigure({
+				moduleDir: dir,
+				entity: "order",
+				numberSequence: { column: "number", defaultPrefix: "", pattern: "{foo}" },
+			}),
 		).toThrow(/placeholder/);
 	});
 	it("validates constraints and supports replace via remove+add", () => {
 		expect(() =>
-			entityConfigure({ moduleDir: dir, entity: "order", constraints: { add: { u: { type: "unique", fields: ["zzz"] } } } }),
+			entityConfigure({
+				moduleDir: dir,
+				entity: "order",
+				constraints: { add: { u: { type: "unique", fields: ["zzz"] } } },
+			}),
 		).toThrow(/not a column/);
 		expect(() =>
 			entityConfigure({ moduleDir: dir, entity: "order", constraints: { add: { c: { type: "check" } } } }),
 		).toThrow(/expression/);
-		apply(entityConfigure({ moduleDir: dir, entity: "order", constraints: { add: { c: { type: "check", expression: "total >= 0" } } } }));
+		apply(
+			entityConfigure({
+				moduleDir: dir,
+				entity: "order",
+				constraints: { add: { c: { type: "check", expression: "total >= 0" } } },
+			}),
+		);
 		expect(() =>
-			entityConfigure({ moduleDir: dir, entity: "order", constraints: { add: { c: { type: "check", expression: "total > 0" } } } }),
+			entityConfigure({
+				moduleDir: dir,
+				entity: "order",
+				constraints: { add: { c: { type: "check", expression: "total > 0" } } },
+			}),
 		).toThrow(/already exists/);
-		apply(entityConfigure({ moduleDir: dir, entity: "order", constraints: { remove: ["c"], add: { c: { type: "check", expression: "total > 0", message: "m" } } } }));
+		apply(
+			entityConfigure({
+				moduleDir: dir,
+				entity: "order",
+				constraints: { remove: ["c"], add: { c: { type: "check", expression: "total > 0", message: "m" } } },
+			}),
+		);
 		expect(read("entities/order.json").constraints.c.expression).toBe("total > 0");
 	});
 });
 
 describe("dforge_manifest_set", () => {
 	it("sets documented keys and refuses en locales", () => {
-		apply(manifestSet({ moduleDir: dir, description: "d", shortDescription: "s", category: "sales", tags: ["a"], supportedLocales: ["ru-RU"] }));
+		apply(
+			manifestSet({
+				moduleDir: dir,
+				description: "d",
+				shortDescription: "s",
+				category: "sales",
+				tags: ["a"],
+				supportedLocales: ["ru-RU"],
+			}),
+		);
 		const m = read("manifest.json");
 		expect(m.shortDescription).toBe("s");
 		expect(m.supportedLocales).toEqual(["ru-RU"]);
@@ -120,24 +155,64 @@ describe("dforge_manifest_set", () => {
 
 describe("dforge_menu_add report leaf", () => {
 	it("emits itemType R + reportCode and folders on the root", () => {
-		apply(menuAdd({ moduleDir: dir, menu: "shop_menu", parentPath: "", code: "sales", label: "Sales", reportCode: "sales", folders: ["shop_east"] }));
+		apply(
+			menuAdd({
+				moduleDir: dir,
+				menu: "shop_menu",
+				parentPath: "",
+				code: "sales",
+				label: "Sales",
+				reportCode: "sales",
+				folders: ["shop_east"],
+			}),
+		);
 		const m = read("ui/menus.json");
 		expect(m.shop_menu.folders).toEqual(["shop_east"]);
 		expect(m.shop_menu.items.sales).toMatchObject({ itemType: "R", reportCode: "sales" });
 	});
 	it("rejects unknown report, unknown folder, and both codes", () => {
-		expect(() => menuAdd({ moduleDir: dir, menu: "m", parentPath: "", code: "x", label: "X", reportCode: "nope" })).toThrow(/ui\/reports/);
-		expect(() => menuAdd({ moduleDir: dir, menu: "m", parentPath: "", code: "x", label: "X", folders: ["bogus"] })).toThrow(/folders/);
-		expect(() => menuAdd({ moduleDir: dir, menu: "m", parentPath: "", code: "x", label: "X", reportCode: "sales", dataViewCode: "orders" })).toThrow(/not both/);
+		expect(() =>
+			menuAdd({ moduleDir: dir, menu: "m", parentPath: "", code: "x", label: "X", reportCode: "nope" }),
+		).toThrow(/ui\/reports/);
+		expect(() =>
+			menuAdd({ moduleDir: dir, menu: "m", parentPath: "", code: "x", label: "X", folders: ["bogus"] }),
+		).toThrow(/folders/);
+		expect(() =>
+			menuAdd({
+				moduleDir: dir,
+				menu: "m",
+				parentPath: "",
+				code: "x",
+				label: "X",
+				reportCode: "sales",
+				dataViewCode: "orders",
+			}),
+		).toThrow(/not both/);
 	});
 });
 
 describe("dforge_action_modify", () => {
 	const dsl = "params:\nexecute:\n\tnotify('hi')\n";
 	it("updates registry entry and DSL, rejects missing code", () => {
-		apply(actionAdd({ moduleDir: dir, code: "ship", entityCode: "order", label: "Ship", executionMode: "single", isAsync: false, dslBody: dsl }));
+		apply(
+			actionAdd({
+				moduleDir: dir,
+				code: "ship",
+				entityCode: "order",
+				label: "Ship",
+				executionMode: "single",
+				isAsync: false,
+				dslBody: dsl,
+			}),
+		);
 		expect(() => actionModify({ moduleDir: dir, code: "nope", label: "x" })).toThrow(/not found/);
-		const r = actionModify({ moduleDir: dir, code: "ship", label: "Ship it", executionMode: "each", dslBody: "params:\nexecute:\n\tnotify('bye')\n" });
+		const r = actionModify({
+			moduleDir: dir,
+			code: "ship",
+			label: "Ship it",
+			executionMode: "each",
+			dslBody: "params:\nexecute:\n\tnotify('bye')\n",
+		});
 		apply(r);
 		expect(read("ui/actions.json").ship).toMatchObject({ label: "Ship it", executionMode: "each", script: "ship" });
 		expect(readFileSync(join(dir, "logic/actions/ship.dsl"), "utf8")).toContain("bye");
@@ -148,22 +223,43 @@ describe("dforge_action_modify", () => {
 describe("role folder: rights", () => {
 	it("refuses folder: keys in role_right_set and role_add", () => {
 		w("security/roles.json", { "shop.admin": { description: "a", rights: { order: "S" } } });
-		expect(() => roleRightSet({ moduleDir: dir, roleCode: "shop.admin", object: "folder:east", rights: "E" })).toThrow(/NOT expressible/);
-		expect(() => roleAddChecked({ moduleDir: dir, code: "shop.user", description: "u", rights: { order: "S", "folder:east": "E" } })).toThrow(/NOT expressible/);
+		expect(() => roleRightSet({ moduleDir: dir, roleCode: "shop.admin", object: "folder:east", rights: "E" })).toThrow(
+			/NOT expressible/,
+		);
+		expect(() =>
+			roleAddChecked({
+				moduleDir: dir,
+				code: "shop.user",
+				description: "u",
+				rights: { order: "S", "folder:east": "E" },
+			}),
+		).toThrow(/NOT expressible/);
 		// revoke stays allowed
-		expect(() => roleRightSet({ moduleDir: dir, roleCode: "shop.admin", object: "folder:east", rights: "" })).not.toThrow();
+		expect(() =>
+			roleRightSet({ moduleDir: dir, roleCode: "shop.admin", object: "folder:east", rights: "" }),
+		).not.toThrow();
 	});
 });
 
 describe("view_add / seed_add guards", () => {
 	it("rejects empty entityCode and fills grid columns from the entity", () => {
-		expect(() => viewAdd({ moduleDir: dir, code: "v", view: { viewType: "grid", dataSources: [{ entityCode: "" }] } })).toThrow(/empty/);
-		const r = viewAdd({ moduleDir: dir, code: "v2", view: { viewType: "grid", dataSources: [{ entityCode: "order", columns: [] }] } });
+		expect(() =>
+			viewAdd({ moduleDir: dir, code: "v", view: { viewType: "grid", dataSources: [{ entityCode: "" }] } }),
+		).toThrow(/empty/);
+		const r = viewAdd({
+			moduleDir: dir,
+			code: "v2",
+			view: { viewType: "grid", dataSources: [{ entityCode: "order", columns: [] }] },
+		});
 		const v = JSON.parse(r.files["ui/data_views.json"]);
 		expect(v.v2.dataSources[0].columns).toEqual(["number", "total", "label"]);
 	});
 	it("warns when columns can't be derived", () => {
-		const r = viewAdd({ moduleDir: dir, code: "v3", view: { viewType: "grid", dataSources: [{ entityCode: "other.thing", columns: [] }] } });
+		const r = viewAdd({
+			moduleDir: dir,
+			code: "v3",
+			view: { viewType: "grid", dataSources: [{ entityCode: "other.thing", columns: [] }] },
+		});
 		expect(r.warning).toMatch(/columns: \[\]/);
 	});
 	it("seed_add rejects an empty entity", () => {

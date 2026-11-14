@@ -12,7 +12,10 @@ import { moduleImport } from "../src/tools/import";
 import { moduleValidate } from "../src/tools/module-validate";
 
 const dir = mkdtempSync(join(tmpdir(), "dforge-mcp-import-"));
-writeFileSync(join(dir, "manifest.json"), JSON.stringify({ code: "imp", displayName: "Imp", version: "0.1.0", dbSchemaVersion: "0.0.1", entities: {} }));
+writeFileSync(
+	join(dir, "manifest.json"),
+	JSON.stringify({ code: "imp", displayName: "Imp", version: "0.1.0", dbSchemaVersion: "0.0.1", entities: {} }),
+);
 afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
 const { files } = moduleImport({

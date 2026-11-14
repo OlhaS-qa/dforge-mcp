@@ -37,10 +37,22 @@ const apply = (r: ToolResult) => applyToDisk(dir, guardSchemas(dir, r));
 
 function phase0() {
 	mkdirSync(join(dir, "docs"), { recursive: true });
-	writeFileSync(join(dir, "CLAUDE.md"), "# Shop\n\n- [x] **0a** Identity\n- [x] **0b** Requirements\n- [x] **0c** Design\n- [x] **0d** Validation\n- [ ] **1** Scaffolded — `manifest.json`\n");
-	writeFileSync(join(dir, "docs/REQUIREMENTS.md"), "# Requirements\n\nThe shop module tracks orders and items for staff.\nStaff create orders and supervisors approve them.\n");
-	writeFileSync(join(dir, "docs/DESIGN.md"), "# Design\n\n## Entity List\n- item\n- order\n\n## Relationship Map\n```mermaid\nerDiagram\n    item ||--o{ order : in\n```\n");
-	writeFileSync(join(dir, "docs/VALIDATION.md"), "# Validation Report\n\nAll checks passed.\n\nreadyToScaffold: true\n");
+	writeFileSync(
+		join(dir, "CLAUDE.md"),
+		"# Shop\n\n- [x] **0a** Identity\n- [x] **0b** Requirements\n- [x] **0c** Design\n- [x] **0d** Validation\n- [ ] **1** Scaffolded — `manifest.json`\n",
+	);
+	writeFileSync(
+		join(dir, "docs/REQUIREMENTS.md"),
+		"# Requirements\n\nThe shop module tracks orders and items for staff.\nStaff create orders and supervisors approve them.\n",
+	);
+	writeFileSync(
+		join(dir, "docs/DESIGN.md"),
+		"# Design\n\n## Entity List\n- item\n- order\n\n## Relationship Map\n```mermaid\nerDiagram\n    item ||--o{ order : in\n```\n",
+	);
+	writeFileSync(
+		join(dir, "docs/VALIDATION.md"),
+		"# Validation Report\n\nAll checks passed.\n\nreadyToScaffold: true\n",
+	);
 	writeFileSync(join(dir, "docs/phase.json"), JSON.stringify({ phase: "0d", readyToScaffold: true }) + "\n");
 }
 
@@ -80,8 +92,22 @@ const requiredProblems = (entityRel: string): string[] => {
 describe("field tools emit orderNum + description", () => {
 	it("field_add assigns max+10 and a description; explicit values are kept", () => {
 		scaffold();
-		apply(entityFieldAdd({ moduleDir: dir, entityName: "item", fieldName: "price", field: { fieldTypeCd: "currency", flags: "VE" } }));
-		apply(entityFieldAdd({ moduleDir: dir, entityName: "item", fieldName: "qty", field: { fieldTypeCd: "number", flags: "VE", orderNum: 5, description: "Quantity" } }));
+		apply(
+			entityFieldAdd({
+				moduleDir: dir,
+				entityName: "item",
+				fieldName: "price",
+				field: { fieldTypeCd: "currency", flags: "VE" },
+			}),
+		);
+		apply(
+			entityFieldAdd({
+				moduleDir: dir,
+				entityName: "item",
+				fieldName: "qty",
+				field: { fieldTypeCd: "number", flags: "VE", orderNum: 5, description: "Quantity" },
+			}),
+		);
 		const e = read("entities/item.json");
 		expect(e.fields.name.orderNum).toBe(10);
 		expect(e.fields.price.orderNum).toBe(20);
@@ -92,26 +118,66 @@ describe("field tools emit orderNum + description", () => {
 
 	it("field_modify keeps the old orderNum/description when the replacement omits them", () => {
 		scaffold();
-		apply(entityFieldModify({ moduleDir: dir, entityName: "item", fieldName: "name", field: { fieldTypeCd: "text", flags: "VEM", dbDatatype: "varchar", maxLen: 100 } }));
+		apply(
+			entityFieldModify({
+				moduleDir: dir,
+				entityName: "item",
+				fieldName: "name",
+				field: { fieldTypeCd: "text", flags: "VEM", dbDatatype: "varchar", maxLen: 100 },
+			}),
+		);
 		expect(read("entities/item.json").fields.name).toMatchObject({ orderNum: 10, description: "Name", maxLen: 100 });
 	});
 
 	it("reference_add / status_add / rollup_add / dbml_import / entity_add stubs validate against the field `required`", () => {
 		scaffold();
 		apply(entityReferenceAdd({ moduleDir: dir, entity: "order", targetEntity: "item", name: "item", required: true }));
-		apply(entityStatusAdd({ moduleDir: dir, entity: "order", name: "status", options: ["new", "done"], required: true } as never));
-		apply(entityFieldAdd({ moduleDir: dir, entityName: "order", fieldName: "amount", field: { fieldTypeCd: "currency", flags: "VE" } }));
-		apply(entityRollupAdd({ moduleDir: dir, entity: "item", name: "total", childEntity: "order", childField: "amount", agg: "SUM", childFkField: "item_id" } as never));
-		apply({ summary: "x", files: addEntityFiles({ moduleDir: dir, entity: { name: "extra", label: "Extra", traits: ["identity"] } }).files });
+		apply(
+			entityStatusAdd({
+				moduleDir: dir,
+				entity: "order",
+				name: "status",
+				options: ["new", "done"],
+				required: true,
+			} as never),
+		);
+		apply(
+			entityFieldAdd({
+				moduleDir: dir,
+				entityName: "order",
+				fieldName: "amount",
+				field: { fieldTypeCd: "currency", flags: "VE" },
+			}),
+		);
+		apply(
+			entityRollupAdd({
+				moduleDir: dir,
+				entity: "item",
+				name: "total",
+				childEntity: "order",
+				childField: "amount",
+				agg: "SUM",
+				childFkField: "item_id",
+			} as never),
+		);
+		apply({
+			summary: "x",
+			files: addEntityFiles({ moduleDir: dir, entity: { name: "extra", label: "Extra", traits: ["identity"] } }).files,
+		});
 		for (const n of ["item", "order", "extra"]) expect(requiredProblems(`entities/${n}.json`), n).toEqual([]);
 
 		const d2 = mkdtempSync(join(tmpdir(), "dforge-mcp-r3b2-"));
 		try {
-			const r = dbmlImport({ moduleDir: d2, dbml: "Table ord { id int [pk]\n title varchar(50) [not null]\n cust int }\nTable cust { id int [pk]\n name varchar }\nRef: ord.cust > cust.id", module: { code: "shop", displayName: "Shop" } });
+			const r = dbmlImport({
+				moduleDir: d2,
+				dbml: "Table ord { id int [pk]\n title varchar(50) [not null]\n cust int }\nTable cust { id int [pk]\n name varchar }\nRef: ord.cust > cust.id",
+				module: { code: "shop", displayName: "Shop" },
+			});
 			const req = fieldSchema().required;
 			for (const [rel, text] of Object.entries(r.files)) {
 				if (!rel.startsWith("entities/")) continue;
-				for (const [k, f] of Object.entries<any>(JSON.parse(text).fields ?? {})) for (const q of req) expect(f, `${rel}.${k}.${q}`).toHaveProperty(q);
+				for (const [k, f] of Object.entries<any>(JSON.parse(text).fields ?? {}))
+					for (const q of req) expect(f, `${rel}.${k}.${q}`).toHaveProperty(q);
 			}
 		} finally {
 			rmSync(d2, { recursive: true, force: true });
@@ -137,11 +203,24 @@ describe("validate summary", () => {
 describe("field_remove cascades into data views", () => {
 	it("removes the column from string-form columns, order and filter", () => {
 		scaffold();
-		apply(entityFieldAdd({ moduleDir: dir, entityName: "item", fieldName: "code", field: { fieldTypeCd: "text", flags: "VE", dbDatatype: "varchar" } }));
+		apply(
+			entityFieldAdd({
+				moduleDir: dir,
+				entityName: "item",
+				fieldName: "code",
+				field: { fieldTypeCd: "text", flags: "VE", dbDatatype: "varchar" },
+			}),
+		);
 		const v = read("ui/data_views.json");
 		v.item.dataSources[0].columns = ["name", "code"];
 		v.item.dataSources[0].order = [{ c: "name", d: "asc" }, "-code"];
-		v.item.dataSources[0].filter = { g: "and", i: [{ c: "name", o: "=", v: "x" }, { c: "code", o: "!null" }] };
+		v.item.dataSources[0].filter = {
+			g: "and",
+			i: [
+				{ c: "name", o: "=", v: "x" },
+				{ c: "code", o: "!null" },
+			],
+		};
 		write("ui/data_views.json", v);
 		const r = entityFieldRemove({ moduleDir: dir, entityName: "item", fieldName: "name" });
 		expect(r.summary).toMatch(/data_views\.json/);
@@ -177,11 +256,20 @@ describe("nameField: false", () => {
 		expect(read("ui/data_views.json").item.dataSources[0].columns).toEqual(["item_id"]);
 		// A grid needs a visible field: the only open error is that one, until the author adds a field.
 		let v = JSON.parse(moduleValidate({ moduleDir: dir }).files["_validate.json"]);
-		expect(v.errors.map((e: { message: string }) => e.message).every((m: string) => /no visible column/.test(m))).toBe(true);
+		expect(v.errors.map((e: { message: string }) => e.message).every((m: string) => /no visible column/.test(m))).toBe(
+			true,
+		);
 		const grid = v.warnings.filter((w: { message: string }) => /schema\)/.test(w.message));
 		expect(grid, JSON.stringify(grid)).toEqual([]);
 		for (const n of ["item", "order"]) {
-			apply(entityFieldAdd({ moduleDir: dir, entityName: n, fieldName: "title", field: { fieldTypeCd: "text", flags: "VEM", dbDatatype: "varchar" } }));
+			apply(
+				entityFieldAdd({
+					moduleDir: dir,
+					entityName: n,
+					fieldName: "title",
+					field: { fieldTypeCd: "text", flags: "VEM", dbDatatype: "varchar" },
+				}),
+			);
 		}
 		expect(read("entities/item.json").fields.title.orderNum).toBe(10);
 		v = JSON.parse(moduleValidate({ moduleDir: dir }).files["_validate.json"]);
@@ -191,7 +279,10 @@ describe("nameField: false", () => {
 	});
 	it("entity_add accepts nameField:false and toStringTemplate", () => {
 		scaffold();
-		const r = addEntityFiles({ moduleDir: dir, entity: { name: "line", label: "Line", traits: ["identity"], nameField: false, toStringTemplate: "{number}" } });
+		const r = addEntityFiles({
+			moduleDir: dir,
+			entity: { name: "line", label: "Line", traits: ["identity"], nameField: false, toStringTemplate: "{number}" },
+		});
 		const e = JSON.parse(r.files["entities/line.json"]);
 		expect(e.fields).toEqual({});
 		expect(e.toString).toBe("{number}");
@@ -214,7 +305,14 @@ describe("module_plan ledger", () => {
 
 	it("still flags real evidence: actions exist but Phase 2 is not recorded", () => {
 		scaffold();
-		apply(entityFieldAdd({ moduleDir: dir, entityName: "item", fieldName: "code", field: { fieldTypeCd: "text", flags: "VE", dbDatatype: "varchar" } }));
+		apply(
+			entityFieldAdd({
+				moduleDir: dir,
+				entityName: "item",
+				fieldName: "code",
+				field: { fieldTypeCd: "text", flags: "VE", dbDatatype: "varchar" },
+			}),
+		);
 		write("ui/actions.json", { approve: { label: "Approve", entityCode: "item" } });
 		const c = plan({ action: "check" });
 		expect((c.ledgerBehind ?? []).join(" ")).toMatch(/Phase 1/);
@@ -227,7 +325,10 @@ describe("messages from function libraries", () => {
 	function withLibrary() {
 		scaffold();
 		write("manifest.json", { ...read("manifest.json"), supportedLocales: ["ru-RU"] });
-		write("logic/functions/lib.dsl", "function guard(c) {\n    if (c == null) { error('The record is missing.') }\n}\n");
+		write(
+			"logic/functions/lib.dsl",
+			"function guard(c) {\n    if (c == null) { error('The record is missing.') }\n}\n",
+		);
 		write("logic/actions/go.dsl", "execute:\n    info('Done.')\n");
 		write("ui/actions.json", { go: { label: "Go", entityCode: "item" } });
 	}
@@ -249,9 +350,17 @@ describe("setting_add datatype enum", () => {
 	it("rejects baseDatatypeCd 'cuid' naming the vendored schema; accepts 'string'", () => {
 		scaffold();
 		expect(() =>
-			settingAdd({ moduleDir: dir, code: "owner", setting: { fieldTypeCd: "text", baseDatatypeCd: "cuid", label: "Owner" } } as never),
+			settingAdd({
+				moduleDir: dir,
+				code: "owner",
+				setting: { fieldTypeCd: "text", baseDatatypeCd: "cuid", label: "Owner" },
+			} as never),
 		).toThrow(/vendored settings\.schema\.json does not list it/);
-		const r = settingAdd({ moduleDir: dir, code: "owner", setting: { fieldTypeCd: "text", baseDatatypeCd: "string", label: "Owner" } } as never);
+		const r = settingAdd({
+			moduleDir: dir,
+			code: "owner",
+			setting: { fieldTypeCd: "text", baseDatatypeCd: "string", label: "Owner" },
+		} as never);
 		expect(JSON.parse(r.files["settings.json"]).owner.baseDatatypeCd).toBe("string");
 	});
 });

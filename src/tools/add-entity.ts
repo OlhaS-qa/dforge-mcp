@@ -1,41 +1,39 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { z } from "zod";
-import {
-	buildEntity,
-	buildFolders,
-	buildMenus,
-	buildRoles,
-} from "@dforge-core/dforge-cli/templates";
+import { buildEntity, buildFolders, buildMenus, buildRoles } from "@dforge-core/dforge-cli/templates";
 import type { EntitySpec, ScaffoldOpts } from "@dforge-core/dforge-cli/templates";
-import {
-	traitsInput,
-	withTraits,
-	withIdentityToString,
-	expandedEntity,
-	walkFolders,
-	jsonText,
-} from "./_helpers";
+import { traitsInput, withTraits, withIdentityToString, expandedEntity, walkFolders, jsonText } from "./_helpers";
 
 export const adminRightsInput = z
 	.string()
 	.regex(/^[SIUDC]+$/)
 	.describe(
-		"Rights granted to the '<module>.admin' role on the new entity/entities (default 'SIUDC'). Pass e.g. 'SIUC' when the module forbids deleting these records. Applies only when roles.json already exists; with a fresh roles.json the scaffold default is used.",
+		"Rights granted to the '<module>.admin' role on the new entity/entities (default 'SIUDC'). Pass e.g. " +
+			"'SIUC' when the module forbids deleting these records. Applies only when roles.json already exists; " +
+			"with a fresh roles.json the scaffold default is used.",
 	);
 
 export const nameFieldInput = z
 	.boolean()
 	.optional()
 	.describe(
-		"Default true: the scaffold stub carries a visible `name` text field and toString '{name}'. Pass false when the entity has no 'name' (a document, a line, a register row): no stub field is created, so there is nothing to remove afterwards; toString is then the given `toString` template or the primary key, and the default grid lists real columns (the PK until you add fields). A grid needs one visible field, so add the entity's first field (dforge_entity_field_add, flags V…) before dforge_module_validate.",
+		"Default true: the scaffold stub carries a visible `name` text field and toString '{name}'. Pass " +
+			"false when the entity has no 'name' (a document, a line, a register row): no stub field is created, " +
+			"so there is nothing to remove afterwards; toString is then the given `toString` template or the " +
+			"primary key, and the default grid lists real columns (the PK until you add fields). A grid needs " +
+			"one visible field, so add the entity's first field (dforge_entity_field_add, flags V…) before " +
+			"dforge_module_validate.",
 	);
 
 export const toStringInput = z
 	.string()
 	.optional()
 	.describe(
-		"Optional toString template (key `toStringTemplate`) for the new entity, e.g. '{number} - {title}'. It must name columns the entity has or will get (add them with dforge_entity_field_add); dforge_module_validate flags a placeholder with no column. Used as given with nameField:false; otherwise it replaces the stub '{name}'.",
+		"Optional toString template (key `toStringTemplate`) for the new entity, e.g. '{number} - {title}'. " +
+			"It must name columns the entity has or will get (add them with dforge_entity_field_add); " +
+			"dforge_module_validate flags a placeholder with no column. Used as given with nameField:false; " +
+			"otherwise it replaces the stub '{name}'.",
 	);
 
 /**
@@ -60,9 +58,7 @@ export function buildEntityStub(
 }
 
 export const addEntitySchema = {
-	moduleDir: z
-		.string()
-		.describe("Absolute or relative path to an existing module directory (contains manifest.json)."),
+	moduleDir: z.string().describe("Absolute or relative path to an existing module directory (contains manifest.json)."),
 	entity: z.object({
 		name: z.string().regex(/^[a-z][a-z0-9_]*$/),
 		label: z.string().min(1),
@@ -119,7 +115,9 @@ export function viewColumnsFor(entity: Obj, entityName: string): string[] {
  */
 export function ensureToString<T extends Obj>(entity: T, entityName: string): T {
 	const { columns, fieldDefs } = expandedEntity(entity, entityName);
-	const ts: unknown = Object.prototype.hasOwnProperty.call(entity, "toString") ? (entity as Obj)["toString"] : undefined;
+	const ts: unknown = Object.prototype.hasOwnProperty.call(entity, "toString")
+		? (entity as Obj)["toString"]
+		: undefined;
 	if (typeof ts === "string") {
 		const refs = [...ts.matchAll(/\{(\w+)\}/g)].map((m) => m[1]);
 		if (refs.length > 0 && refs.every((r) => columns.has(r))) return entity;
@@ -157,7 +155,9 @@ function readExisting(root: string, rel: string): Obj | undefined {
 	try {
 		parsed = JSON.parse(fs.readFileSync(abs, "utf8"));
 	} catch (e) {
-		throw new Error(`${rel} is not valid JSON (${(e as Error).message}) — fix it before adding entities; nothing was changed.`);
+		throw new Error(
+			`${rel} is not valid JSON (${(e as Error).message}) — fix it before adding entities; nothing was changed.`,
+		);
 	}
 	if (parsed === null || typeof parsed !== "object" || Array.isArray(parsed)) {
 		throw new Error(`${rel} is not a JSON object — fix it before adding entities; nothing was changed.`);
@@ -278,7 +278,10 @@ export function mergeUiAndSecurity(
 			const items: Obj = menus[key].items;
 			let itemKey = n.name;
 			while (Object.prototype.hasOwnProperty.call(items, itemKey)) itemKey = `${itemKey}_item`;
-			const maxOrder = Math.max(0, ...Object.values(items).map((i) => (typeof (i as Obj)?.orderNum === "number" ? (i as Obj).orderNum : 0)));
+			const maxOrder = Math.max(
+				0,
+				...Object.values(items).map((i) => (typeof (i as Obj)?.orderNum === "number" ? (i as Obj).orderNum : 0)),
+			);
 			items[itemKey] = { itemType: "V", label: n.label, dataViewCode: n.name, orderNum: maxOrder + 1, icon: "table" };
 			added_.push(n.name);
 		}
@@ -322,7 +325,8 @@ export function mergeUiAndSecurity(
 export function additiveNotice(m: UiMergeResult, otherFiles: string[]): string {
 	const lines = [
 		`Additive update — ADDED: ${[...otherFiles, ...m.added].join("; ")}.`,
-		"Nothing existing was overwritten: roles, rights on actions/reports, custom views, child folders, menu sections and every other entry already on disk were preserved.",
+		"Nothing existing was overwritten: roles, rights on actions/reports, custom views, child folders, " +
+			"menu sections and every other entry already on disk were preserved.",
 	];
 	if (m.notes.length) lines.push(...m.notes);
 	return lines.join("\n");
@@ -336,9 +340,10 @@ export function additiveNotice(m: UiMergeResult, otherFiles: string[]): string {
  * stays untouched. UI/security files are MERGED with what is on disk — only the
  * new entity's default view / folder entry / menu leaf / admin right is added.
  */
-export function addEntityFiles(
-	args: z.infer<z.ZodObject<typeof addEntitySchema>>,
-): { files: Record<string, string>; warning?: string } {
+export function addEntityFiles(args: z.infer<z.ZodObject<typeof addEntitySchema>>): {
+	files: Record<string, string>;
+	warning?: string;
+} {
 	const root = path.resolve(args.moduleDir);
 	const manifestPath = path.join(root, "manifest.json");
 	if (!fs.existsSync(manifestPath)) {
@@ -361,13 +366,11 @@ export function addEntityFiles(
 	}
 
 	// Existing entities are only needed to build files that do not exist yet.
-	const existingEntities: EntitySpec[] = Object.keys(manifest.entities ?? {}).map(
-		(name) => ({
-			name,
-			label: tryReadEntityLabel(root, name) ?? name,
-			traits: "identity+audit",
-		}),
-	);
+	const existingEntities: EntitySpec[] = Object.keys(manifest.entities ?? {}).map((name) => ({
+		name,
+		label: tryReadEntityLabel(root, name) ?? name,
+		traits: "identity+audit",
+	}));
 
 	const newEntity: EntitySpec = {
 		name: args.entity.name,
@@ -429,9 +432,7 @@ export function addEntityFiles(
 
 function tryReadEntityLabel(root: string, name: string): string | undefined {
 	try {
-		const e = JSON.parse(
-			fs.readFileSync(path.join(root, "entities", `${name}.json`), "utf8"),
-		);
+		const e = JSON.parse(fs.readFileSync(path.join(root, "entities", `${name}.json`), "utf8"));
 		return e.description as string | undefined;
 	} catch {
 		return undefined;

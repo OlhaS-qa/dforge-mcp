@@ -49,7 +49,8 @@ function make(files: Record<string, unknown>, manifest: Record<string, unknown> 
 }
 const run = (dir: string, format?: "full" | "summary") =>
 	JSON.parse(moduleValidate({ moduleDir: dir, format }).files["_validate.json"]);
-const msgs = (list: Array<{ where: string; message: string }>) => list.map((i) => `${i.where}: ${i.message}`).join("\n");
+const msgs = (list: Array<{ where: string; message: string }>) =>
+	list.map((i) => `${i.where}: ${i.message}`).join("\n");
 
 describe("format: summary", () => {
 	it("groups repeated warnings with a count and 3 examples, keeps counts in the summary line", () => {
@@ -123,7 +124,10 @@ describe("tests/*.test.json", () => {
 					{},
 					{
 						given: [{ entityCode: "ghost", records: [{}] }],
-						do: [{ action: "nope", record: { thing: { name: "a" } } }, { insert: "thing", values: { colx: 1 } }],
+						do: [
+							{ action: "nope", record: { thing: { name: "a" } } },
+							{ insert: "thing", values: { colx: 1 } },
+						],
 					},
 				),
 			}),
@@ -266,7 +270,8 @@ describe("vendored JSON-schema pass", () => {
 describe("library functions are collected and passed to the DSL checker", () => {
 	it("reads top-level function names from logic/functions/*.dsl", () => {
 		const dir = make({
-			"logic/functions/lib.dsl": "// helpers\nfunction addMonths(d, n) {\n\treturn d\n}\n\nfunction daysSince(ts) {\n\treturn 1\n}\n  function nested() {}\n",
+			"logic/functions/lib.dsl":
+				"// helpers\nfunction addMonths(d, n) {\n\treturn d\n}\n\nfunction daysSince(ts) {\n\treturn 1\n}\n  function nested() {}\n",
 		});
 		expect(readLibraryFunctions(join(dir, "logic"))).toEqual(["addMonths", "daysSince"]);
 	});
@@ -280,7 +285,9 @@ describe("library functions are collected and passed to the DSL checker", () => 
 		seen.length = 0;
 		run(dir);
 		expect(seen.length).toBeGreaterThan(0);
-		expect(seen.some((c) => Array.isArray(c.libraryFunctions) && (c.libraryFunctions as string[]).includes("addMonths"))).toBe(true);
+		expect(
+			seen.some((c) => Array.isArray(c.libraryFunctions) && (c.libraryFunctions as string[]).includes("addMonths")),
+		).toBe(true);
 	});
 });
 
@@ -294,10 +301,24 @@ describe("menu nesting hint", () => {
 		const dir = mkdtempSync(join(tmpdir(), "dforge-menu-hint-"));
 		try {
 			mkdirSync(join(dir, "ui"), { recursive: true });
-			writeFileSync(join(dir, "manifest.json"), JSON.stringify({ packageFormat: 1, code: "m", version: "1.0.0", displayName: "M", entities: {} }));
+			writeFileSync(
+				join(dir, "manifest.json"),
+				JSON.stringify({ packageFormat: 1, code: "m", version: "1.0.0", displayName: "M", entities: {} }),
+			);
 			writeFileSync(
 				join(dir, "ui/menus.json"),
-				JSON.stringify({ m_menu: { label: "M", items: { sec: { label: "S", orderNum: 1, items: { a: { itemType: "V", label: "A", dataViewCode: "a", orderNum: 1 } } } } } }),
+				JSON.stringify({
+					m_menu: {
+						label: "M",
+						items: {
+							sec: {
+								label: "S",
+								orderNum: 1,
+								items: { a: { itemType: "V", label: "A", dataViewCode: "a", orderNum: 1 } },
+							},
+						},
+					},
+				}),
 			);
 			const ctx = loadContext(dir);
 			checkJsonSchemas(ctx);

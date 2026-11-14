@@ -66,17 +66,45 @@ const DB_DATATYPE_ALIASES: Record<string, string | string[]> = {
 
 /** baseDatatypeCd values the vendored entity.schema.json accepts. */
 export const BASE_DATATYPE_CDS = [
-	"binary", "bool", "cuid", "culture", "date", "guid", "link", "number", "project", "string", "time", "timestamp", "xml", "json",
+	"binary",
+	"bool",
+	"cuid",
+	"culture",
+	"date",
+	"guid",
+	"link",
+	"number",
+	"project",
+	"string",
+	"time",
+	"timestamp",
+	"xml",
+	"json",
 ] as const;
 
 /** fieldTypeCd-ish / SQL-ish codes people type into baseDatatypeCd → the real one. */
 const BASE_DATATYPE_ALIASES: Record<string, string> = {
-	text: "string", varchar: "string", textarea: "string", email: "string", phone: "string", url: "string",
-	datetime: "timestamp", timestamptz: "timestamp",
-	boolean: "bool", checkbox: "bool",
-	integer: "number", int: "number", bigint: "number", numeric: "number", decimal: "number", float: "number",
-	currency: "number", percent: "number", money: "number",
-	lookup: "cuid", uuid: "guid",
+	text: "string",
+	varchar: "string",
+	textarea: "string",
+	email: "string",
+	phone: "string",
+	url: "string",
+	datetime: "timestamp",
+	timestamptz: "timestamp",
+	boolean: "bool",
+	checkbox: "bool",
+	integer: "number",
+	int: "number",
+	bigint: "number",
+	numeric: "number",
+	decimal: "number",
+	float: "number",
+	currency: "number",
+	percent: "number",
+	money: "number",
+	lookup: "cuid",
+	uuid: "guid",
 };
 
 /** Quote one suggestion, or a list of them, for an error message. */
@@ -97,15 +125,14 @@ export function checkFieldSpec(where: string, field: unknown): FieldIssue[] {
 	}
 	const v = field as Record<string, unknown>;
 	const err = (message: string) => issues.push({ level: "error", message: `${where}: ${message}` });
-	const warn = (message: string) =>
-		issues.push({ level: "warning", message: `${where}: ${message}` });
+	const warn = (message: string) => issues.push({ level: "warning", message: `${where}: ${message}` });
 
 	// `defaultValue`/`default` are settings keys, not entity-field keys — the
 	// entity schema is additionalProperties:false, so this hard-fails install.
 	if (v.defaultValue !== undefined || v.default !== undefined) {
 		err(
 			"entity fields have no 'defaultValue'/'default' key (settings-only). Set a default with " +
-				"'formula' (e.g. \"formula\": \"'draft'\" or \"formula\": \"TODAY()\"), a numberSequence, or DSL logic.",
+				'\'formula\' (e.g. "formula": "\'draft\'" or "formula": "TODAY()"), a numberSequence, or DSL logic.',
 		);
 	}
 
@@ -122,9 +149,7 @@ export function checkFieldSpec(where: string, field: unknown): FieldIssue[] {
 		const hint = v.flags.includes("H")
 			? " There is no 'H' flag — a column is hidden by omitting 'V'."
 			: " U/S/P are not flag letters.";
-		err(
-			`flags '${v.flags}' contains invalid letters — use only V/I/E/M (e.g. VEM, VE, V, E).${hint}`,
-		);
+		err(`flags '${v.flags}' contains invalid letters — use only V/I/E/M (e.g. VEM, VE, V, E).${hint}`);
 	}
 
 	// 'M' resolves to isNullable:false at install, so declaring both is a
@@ -145,12 +170,8 @@ export function checkFieldSpec(where: string, field: unknown): FieldIssue[] {
 	// column legitimately has no fieldTypeCd, so only validate when present.
 	if (typeof v.fieldTypeCd === "string" && v.fieldTypeCd.length > 0 && !isFieldTypeCd(v.fieldTypeCd)) {
 		const alias = FIELD_TYPE_ALIASES[v.fieldTypeCd.toLowerCase()];
-		const hint = alias
-			? ` Did you mean '${alias}'?`
-			: ` Valid codes: ${[...fieldTypeCds].sort().join(", ")}.`;
-		err(
-			`fieldTypeCd '${v.fieldTypeCd}' is not a valid field type.${hint} (See dforge://reference/field-types.)`,
-		);
+		const hint = alias ? ` Did you mean '${alias}'?` : ` Valid codes: ${[...fieldTypeCds].sort().join(", ")}.`;
+		err(`fieldTypeCd '${v.fieldTypeCd}' is not a valid field type.${hint} (See dforge://reference/field-types.)`);
 	}
 
 	// columnType, when present, must be a known column kind. A plain data column
@@ -207,9 +228,7 @@ export function checkFieldSpec(where: string, field: unknown): FieldIssue[] {
 			err("formula column (columnType 'F') requires a non-empty 'formula' expression.");
 		}
 		if (typeof v.flags === "string" && v.flags !== "V" && /^[VIEM]+$/.test(v.flags)) {
-			warn(
-				`formula column has flags '${v.flags}' — a computed column is read-only, expected flags 'V'.`,
-			);
+			warn(`formula column has flags '${v.flags}' — a computed column is read-only, expected flags 'V'.`);
 		}
 	}
 
@@ -310,12 +329,8 @@ export function isHiddenFk(field: Record<string, unknown>): boolean {
  * to check the aggregated child column is PHYSICAL (an 'F'/'R'/'S' child fails
  * install with `column old.<field> does not exist`).
  */
-export function parseSetAggregate(
-	formula: string,
-): { agg: string; setField: string; childField: string } | null {
-	const m = formula.match(
-		/\b(SUM|COUNT|AVG|MIN|MAX)\s*\(\s*\[([a-z][a-z0-9_]*)\]\s*\.\s*\[([a-z][a-z0-9_]*)\]\s*\)/i,
-	);
+export function parseSetAggregate(formula: string): { agg: string; setField: string; childField: string } | null {
+	const m = formula.match(/\b(SUM|COUNT|AVG|MIN|MAX)\s*\(\s*\[([a-z][a-z0-9_]*)\]\s*\.\s*\[([a-z][a-z0-9_]*)\]\s*\)/i);
 	if (!m) return null;
 	return { agg: m[1].toUpperCase(), setField: m[2], childField: m[3] };
 }

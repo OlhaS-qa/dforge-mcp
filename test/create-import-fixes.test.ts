@@ -36,10 +36,22 @@ const validate = () => JSON.parse(moduleValidate({ moduleDir: dir }).files["_val
 
 function phase0() {
 	mkdirSync(join(dir, "docs"), { recursive: true });
-	writeFileSync(join(dir, "CLAUDE.md"), "# Shop — dForge Module\n\n| Field | Value |\n|---|---|\n| Code | `shop` |\n\n- [x] **0a** Identity\n- [x] **0b** Requirements\n- [x] **0c** Design\n- [x] **0d** Validation\n");
-	writeFileSync(join(dir, "docs/REQUIREMENTS.md"), "# Requirements\n\nThe shop module tracks orders and items for staff.\nStaff create orders and supervisors approve them.\n");
-	writeFileSync(join(dir, "docs/DESIGN.md"), "# Design\n\n## Entity List\n- item\n- order\n\n## Relationship Map\n```mermaid\nerDiagram\n    item ||--o{ order : in\n```\n");
-	writeFileSync(join(dir, "docs/VALIDATION.md"), "# Validation Report\n\nAll checks passed.\n\nreadyToScaffold: true\n");
+	writeFileSync(
+		join(dir, "CLAUDE.md"),
+		"# Shop — dForge Module\n\n| Field | Value |\n|---|---|\n| Code | `shop` |\n\n- [x] **0a** Identity\n- [x] **0b** Requirements\n- [x] **0c** Design\n- [x] **0d** Validation\n",
+	);
+	writeFileSync(
+		join(dir, "docs/REQUIREMENTS.md"),
+		"# Requirements\n\nThe shop module tracks orders and items for staff.\nStaff create orders and supervisors approve them.\n",
+	);
+	writeFileSync(
+		join(dir, "docs/DESIGN.md"),
+		"# Design\n\n## Entity List\n- item\n- order\n\n## Relationship Map\n```mermaid\nerDiagram\n    item ||--o{ order : in\n```\n",
+	);
+	writeFileSync(
+		join(dir, "docs/VALIDATION.md"),
+		"# Validation Report\n\nAll checks passed.\n\nreadyToScaffold: true\n",
+	);
 	writeFileSync(join(dir, "docs/phase.json"), JSON.stringify({ phase: "0d", readyToScaffold: true }) + "\n");
 }
 
@@ -145,9 +157,20 @@ describe("module_create: preset full and defaults (R-14)", () => {
 
 // A module with hand-built UI/security that the regenerating builders used to destroy.
 function richModule() {
-	write("manifest.json", { packageFormat: 1, moduleId: "m", code: "shop", version: "0.1.0", dbSchemaVersion: "0.0.1", displayName: "Shop", entities: { item: "./entities/item.json" } });
+	write("manifest.json", {
+		packageFormat: 1,
+		moduleId: "m",
+		code: "shop",
+		version: "0.1.0",
+		dbSchemaVersion: "0.0.1",
+		displayName: "Shop",
+		entities: { item: "./entities/item.json" },
+	});
 	write("entities/item.json", {
-		description: "Item", dbObject: "item", toString: "{title}", traits: ["identity", "audit"],
+		description: "Item",
+		dbObject: "item",
+		toString: "{title}",
+		traits: ["identity", "audit"],
 		fields: { title: { dbDatatype: "varchar", fieldTypeCd: "text", flags: "VEM", orderNum: 10, description: "Title" } },
 	});
 	write("ui/data_views.json", {
@@ -155,11 +178,26 @@ function richModule() {
 		item_kanban: { viewType: "kanban", label: "Board", dataSources: [{ entityCode: "item", columns: ["title"] }] },
 	});
 	write("ui/folders.json", {
-		label: "Shop", icon: "bi-folder", entities: { item: { viewName: "default" } },
-		children: { archive: { label: "Archive", entities: { item: { viewName: "default", rowFilter: { c: "title", o: "=", v: "x" } } } } },
+		label: "Shop",
+		icon: "bi-folder",
+		entities: { item: { viewName: "default" } },
+		children: {
+			archive: {
+				label: "Archive",
+				entities: { item: { viewName: "default", rowFilter: { c: "title", o: "=", v: "x" } } },
+			},
+		},
 	});
 	write("ui/menus.json", {
-		shop_menu: { label: "Shop", items: { stock: { label: "Stock", children: { item: { itemType: "V", label: "Item", dataViewCode: "item", orderNum: 1 } } } } },
+		shop_menu: {
+			label: "Shop",
+			items: {
+				stock: {
+					label: "Stock",
+					children: { item: { itemType: "V", label: "Item", dataViewCode: "item", orderNum: 1 } },
+				},
+			},
+		},
 	});
 	write("security/roles.json", {
 		"shop.admin": { description: "Admins", rights: { item: "SIUDC", "action:approve": "E" } },
@@ -171,7 +209,10 @@ describe("entity_add is additive (R-9)", () => {
 	it("keeps existing roles, rights, views, child folders and menu sections", () => {
 		richModule();
 		const before = { roles: read("security/roles.json"), folders: read("ui/folders.json") };
-		const res = addEntityFiles({ moduleDir: dir, entity: { name: "order", label: "Order", traits: ["identity", "audit"] } });
+		const res = addEntityFiles({
+			moduleDir: dir,
+			entity: { name: "order", label: "Order", traits: ["identity", "audit"] },
+		});
 		apply({ summary: "x", files: res.files });
 		const roles = read("security/roles.json");
 		expect(roles["shop.clerk"]).toEqual(before.roles["shop.clerk"]);
@@ -191,16 +232,29 @@ describe("entity_add is additive (R-9)", () => {
 
 	it("does not touch files it has nothing to add to", () => {
 		richModule();
-		const res = addEntityFiles({ moduleDir: dir, entity: { name: "order", label: "Order", traits: ["identity", "audit"] } });
+		const res = addEntityFiles({
+			moduleDir: dir,
+			entity: { name: "order", label: "Order", traits: ["identity", "audit"] },
+		});
 		expect(Object.keys(res.files).sort()).toEqual(
-			["entities/order.json", "manifest.json", "security/roles.json", "ui/data_views.json", "ui/folders.json", "ui/menus.json"].sort(),
+			[
+				"entities/order.json",
+				"manifest.json",
+				"security/roles.json",
+				"ui/data_views.json",
+				"ui/folders.json",
+				"ui/menus.json",
+			].sort(),
 		);
 	});
 
 	it("warns when there is no admin role to grant on instead of inventing one", () => {
 		richModule();
 		write("security/roles.json", { "shop.clerk": { description: "Clerks", rights: { item: "SI" } } });
-		const res = addEntityFiles({ moduleDir: dir, entity: { name: "order", label: "Order", traits: ["identity", "audit"] } });
+		const res = addEntityFiles({
+			moduleDir: dir,
+			entity: { name: "order", label: "Order", traits: ["identity", "audit"] },
+		});
 		expect(res.files["security/roles.json"]).toBeUndefined();
 		expect(res.warning).toMatch(/no 'shop.admin' role/);
 	});
@@ -258,7 +312,11 @@ describe("dbml_import fidelity (R-9, Q-9)", () => {
 
 	it("maps Enum to dropdown options", () => {
 		expect(cust.fields.state.fieldTypeCd).toBe("dropdown");
-		expect(cust.fields.state.params.options.map((o: { value: string }) => o.value)).toEqual(["new", "in progress", "done"]);
+		expect(cust.fields.state.params.options.map((o: { value: string }) => o.value)).toEqual([
+			"new",
+			"in progress",
+			"done",
+		]);
 	});
 
 	it("maps default to a formula, never a defaultValue key", () => {
@@ -279,7 +337,11 @@ describe("dbml_import fidelity (R-9, Q-9)", () => {
 
 	it("maps unique and composite unique to unique constraints, plain index to indexes", () => {
 		expect(cust.constraints.uq_customer_code).toMatchObject({ type: "unique", fields: ["code"] });
-		expect(Object.values(cust.constraints).some((c) => JSON.stringify((c as { fields: string[] }).fields) === '["code","name"]')).toBe(true);
+		expect(
+			Object.values(cust.constraints).some(
+				(c) => JSON.stringify((c as { fields: string[] }).fields) === '["code","name"]',
+			),
+		).toBe(true);
 		expect(cust.indexes.idx_customer_name.fields).toEqual(["name"]);
 	});
 
@@ -356,7 +418,10 @@ describe("import into an existing module", () => {
 
 	it("module_import (table-spec) is additive too", () => {
 		richModule();
-		const r = moduleImport({ moduleDir: dir, tables: [{ name: "ord", columns: [{ name: "title", sqlType: "varchar(50)" }] }] });
+		const r = moduleImport({
+			moduleDir: dir,
+			tables: [{ name: "ord", columns: [{ name: "title", sqlType: "varchar(50)" }] }],
+		});
 		apply(r);
 		expect(read("security/roles.json")["shop.clerk"]).toBeDefined();
 		expect(existsSync(join(dir, "entities/ord.json"))).toBe(true);

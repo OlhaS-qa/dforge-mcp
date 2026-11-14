@@ -4,7 +4,11 @@ import { validateAgainstSchema } from "../src/tools/validate/json-schema";
 describe("validateAgainstSchema oneOf reporting", () => {
 	const schema = {
 		oneOf: [
-			{ type: "object", required: ["kind", "domain"], properties: { kind: { const: "lookup" }, domain: { type: "string" } } },
+			{
+				type: "object",
+				required: ["kind", "domain"],
+				properties: { kind: { const: "lookup" }, domain: { type: "string" } },
+			},
 			{ type: "object", required: ["kind", "type"], properties: { kind: { const: "text" }, type: { type: "string" } } },
 		],
 	};

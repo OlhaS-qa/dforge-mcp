@@ -54,8 +54,15 @@ export function schemaNameForFile(rel: string): string | undefined {
 /** A pointed fix for findings agents keep making; empty when there is none. */
 function hintFor(schemaName: string, p: { path: string; message: string }): string {
 	// Only the ROOT menu key has `items`; a nested section node nests under `children`.
-	if (schemaName === "menus" && /unexpected property 'items'/.test(p.message) && p.path.split(/[./]/).filter(Boolean).length > 2) {
-		return " Hint: a section node inside a menu nests its entries under `children`, not `items` (only the root menu key has `items`) — rename it, or add the entries with dforge_menu_add parentPath.";
+	if (
+		schemaName === "menus" &&
+		/unexpected property 'items'/.test(p.message) &&
+		p.path.split(/[./]/).filter(Boolean).length > 2
+	) {
+		return (
+			" Hint: a section node inside a menu nests its entries under `children`, not `items` (only the root " +
+			"menu key has `items`) — rename it, or add the entries with dforge_menu_add parentPath."
+		);
 	}
 	return "";
 }
@@ -63,7 +70,11 @@ function hintFor(schemaName: string, p: { path: string; message: string }): stri
 /** Stable rule id for a schema finding: keyword + the property it concerns, never the instance values. */
 function schemaRuleId(schemaName: string, p: { path: string; message: string }): string {
 	const m = p.message;
-	const last = p.path.split(/[.\[]/).filter((x) => x && !/^\d+\]?$/.test(x)).pop() ?? "";
+	const last =
+		p.path
+			.split(/[.\[]/)
+			.filter((x) => x && !/^\d+\]?$/.test(x))
+			.pop() ?? "";
 	let keyword: string;
 	const req = /missing required property '([^']+)'/.exec(m);
 	const extra = /unexpected property '([^']+)'/.exec(m);
@@ -96,7 +107,11 @@ export function checkJsonSchemas(ctx: ValidateContext): void {
 			return; // unparseable files are reported by the check that owns them
 		}
 		for (const p of validateAgainstSchema(schema, doc)) {
-			warn(`${rel}${p.path ? ` → ${p.path}` : ""}`, `${p.message} (${schemaName} schema).${hintFor(schemaName, p)}`, schemaRuleId(schemaName, p));
+			warn(
+				`${rel}${p.path ? ` → ${p.path}` : ""}`,
+				`${p.message} (${schemaName} schema).${hintFor(schemaName, p)}`,
+				schemaRuleId(schemaName, p),
+			);
 		}
 	};
 
@@ -104,7 +119,10 @@ export function checkJsonSchemas(ctx: ValidateContext): void {
 	for (const [dir, name] of DIR_SCHEMAS) {
 		let files: string[];
 		try {
-			files = fs.readdirSync(path.join(paths.root, dir)).filter((f) => f.endsWith(".json")).sort();
+			files = fs
+				.readdirSync(path.join(paths.root, dir))
+				.filter((f) => f.endsWith(".json"))
+				.sort();
 		} catch {
 			continue;
 		}

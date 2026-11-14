@@ -43,18 +43,23 @@ export const reportAddSchema = {
 				.string()
 				.optional()
 				.describe(
-					"The report's name: page title, breadcrumb and parameter dialog. Keep it short ('Trial Balance'). Omitted, the description names the report and pack/validate/install warn.",
+					"The report's name: page title, breadcrumb and parameter dialog. Keep it short ('Trial Balance'). " +
+						"Omitted, the description names the report and pack/validate/install warn.",
 				),
 			description: z
 				.string()
-				.describe("What the report shows, under its label on the page ('Debit and credit totals per account for a period')."),
+				.describe(
+					"What the report shows, under its label on the page ('Debit and credit totals per account for a period').",
+				),
 			layout: z.record(z.string(), z.unknown()),
 			datasets: z.record(z.string(), z.unknown()),
 			parameters: z
 				.record(z.string(), z.unknown())
 				.optional()
 				.describe(
-					"Report-level parameter declarations — the canonical home for a param, and the only one that fits a param several datasets use. Merged with each dataset's `params` into the report's one param set; this block wins on a code collision.",
+					"Report-level parameter declarations — the canonical home for a param, and the only one that fits a " +
+						"param several datasets use. Merged with each dataset's `params` into the report's one param set; " +
+						"this block wins on a code collision.",
 				),
 			entities: z
 				.array(
@@ -68,12 +73,23 @@ export const reportAddSchema = {
 				)
 				.optional()
 				.describe(
-					"RECORD-REPORT attachments — entities this report can be opened FROM, so it appears on the record's toolbar with the record's values feeding its params. Each entry: { entityCd, params: { <reportParamCd>: <sourceColumnOnThatEntity> }, orderNum? }. NOTE `params` here is the MAPPING (param → column), not a param declaration. Qualify a cross-module entityCd ('parties.party') and declare that module as a dependency. Source columns: the PK, a reference ('R') column, or a bounded scalar — never text/json/file. Requires 'metadata': '>=1.5.0' in the manifest.",
+					"RECORD-REPORT attachments — entities this report can be opened FROM, so it appears on the record's " +
+						"toolbar with the record's values feeding its params. Each entry: { entityCd, params: { " +
+						"<reportParamCd>: <sourceColumnOnThatEntity> }, orderNum? }. NOTE `params` here is the MAPPING " +
+						"(param → column), not a param declaration. Qualify a cross-module entityCd ('parties.party') and " +
+						"declare that module as a dependency. Source columns: the PK, a reference ('R') column, or a bounded " +
+						"scalar — never text/json/file. Requires 'metadata': '>=1.5.0' in the manifest.",
 				),
 		})
 		.passthrough()
 		.describe(
-			"Full report spec per reports.schema.json: { label, description, layout: { panels: [...] }, datasets: { code: {...} }, parameters?, entities?, reloadInterval? }. PARAMS ARE REPORT-SCOPED: declare them in the top-level `parameters` block, or as shorthand under `datasets.<cd>.params` when exactly one dataset uses the param — the installer merges both into the report's single param set, report level winning on a collision. A param several datasets use belongs at report level; there is no meaningful dataset to attribute it to. Within a param, use `required` (not `isRequired`) and nest a lookup's binding as `params: { link: { entity } }` (not a top-level `link`).",
+			"Full report spec per reports.schema.json: { label, description, layout: { panels: [...] }, " +
+				"datasets: { code: {...} }, parameters?, entities?, reloadInterval? }. PARAMS ARE REPORT-SCOPED: " +
+				"declare them in the top-level `parameters` block, or as shorthand under `datasets.<cd>.params` when " +
+				"exactly one dataset uses the param — the installer merges both into the report's single param set, " +
+				"report level winning on a collision. A param several datasets use belongs at report level; there is " +
+				"no meaningful dataset to attribute it to. Within a param, use `required` (not `isRequired`) and " +
+				"nest a lookup's binding as `params: { link: { entity } }` (not a top-level `link`).",
 		),
 };
 
@@ -165,13 +181,19 @@ export const roleAddSchema = {
 		.string()
 		.regex(/^[a-z][a-z0-9_-]*\.[a-z][a-z0-9_-]*$/)
 		.describe(
-			"Role code, namespaced as `<module>.<role>` (e.g. 'crm.admin'). Conventional namespacing prevents collisions across modules.",
+			"Role code, namespaced as `<module>.<role>` (e.g. 'crm.admin'). Conventional namespacing prevents " +
+				"collisions across modules.",
 		),
 	description: z.string(),
 	rights: z
 		.record(z.string(), z.string())
 		.describe(
-			"Map: object code → rights string. Keys: same-module entity bare ('product'), cross-module entity dotted ('fin.invoice'), action/report/SP/folder with a COLON prefix ('action:approve', 'report:summary', 'sp:rpt_totals', 'folder:east') — never a dot. Values: entities use 'S'/'I'/'U'/'D'/'C' (e.g. 'SIUDC'); actions/reports/SPs/folders use 'E'. A report with a datasetType 'S' dataset needs BOTH 'report:<cd>' and 'sp:<spCd>'. To deny, omit the key (never map to '').",
+			"Map: object code → rights string. Keys: same-module entity bare ('product'), cross-module entity " +
+				"dotted ('fin.invoice'), action/report/SP/folder with a COLON prefix ('action:approve', " +
+				"'report:summary', 'sp:rpt_totals', 'folder:east') — never a dot. Values: entities use " +
+				"'S'/'I'/'U'/'D'/'C' (e.g. 'SIUDC'); actions/reports/SPs/folders use 'E'. A report with a " +
+				"datasetType 'S' dataset needs BOTH 'report:<cd>' and 'sp:<spCd>'. To deny, omit the key (never map " +
+				"to '').",
 		),
 };
 
@@ -183,13 +205,10 @@ export function roleAdd(args: z.infer<z.ZodObject<typeof roleAddSchema>>): ToolR
 		throw new Error(`Role '${args.code}' already exists.`);
 	}
 	roles[args.code] = { description: args.description, rights: args.rights };
-	return makeResult(
-		`Added role '${args.code}' with rights on ${Object.keys(args.rights).length} object(s).`,
-		{
-			[rel(paths.root, paths.roles)]: jsonText(roles),
-			"manifest.json": jsonText(withTodayStamp(manifest)),
-		},
-	);
+	return makeResult(`Added role '${args.code}' with rights on ${Object.keys(args.rights).length} object(s).`, {
+		[rel(paths.root, paths.roles)]: jsonText(roles),
+		"manifest.json": jsonText(withTodayStamp(manifest)),
+	});
 }
 
 // ── folder add ──────────────────────────────────────────────────────
@@ -205,7 +224,8 @@ export const folderAddSchema = {
 		.string()
 		.default("")
 		.describe(
-			"Slash-separated folder codes from root, e.g. 'central/east' nests under root → central → east. Empty = add directly under root.",
+			"Slash-separated folder codes from root, e.g. 'central/east' nests under root → central → east. " +
+				"Empty = add directly under root.",
 		),
 	code: z
 		.string()
@@ -259,13 +279,10 @@ export function folderAdd(args: z.infer<z.ZodObject<typeof folderAddSchema>>): T
 	children[args.code] = args.folder;
 	cursor.children = children;
 
-	return makeResult(
-		`Added folder '${args.code}' under '${args.parentPath || "(root)"}'.`,
-		{
-			[rel(paths.root, paths.folders)]: jsonText(root),
-			"manifest.json": jsonText(withTodayStamp(manifest)),
-		},
-	);
+	return makeResult(`Added folder '${args.code}' under '${args.parentPath || "(root)"}'.`, {
+		[rel(paths.root, paths.folders)]: jsonText(root),
+		"manifest.json": jsonText(withTodayStamp(manifest)),
+	});
 }
 
 // ── folder modify ───────────────────────────────────────────────────
@@ -278,9 +295,15 @@ export function folderAdd(args: z.infer<z.ZodObject<typeof folderAddSchema>>): T
 
 const folderBindingSchema = z
 	.object({
-		viewName: z.string().optional().describe("Entity view (a key under the entity's `views`), NOT a data view code. 'default' = no view."),
+		viewName: z
+			.string()
+			.optional()
+			.describe("Entity view (a key under the entity's `views`), NOT a data view code. 'default' = no view."),
 		quickAdd: z.boolean().optional(),
-		rowFilter: z.union([z.string(), z.record(z.string(), z.unknown())]).optional().describe("SQL expression string or canonical filter object ({c,o,v} / {g,i})."),
+		rowFilter: z
+			.union([z.string(), z.record(z.string(), z.unknown())])
+			.optional()
+			.describe("SQL expression string or canonical filter object ({c,o,v} / {g,i})."),
 	})
 	.strict();
 
@@ -289,11 +312,11 @@ export const folderModifySchema = {
 	parentPath: z
 		.string()
 		.default("")
-		.describe("Slash-separated folder codes from the root to the PARENT of the folder to modify. Empty = the folder is directly under the root."),
-	code: z
-		.string()
-		.optional()
-		.describe("Code of the folder to modify. Omit it to modify the ROOT folder."),
+		.describe(
+			"Slash-separated folder codes from the root to the PARENT of the folder to modify. Empty = the " +
+				"folder is directly under the root.",
+		),
+	code: z.string().optional().describe("Code of the folder to modify. Omit it to modify the ROOT folder."),
 	label: z.string().optional(),
 	description: z.string().optional(),
 	icon: z.string().optional(),
@@ -306,13 +329,19 @@ export const folderModifySchema = {
 	addEntities: z
 		.record(z.string(), folderBindingSchema)
 		.optional()
-		.describe("Entity code -> binding {viewName?, quickAdd?, rowFilter?}. An entity already bound is MERGED (given keys replace, others stay)."),
+		.describe(
+			"Entity code -> binding {viewName?, quickAdd?, rowFilter?}. An entity already bound is MERGED (given " +
+				"keys replace, others stay).",
+		),
 	removeEntities: z.array(z.string()).optional().describe("Entity codes whose binding is removed from the folder."),
 };
 
 export function folderModify(args: z.infer<z.ZodObject<typeof folderModifySchema>>): ToolResult {
 	const { paths, manifest } = loadManifest(args.moduleDir);
-	if (!fs.existsSync(paths.folders)) throw new Error("ui/folders.json does not exist — nothing to modify (dforge_folder_add creates sub-folders on an existing root).");
+	if (!fs.existsSync(paths.folders))
+		throw new Error(
+			"ui/folders.json does not exist — nothing to modify (dforge_folder_add creates sub-folders on an existing root).",
+		);
 	const root = readJson<Record<string, unknown>>(paths.folders);
 
 	const parentSegments = args.parentPath.split("/").filter(Boolean);
@@ -326,7 +355,13 @@ export function folderModify(args: z.infer<z.ZodObject<typeof folderModifySchema
 	for (let i = 0; i < segments.length; i++) {
 		const child = ((node.children as Record<string, unknown> | undefined) ?? {})[segments[i]];
 		if (!child || typeof child !== "object") {
-			throw new Error(`Folder '${segments.slice(0, i + 1).join("/")}' not found. Existing folders: ${walkFolders(root).map((f) => f.path).join(", ") || "(only the root)"}.`);
+			throw new Error(
+				`Folder '${segments.slice(0, i + 1).join("/")}' not found. Existing folders: ${
+					walkFolders(root)
+						.map((f) => f.path)
+						.join(", ") || "(only the root)"
+				}.`,
+			);
 		}
 		node = child as Record<string, unknown>;
 	}
@@ -353,25 +388,34 @@ export function folderModify(args: z.infer<z.ZodObject<typeof folderModifySchema
 	const entities = { ...((node.entities as Record<string, Record<string, unknown>> | undefined) ?? {}) };
 	for (const code of args.removeEntities ?? []) {
 		if (!Object.prototype.hasOwnProperty.call(entities, code)) {
-			throw new Error(`Folder '${where}' has no binding for entity '${code}'. Bound: ${Object.keys(entities).join(", ") || "(none)"}.`);
+			throw new Error(
+				`Folder '${where}' has no binding for entity '${code}'. Bound: ${Object.keys(entities).join(", ") || "(none)"}.`,
+			);
 		}
-		if (args.addEntities && code in args.addEntities) throw new Error(`Entity '${code}' is both added and removed in one call.`);
+		if (args.addEntities && code in args.addEntities)
+			throw new Error(`Entity '${code}' is both added and removed in one call.`);
 		delete entities[code];
 		changed.push(`-entities.${code}`);
 	}
 	const ownEntities = manifest.entities ?? {};
 	for (const [code, binding] of Object.entries(args.addEntities ?? {})) {
 		if (!code.includes(".") && !Object.prototype.hasOwnProperty.call(ownEntities, code)) {
-			throw new Error(`Entity '${code}' is not in manifest.entities. Existing: ${Object.keys(ownEntities).join(", ") || "(none)"}. (Cross-module entities are written 'module.entity'.)`);
+			throw new Error(
+				`Entity '${code}' is not in manifest.entities. Existing: ${Object.keys(ownEntities).join(", ") || "(none)"}. (Cross-module entities are written 'module.entity'.)`,
+			);
 		}
 		const vn = binding.viewName;
 		if (vn && vn.trim().toLowerCase() !== "default" && ownEntities[code]) {
 			const ep = entityFilePath(paths.root, ownEntities[code]);
 			const declared = fs.existsSync(ep)
-				? Object.keys(((readJson<Record<string, unknown>>(ep).views as Record<string, unknown> | undefined) ?? {})).map((v) => v.trim().toLowerCase())
+				? Object.keys((readJson<Record<string, unknown>>(ep).views as Record<string, unknown> | undefined) ?? {}).map(
+						(v) => v.trim().toLowerCase(),
+					)
 				: [];
 			if (!declared.includes(vn.trim().toLowerCase())) {
-				throw new Error(`viewName '${vn}' is not declared under 'views' in entities/${code}.json — the install fails on it. Declare the view or use 'default'.`);
+				throw new Error(
+					`viewName '${vn}' is not declared under 'views' in entities/${code}.json — the install fails on it. Declare the view or use 'default'.`,
+				);
 			}
 		}
 		const had = Object.prototype.hasOwnProperty.call(entities, code);
@@ -384,14 +428,19 @@ export function folderModify(args: z.infer<z.ZodObject<typeof folderModifySchema
 	}
 
 	if (changed.length === 0) {
-		throw new Error("Nothing to change: pass at least one of label, description, icon, color, inheritSecurity, unset, addEntities, removeEntities.");
+		throw new Error(
+			"Nothing to change: pass at least one of label, description, icon, color, inheritSecurity, unset, " +
+				"addEntities, removeEntities.",
+		);
 	}
 
 	const schema = loadVendoredSchema("folders");
 	if (schema) {
 		const problems = validateAgainstSchema(schema, root);
 		if (problems.length > 0) {
-			throw new Error(`Result would violate folders.schema.json: ${problems.map((p) => `${p.path || "(root)"} ${p.message}`).join("; ")}. Nothing written.`);
+			throw new Error(
+				`Result would violate folders.schema.json: ${problems.map((p) => `${p.path || "(root)"} ${p.message}`).join("; ")}. Nothing written.`,
+			);
 		}
 	}
 
@@ -427,19 +476,22 @@ export const diagramAddSchema = {
 		.array(z.string().min(1))
 		.default([])
 		.describe(
-			"Entity keys to draw: the manifest's own entity code ('invoice'), or 'module.entity' for an entity of a declared dependency ('parties.party') — the same form a field link's `entity` takes.",
+			"Entity keys to draw: the manifest's own entity code ('invoice'), or 'module.entity' for an entity " +
+				"of a declared dependency ('parties.party') — the same form a field link's `entity` takes.",
 		),
 	fromFolder: z
 		.string()
 		.optional()
 		.describe(
-			"A folder code from ui/folders.json (anywhere in the tree). Adds the entities bound to that folder AND to all its descendants.",
+			"A folder code from ui/folders.json (anywhere in the tree). Adds the entities bound to that folder " +
+				"AND to all its descendants.",
 		),
 	showBoundary: z
 		.boolean()
 		.optional()
 		.describe(
-			"Also draw the entities outside the diagram that its entities reference or are referenced by, as header-only stubs. Default true.",
+			"Also draw the entities outside the diagram that its entities reference or are referenced by, as " +
+				"header-only stubs. Default true.",
 		),
 };
 
@@ -545,24 +597,34 @@ export const dependencyAddSchema = {
 		.string()
 		.optional()
 		.describe(
-			"Semver range. Defaults to '>=0.1.0' for a new dependency; when the dependency is already declared, omit it to keep the current range or pass it to change the range (manifest and contract are both updated).",
+			"Semver range. Defaults to '>=0.1.0' for a new dependency; when the dependency is already declared, " +
+				"omit it to keep the current range or pass it to change the range (manifest and contract are both " +
+				"updated).",
 		),
 	entities: z
 		.array(z.string())
 		.describe(
-			"The provider entities this module consumes, e.g. ['party']. Every dependency needs a deps/<module>.json contract naming at least one entity, and a dependency you cannot name a consumed entity for should not be declared at all. Narrows the manifest dep to the object form `{ version, entities }`. Exception: against a system module (admin, metadata, workspace, sys-billing) pass [] for a pure platform-version gate, e.g. admin >=1.21.0 for upgrade migrations; the contract then declares \"entities\": {} and the manifest dep stays a plain version string.",
+			"The provider entities this module consumes, e.g. ['party']. Every dependency needs a " +
+				"deps/<module>.json contract naming at least one entity, and a dependency you cannot name a consumed " +
+				"entity for should not be declared at all. Narrows the manifest dep to the object form `{ version, " +
+				"entities }`. Exception: against a system module (admin, metadata, workspace, sys-billing) pass [] " +
+				"for a pure platform-version gate, e.g. admin >=1.21.0 for upgrade migrations; the contract then " +
+				'declares "entities": {} and the manifest dep stays a plain version string.',
 		),
 	use: z
 		.array(z.string())
 		.optional()
 		.describe(
-			"Provenance tokens recorded against each declared entity: '<kind>:<symbol>' where kind is ref|extends|formula|action|view|report|print|role, e.g. 'ref:invoice.customer'. 'extends' must be fully qualified ('extends:parties.party'). Defaults to a placeholder you must refine.",
+			"Provenance tokens recorded against each declared entity: '<kind>:<symbol>' where kind is " +
+				"ref|extends|formula|action|view|report|print|role, e.g. 'ref:invoice.customer'. 'extends' must be " +
+				"fully qualified ('extends:parties.party'). Defaults to a placeholder you must refine.",
 		),
 	pks: z
 		.record(z.string(), z.string())
 		.optional()
 		.describe(
-			"Override the provider PK column per entity, e.g. { \"party\": \"party_uid\" }. Defaults to '<entity>_id', which is what the 'identity' trait produces.",
+			'Override the provider PK column per entity, e.g. { "party": "party_uid" }. Defaults to ' +
+				"'<entity>_id', which is what the 'identity' trait produces.",
 		),
 };
 
@@ -581,15 +643,11 @@ export function buildDependencyContract(
 	return {
 		module: moduleCode,
 		version,
-		entities: Object.fromEntries(
-			entities.map((e) => [e, { pk: pks?.[e] ?? `${e}_id`, use: [...use] }]),
-		),
+		entities: Object.fromEntries(entities.map((e) => [e, { pk: pks?.[e] ?? `${e}_id`, use: [...use] }])),
 	};
 }
 
-export function dependencyAdd(
-	args: z.infer<z.ZodObject<typeof dependencyAddSchema>>,
-): ToolResult {
+export function dependencyAdd(args: z.infer<z.ZodObject<typeof dependencyAddSchema>>): ToolResult {
 	const { manifest, paths } = loadManifest(args.moduleDir);
 	if (manifest.code === args.moduleCode) {
 		throw new Error("A module can't depend on itself.");
@@ -746,7 +804,8 @@ function repairDependency(
 
 	const did: string[] = [];
 	if (!contract) did.push(`created the missing deps/${code}.json contract`);
-	else if (addedEntities.length) did.push(`added entit${addedEntities.length === 1 ? "y" : "ies"} ${addedEntities.join(", ")} to deps/${code}.json`);
+	else if (addedEntities.length)
+		did.push(`added entit${addedEntities.length === 1 ? "y" : "ies"} ${addedEntities.join(", ")} to deps/${code}.json`);
 	if (version !== entryVersion) did.push(`moved the range ${entryVersion} -> ${version}`);
 	const warnings: string[] = [];
 	if (addedEntities.length && placeholderUse) {
@@ -755,7 +814,9 @@ function repairDependency(
 		);
 	}
 	if (addedEntities.length && !args.pks) {
-		warnings.push(`PKs of the added entities were guessed as '<entity>_id' — check them against ${code}'s entity files.`);
+		warnings.push(
+			`PKs of the added entities were guessed as '<entity>_id' — check them against ${code}'s entity files.`,
+		);
 	}
 	return makeResult(
 		`Dependency on '${code}' was already declared; ${did.join(", ") || "synchronised manifest and contract"}.`,

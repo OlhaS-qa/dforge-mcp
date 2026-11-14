@@ -222,9 +222,7 @@ export function buildPhaseCheck(root: string, override?: PhaseStateLike): BuildP
 		gaps.push("no manifest.json — the module has not been scaffolded (dforge_module_create).");
 	} else {
 		if (ev.entitiesWithoutFields.length > 0) {
-			gaps.push(
-				`Phase 1: entities with no fields yet: ${ev.entitiesWithoutFields.join(", ")}.`,
-			);
+			gaps.push(`Phase 1: entities with no fields yet: ${ev.entitiesWithoutFields.join(", ")}.`);
 		}
 		if (ev.entitiesWithoutView.length > 0) {
 			gaps.push(
@@ -320,7 +318,8 @@ export function handleCompletePhase(root: string, args: Args): PlanResult {
 	}
 	if (!isReadyToScaffold(root)) {
 		throw new Error(
-			"Phase 0 has not passed validation yet — there are no build phases to record. Call dforge_module_plan({ action: 'check', moduleDir }) to see what Phase 0 still needs.",
+			"Phase 0 has not passed validation yet — there are no build phases to record. Call " +
+				"dforge_module_plan({ action: 'check', moduleDir }) to see what Phase 0 still needs.",
 		);
 	}
 	const open = openIteration(readPhaseState(root));
@@ -336,10 +335,7 @@ export function handleCompletePhase(root: string, args: Args): PlanResult {
 		statements: args.statements,
 	});
 	// `next` is evaluated against the NEW ledger (not on disk yet unless applied).
-	const { currentPhase, nextSkill, nextStep, gaps } = buildPhaseCheck(
-		root,
-		JSON.parse(json) as PhaseStateLike,
-	);
+	const { currentPhase, nextSkill, nextStep, gaps } = buildPhaseCheck(root, JSON.parse(json) as PhaseStateLike);
 
 	const files: FileMap = { [P0.phaseState]: json };
 	if (!args.skipped) {
@@ -370,12 +366,14 @@ function writeLedgerNote(args: Args): string {
 export function handleBeginChange(root: string, args: Args): PlanResult {
 	if (!args.note || !args.note.trim()) {
 		throw new Error(
-			"begin_change needs a 'note' — one line saying what the change is (and optionally 'statements': the spec ids it affects).",
+			"begin_change needs a 'note' — one line saying what the change is (and optionally 'statements': the " +
+				"spec ids it affects).",
 		);
 	}
 	if (!isReadyToScaffold(root)) {
 		throw new Error(
-			"Phase 0 has not passed validation yet — there is no finished module to change. Call dforge_module_plan({ action: 'check', moduleDir }).",
+			"Phase 0 has not passed validation yet — there is no finished module to change. Call " +
+				"dforge_module_plan({ action: 'check', moduleDir }).",
 		);
 	}
 	const { json, iteration } = beginIteration(root, {

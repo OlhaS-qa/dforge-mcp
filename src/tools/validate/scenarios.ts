@@ -17,7 +17,10 @@ export function checkTestScenarios(ctx: ValidateContext): void {
 	const dir = path.join(paths.root, "tests");
 	let files: string[];
 	try {
-		files = fs.readdirSync(dir).filter((f) => f.endsWith(".test.json")).sort();
+		files = fs
+			.readdirSync(dir)
+			.filter((f) => f.endsWith(".test.json"))
+			.sort();
 	} catch {
 		return;
 	}
@@ -82,7 +85,10 @@ function checkReferences(ctx: ValidateContext, where: string, doc: Record<string
 	const entityRef = (code: unknown, at: string): void => {
 		if (typeof code !== "string" || code === "") return;
 		if (!entityOk(code)) {
-			warn(at, `names entity '${code}', which is not a known entity of this module (same-module, system, or a declared dependency).`);
+			warn(
+				at,
+				`names entity '${code}', which is not a known entity of this module (same-module, system, or a declared dependency).`,
+			);
 		}
 	};
 	const recordRef = (ref: unknown, at: string): void => {

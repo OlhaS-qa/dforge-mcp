@@ -40,9 +40,15 @@ try {
 		const [hM, hm, hp] = have.map(Number);
 		const ge = hM > wM || (hM === wM && (hm > wm || (hm === wm && hp >= wp)));
 		const sameLine =
-			op === "~" ? hM === wM && hm === wm
-			: op === "^" ? (wM > 0 ? hM === wM : wm > 0 ? hM === 0 && hm === wm : hM === 0 && hm === 0 && hp === wp)
-			: hM === wM && hm === wm && hp === wp;
+			op === "~"
+				? hM === wM && hm === wm
+				: op === "^"
+					? wM > 0
+						? hM === wM
+						: wm > 0
+							? hM === 0 && hm === wm
+							: hM === 0 && hm === 0 && hp === wp
+					: hM === wM && hm === wm && hp === wp;
 		if (!ge || !sameLine) {
 			console.error(
 				`Installed @dforge-core/metadata ${installed} does not satisfy package.json (${range}) — run \`pnpm install\` before vendoring.`,

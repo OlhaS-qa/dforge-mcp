@@ -52,7 +52,13 @@ describe("guardSchemas", () => {
 	});
 
 	it("only warns for manifest.json (its vendored schema lags the platform)", () => {
-		const manifest = JSON.stringify({ packageFormat: 1, code: "m", version: "1.0.0", shortDescription: "x", bogusKey: 1 });
+		const manifest = JSON.stringify({
+			packageFormat: 1,
+			code: "m",
+			version: "1.0.0",
+			shortDescription: "x",
+			bogusKey: 1,
+		});
 		const out = guardSchemas(dir, { summary: "s", files: { "manifest.json": manifest } });
 		expect(out.warning).toMatch(/Schema notes/);
 	});

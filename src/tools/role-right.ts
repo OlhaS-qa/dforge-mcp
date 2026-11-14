@@ -17,18 +17,22 @@ import {
 
 export const roleRightSetSchema = {
 	moduleDir: z.string(),
-	roleCode: z
-		.string()
-		.describe("Role code as it appears in security/roles.json (e.g. 'crm.admin')."),
+	roleCode: z.string().describe("Role code as it appears in security/roles.json (e.g. 'crm.admin')."),
 	object: z
 		.string()
 		.describe(
-			"Object to grant rights on. Same-module entity: bare ('product'). Cross-module entity: dotted ('fin.invoice'). Action/report/SP: COLON prefix ('action:approve', 'report:summary', 'sp:rpt_totals') — never a dot. NEVER 'folder:<code>': role-to-folder access is not expressible through role rights, the CLI rejects that prefix, and the call is refused (folder access is configured by the tenant administrator). A report whose dataset is datasetType 'S' ALSO needs 'sp:<spCd>' — report.run enforces both, and the admin UI cannot grant SP rights later.",
+			"Object to grant rights on. Same-module entity: bare ('product'). Cross-module entity: dotted " +
+				"('fin.invoice'). Action/report/SP: COLON prefix ('action:approve', 'report:summary', " +
+				"'sp:rpt_totals') — never a dot. NEVER 'folder:<code>': role-to-folder access is not expressible " +
+				"through role rights, the CLI rejects that prefix, and the call is refused (folder access is " +
+				"configured by the tenant administrator). A report whose dataset is datasetType 'S' ALSO needs " +
+				"'sp:<spCd>' — report.run enforces both, and the admin UI cannot grant SP rights later.",
 		),
 	rights: z
 		.string()
 		.describe(
-			"Rights string. Entities: any combination of S/I/U/D/C (use '' to revoke all). Actions/reports/SPs: 'E' or '' to revoke.",
+			"Rights string. Entities: any combination of S/I/U/D/C (use '' to revoke all). Actions/reports/SPs: " +
+				"'E' or '' to revoke.",
 		),
 };
 
@@ -59,9 +63,7 @@ export function roleRightSet(args: z.infer<z.ZodObject<typeof roleRightSetSchema
 	const roles = readJson<Record<string, Record<string, unknown>>>(paths.roles);
 	const role = roles[args.roleCode];
 	if (!role) {
-		throw new Error(
-			`Role '${args.roleCode}' not found in security/roles.json. Use role_add to create it.`,
-		);
+		throw new Error(`Role '${args.roleCode}' not found in security/roles.json. Use role_add to create it.`);
 	}
 	const rights = (role.rights as Record<string, string> | undefined) ?? {};
 
@@ -97,6 +99,12 @@ export function roleAddChecked(args: z.infer<z.ZodObject<typeof roleAddSchema>>)
 export const roleAddCheckedSchema = {
 	...roleAddSchema,
 	rights: roleAddSchema.rights.describe(
-		"Map: object code → rights string. Keys: same-module entity bare ('product'), cross-module entity dotted ('fin.invoice'), action/report/SP with a COLON prefix ('action:approve', 'report:summary', 'sp:rpt_totals') — never a dot. NEVER 'folder:<code>': role-to-folder access is not expressible through role rights, the CLI rejects that prefix and this tool refuses it (folder access is configured by the tenant administrator). Values: entities use 'S'/'I'/'U'/'D'/'C' (e.g. 'SIUDC'); actions/reports/SPs use 'E'. A report with a datasetType 'S' dataset needs BOTH 'report:<cd>' and 'sp:<spCd>'. To deny, omit the key (never map to '').",
+		"Map: object code → rights string. Keys: same-module entity bare ('product'), cross-module entity " +
+			"dotted ('fin.invoice'), action/report/SP with a COLON prefix ('action:approve', 'report:summary', " +
+			"'sp:rpt_totals') — never a dot. NEVER 'folder:<code>': role-to-folder access is not expressible " +
+			"through role rights, the CLI rejects that prefix and this tool refuses it (folder access is " +
+			"configured by the tenant administrator). Values: entities use 'S'/'I'/'U'/'D'/'C' (e.g. 'SIUDC'); " +
+			"actions/reports/SPs use 'E'. A report with a datasetType 'S' dataset needs BOTH 'report:<cd>' and " +
+			"'sp:<spCd>'. To deny, omit the key (never map to '').",
 	),
 };

@@ -7,11 +7,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
-import {
-	entityReferenceAdd,
-	entityRollupAdd,
-	entityStatusAdd,
-} from "../src/tools/entity-compose";
+import { entityReferenceAdd, entityRollupAdd, entityStatusAdd } from "../src/tools/entity-compose";
 import { moduleValidate } from "../src/tools/module-validate";
 import { applyToDisk } from "../src/tools/apply";
 import { guardSchemas } from "../src/tools/schema-guard";

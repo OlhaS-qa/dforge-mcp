@@ -59,13 +59,16 @@ export const translationSyncSchema = {
 		.array(z.string().regex(/^[a-z]{2}(-[A-Z]{2})?$/))
 		.optional()
 		.describe(
-			"Non-English locales to sync. Default: every entry in manifest.supportedLocales — exactly the set install requires. An English locale is refused: install never reads translations/en*.json, English text belongs in the definitions.",
+			"Non-English locales to sync. Default: every entry in manifest.supportedLocales — exactly the set " +
+				"install requires. An English locale is refused: install never reads translations/en*.json, English " +
+				"text belongs in the definitions.",
 		),
 	prune: z
 		.boolean()
 		.default(false)
 		.describe(
-			"Remove keys that no longer correspond to anything in the module (e.g. after an entity delete). Off by default — pruning discards translated text.",
+			"Remove keys that no longer correspond to anything in the module (e.g. after an entity delete). Off " +
+				"by default — pruning discards translated text.",
 		),
 };
 
@@ -109,13 +112,7 @@ function buildSkeleton(moduleDir: string): {
 				"which fails the install. Fix the file and sync again.",
 		);
 	}
-	const push = (
-		section: string,
-		pathParts: string[],
-		english: string,
-		required = false,
-		legacyParts?: string[],
-	) => {
+	const push = (section: string, pathParts: string[], english: string, required = false, legacyParts?: string[]) => {
 		entries.push({ pathParts, english, required, legacyParts });
 		counts[section] = (counts[section] ?? 0) + 1;
 	};
@@ -199,17 +196,21 @@ function buildSkeleton(moduleDir: string): {
 		const seenItems = new Set<string>();
 		const walkMenu = (node: Dict, nested: string[]): void => {
 			const children =
-				(node.items as Record<string, Dict> | undefined) ??
-				(node.children as Record<string, Dict> | undefined) ??
-				{};
+				(node.items as Record<string, Dict> | undefined) ?? (node.children as Record<string, Dict> | undefined) ?? {};
 			for (const [icode, child] of Object.entries(children)) {
 				if (!child || typeof child !== "object") continue;
 				const nestedNext = [...nested, "items", icode];
 				if (seenItems.has(icode)) {
-					notes.push(`menu '${code}' uses item code '${icode}' more than once — install keys items by code, so rename one.`);
+					notes.push(
+						`menu '${code}' uses item code '${icode}' more than once — install keys items by code, so rename one.`,
+					);
 				} else {
 					seenItems.add(icode);
-					push("menus", ["menus", code, "items", icode, "label"], str(child, "label") ?? str(child, "description") ?? titleize(icode));
+					push(
+						"menus",
+						["menus", code, "items", icode, "label"],
+						str(child, "label") ?? str(child, "description") ?? titleize(icode),
+					);
 				}
 				if (nested.length > 2) {
 					entries.push({ pathParts: [...nestedNext, "label"], english: "", required: false, tolerated: true });
@@ -223,12 +224,7 @@ function buildSkeleton(moduleDir: string): {
 	// ── roles — the only completeness-ENFORCED section ──
 	const roles = readJsonOrDefault<Record<string, Dict>>(paths.roles, {});
 	for (const [code, r] of Object.entries(roles)) {
-		push(
-			"roles",
-			["roles", code, "label"],
-			str(r, "description") ?? titleize(code.split(".").pop() ?? code),
-			true,
-		);
+		push("roles", ["roles", code, "label"], str(r, "description") ?? titleize(code.split(".").pop() ?? code), true);
 	}
 
 	// ── actions ──
@@ -296,9 +292,7 @@ function buildSkeleton(moduleDir: string): {
 	if (Object.keys(folders).length > 0) {
 		const dupes = duplicateFolderCodes(folders);
 		if (dupes.size > 0) {
-			const detail = [...dupes]
-				.map(([code, paths_]) => `'${code}' (${paths_.join(", ")})`)
-				.join("; ");
+			const detail = [...dupes].map(([code, paths_]) => `'${code}' (${paths_.join(", ")})`).join("; ");
 			throw new Error(
 				`ui/folders.json reuses folder code(s) across branches: ${detail}. Role rights ` +
 					"(`folder:<code>`) can't tell them apart. Rename them to unique codes, then re-run.",
@@ -323,7 +317,11 @@ function buildSkeleton(moduleDir: string): {
 	// `desc` are fallbacks for older files.
 	const settings = readJsonOrDefault<Record<string, Dict>>(paths.settings, {});
 	for (const [code, s] of Object.entries(settings)) {
-		push("settings", ["settings", code, "label"], str(s, "description") ?? str(s, "label") ?? str(s, "desc") ?? titleize(code));
+		push(
+			"settings",
+			["settings", code, "label"],
+			str(s, "description") ?? str(s, "label") ?? str(s, "desc") ?? titleize(code),
+		);
 	}
 
 	// ── DSL messages: info / warn / error / exit texts, keyed by the English text ──
@@ -350,7 +348,18 @@ function setIn(root: Dict, parts: string[], value: unknown): void {
 }
 
 /** Top-level sections sync manages: only inside these may prune delete anything. */
-const MANAGED = new Set(["entities", "views", "menus", "roles", "actions", "reports", "registers", "settings", "folders", "messages"]);
+const MANAGED = new Set([
+	"entities",
+	"views",
+	"menus",
+	"roles",
+	"actions",
+	"reports",
+	"registers",
+	"settings",
+	"folders",
+	"messages",
+]);
 /** Keys that hold a collection of codes — a member there that nothing declares is an orphan. */
 const COLLECTIONS = new Set(["fields", "params", "datasets", "constraints", "items"]);
 
@@ -393,9 +402,7 @@ function pruneTo(existing: Dict, entries: SkeletonEntry[]): Dict {
 	return walk(existing, []);
 }
 
-export function translationSync(
-	args: z.infer<z.ZodObject<typeof translationSyncSchema>>,
-): ToolResult {
+export function translationSync(args: z.infer<z.ZodObject<typeof translationSyncSchema>>): ToolResult {
 	const { paths, manifest } = loadManifest(args.moduleDir);
 	const declared = Array.isArray(manifest.supportedLocales)
 		? (manifest.supportedLocales as unknown[]).filter((l): l is string => typeof l === "string")
@@ -411,16 +418,20 @@ export function translationSync(
 	}
 	// A manifest that still lists English (legacy shape) must not get an English file: skip it.
 	const ignored = fs.existsSync(paths.translationsDir)
-		? fs.readdirSync(paths.translationsDir).filter((f) => f.toLowerCase().endsWith(".json") && isEnglish(f.slice(0, -5)))
+		? fs
+				.readdirSync(paths.translationsDir)
+				.filter((f) => f.toLowerCase().endsWith(".json") && isEnglish(f.slice(0, -5)))
 		: [];
-	const staleEnglish = ignored.length > 0
-		? ` Leftover ${ignored.map((f) => `translations/${f}`).join(", ")} is never read by install — move any wording you want from it into the definitions, then delete it.`
-		: "";
+	const staleEnglish =
+		ignored.length > 0
+			? ` Leftover ${ignored.map((f) => `translations/${f}`).join(", ")} is never read by install — move any wording you want from it into the definitions, then delete it.`
+			: "";
 	const locales = args.locales ?? declared.filter((l) => !isEnglish(l));
 	if (locales.length === 0) {
 		throw new Error(
 			"No locales to sync. An English-only module needs no translation files: its English text lives in the " +
-				"definitions. To translate, declare the other locales in manifest.supportedLocales (e.g. [\"uk-UA\"])." + staleEnglish,
+				'definitions. To translate, declare the other locales in manifest.supportedLocales (e.g. ["uk-UA"]).' +
+				staleEnglish,
 		);
 	}
 

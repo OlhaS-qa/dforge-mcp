@@ -4,7 +4,13 @@ import { applyToDisk } from "./apply";
 import type { Args, PlanResult } from "./plan/types";
 import { P0, DESIGN_TEMPLATE } from "./plan/templates";
 import { fileExists, readFile, assertDocReady, tickChecklist } from "./plan/helpers";
-import { buildPhaseCheck, handleCompletePhase, handleBeginChange, handleEndChange, handleNoteChange } from "./plan/build-phases";
+import {
+	buildPhaseCheck,
+	handleCompletePhase,
+	handleBeginChange,
+	handleEndChange,
+	handleNoteChange,
+} from "./plan/build-phases";
 import { handleValidate } from "./plan/design-checks";
 export { planModuleSchema } from "./plan/types";
 
@@ -92,30 +98,39 @@ function handleCheck(root: string): PlanResult {
 			pending,
 			readyToScaffold: false,
 			nextStep:
-				"Phase 0a — Module Identity. Ask the user these questions ONE AT A TIME. After each answer, restate what you understood and confirm before continuing.",
+				"Phase 0a — Module Identity. Ask the user these questions ONE AT A TIME. After each answer, restate " +
+				"what you understood and confirm before continuing.",
 			questions: [
 				'What\'s the module\'s display name? (e.g. "Purchase Orders", "HR Leave Requests")',
-				"What code should it use? (snake_case, letters + digits + underscores — becomes the DB schema name; suggest a default derived from the display name)",
-				"Does this module depend on any other dForge modules — e.g. needing entities from 'crm' or 'parties'? (admin and metadata are platform-implicit; list any others, or say None)",
-				"English only, or which other locales should the module ship translations for (e.g. uk-UA)? English is the base and needs no translation file.",
-				"How complete should the initial scaffold be? (minimal = entities + default views + single admin role; minimal-plus = + settings stubs; full = + logic stubs + seed data structure)",
+				"What code should it use? (snake_case, letters + digits + underscores — becomes the DB schema name; " +
+					"suggest a default derived from the display name)",
+				"Does this module depend on any other dForge modules — e.g. needing entities from 'crm' or " +
+					"'parties'? (admin and metadata are platform-implicit; list any others, or say None)",
+				"English only, or which other locales should the module ship translations for (e.g. uk-UA)? English " +
+					"is the base and needs no translation file.",
+				"How complete should the initial scaffold be? (minimal = entities + default views + single admin " +
+					"role; minimal-plus = + settings stubs; full = + logic stubs + seed data structure)",
 			],
 			writeAction:
-				"Once all answers are collected and reflected back, call dforge_module_plan({ action: 'write_identity', moduleDir, displayName, code, dependencies, locales, preset }).",
+				"Once all answers are collected and reflected back, call dforge_module_plan({ action: " +
+				"'write_identity', moduleDir, displayName, code, dependencies, locales, preset }).",
 		};
 	}
 
 	if (!has0b) {
 		if (fileExists(reqPath)) {
 			return {
-				summary:
-					"Phase 0a complete. A draft docs/REQUIREMENTS.md exists on disk but hasn't been confirmed yet.",
+				summary: "Phase 0a complete. A draft docs/REQUIREMENTS.md exists on disk but hasn't been confirmed yet.",
 				currentPhase: "0b",
 				completed,
 				pending,
 				readyToScaffold: false,
 				nextStep:
-					"Read docs/REQUIREMENTS.md. Give the user a short outline (section headings + counts) and gap status (open items, or 'No gaps'), then ask them to review the file and reply YES, or describe what to change. If they request changes, edit docs/REQUIREMENTS.md directly (targeted edits), summarize the change in one line, and ask again. Once they reply YES, call dforge_module_plan({ action: 'write_requirements', moduleDir, userConfirmed: true }).",
+					"Read docs/REQUIREMENTS.md. Give the user a short outline (section headings + counts) and gap status " +
+					"(open items, or 'No gaps'), then ask them to review the file and reply YES, or describe what to " +
+					"change. If they request changes, edit docs/REQUIREMENTS.md directly (targeted edits), summarize the " +
+					"change in one line, and ask again. Once they reply YES, call dforge_module_plan({ action: " +
+					"'write_requirements', moduleDir, userConfirmed: true }).",
 			};
 		}
 
@@ -126,30 +141,49 @@ function handleCheck(root: string): PlanResult {
 			pending,
 			readyToScaffold: false,
 			nextStep:
-				"Phase 0b — Intake. Ask the user these questions ONE AT A TIME in free-form prose. After each answer, restate what you understood and confirm before continuing. Do NOT use pickers or predefined options.",
+				"Phase 0b — Intake. Ask the user these questions ONE AT A TIME in free-form prose. After each " +
+				"answer, restate what you understood and confirm before continuing. Do NOT use pickers or predefined " +
+				"options.",
 			questions: [
 				"In one sentence, what does this module do?",
-				"Who will use this, and what does each type DO with it? (Capture as verb-led sentences, e.g. 'Department managers approve or reject pending requests'. NOT role labels like 'Approver — approves requests'. Push back on vague answers like 'admins and users' — ask what each type does that the other can't.)",
-				"For each user type: which records and screens must it be able to reach to do that work, and what must it NOT see or change? (Write the answers in REQUIREMENTS.md under '## Access Needs', one bullet per user type: 'needs: … / must not: …', verb-led, no role codes. These become the Permissions Matrix rows in 0c and the checks in Phase 5.)",
+				"Who will use this, and what does each type DO with it? (Capture as verb-led sentences, e.g. " +
+					"'Department managers approve or reject pending requests'. NOT role labels like 'Approver — approves " +
+					"requests'. Push back on vague answers like 'admins and users' — ask what each type does that the " +
+					"other can't.)",
+				"For each user type: which records and screens must it be able to reach to do that work, and what " +
+					"must it NOT see or change? (Write the answers in REQUIREMENTS.md under '## Access Needs', one " +
+					"bullet per user type: 'needs: … / must not: …', verb-led, no role codes. These become the " +
+					"Permissions Matrix rows in 0c and the checks in Phase 5.)",
 			],
 			followUpNote:
-				"After answers 1-2: ask any domain ambiguity questions that remain open (e.g. 'What counts as a closed item?', 'Can anonymous users submit?'). Continue one at a time until no open questions remain. Dependencies and locales are confirmed from Phase 0a — carry them into REQUIREMENTS.md without re-asking.",
+				"After answers 1-2: ask any domain ambiguity questions that remain open (e.g. 'What counts as a " +
+				"closed item?', 'Can anonymous users submit?'). Continue one at a time until no open questions " +
+				"remain. Dependencies and locales are confirmed from Phase 0a — carry them into REQUIREMENTS.md " +
+				"without re-asking.",
 			writeAction:
-				"Draft REQUIREMENTS.md and write it directly to docs/REQUIREMENTS.md on disk (do not paste it into chat). Tell the user it's ready: give a short outline (section headings + counts) and gap status ('No gaps' or a one-line list), then ask them to review and reply YES, or describe what to change. If they request changes, edit the file directly and ask again. Once they reply YES ('yes', 'looks good', 'confirmed', 'LGTM'), call dforge_module_plan({ action: 'write_requirements', moduleDir, userConfirmed: true }).",
+				"Draft REQUIREMENTS.md and write it directly to docs/REQUIREMENTS.md on disk (do not paste it into " +
+				"chat). Tell the user it's ready: give a short outline (section headings + counts) and gap status " +
+				"('No gaps' or a one-line list), then ask them to review and reply YES, or describe what to change. " +
+				"If they request changes, edit the file directly and ask again. Once they reply YES ('yes', 'looks " +
+				"good', 'confirmed', 'LGTM'), call dforge_module_plan({ action: 'write_requirements', moduleDir, " +
+				"userConfirmed: true }).",
 		};
 	}
 
 	if (!has0c) {
 		if (fileExists(designPath)) {
 			return {
-				summary:
-					"Phase 0b complete. A draft docs/DESIGN.md exists on disk but hasn't been confirmed yet.",
+				summary: "Phase 0b complete. A draft docs/DESIGN.md exists on disk but hasn't been confirmed yet.",
 				currentPhase: "0c",
 				completed,
 				pending,
 				readyToScaffold: false,
 				nextStep:
-					"Read docs/DESIGN.md. Give the user a short outline (entity/status-machine counts, section headings) and Gaps & Proposals status (open items, or 'No gaps'), then ask them to review the file and reply YES, or describe what to change. If they request changes, edit docs/DESIGN.md directly (targeted edits), summarize the change in one line, and ask again. Once they reply YES, call dforge_module_plan({ action: 'write_design', moduleDir, userConfirmed: true }).",
+					"Read docs/DESIGN.md. Give the user a short outline (entity/status-machine counts, section headings) " +
+					"and Gaps & Proposals status (open items, or 'No gaps'), then ask them to review the file and reply " +
+					"YES, or describe what to change. If they request changes, edit docs/DESIGN.md directly (targeted " +
+					"edits), summarize the change in one line, and ask again. Once they reply YES, call " +
+					"dforge_module_plan({ action: 'write_design', moduleDir, userConfirmed: true }).",
 			};
 		}
 
@@ -160,7 +194,8 @@ function handleCheck(root: string): PlanResult {
 			pending,
 			readyToScaffold: false,
 			nextStep:
-				"Phase 0c — Design. Re-read REQUIREMENTS.md, then draft DESIGN.md (use the designTemplate below) with all 8 design items in a single message.",
+				"Phase 0c — Design. Re-read REQUIREMENTS.md, then draft DESIGN.md (use the designTemplate below) " +
+				"with all 8 design items in a single message.",
 			designTemplate: DESIGN_TEMPLATE,
 			designItems: [
 				"1. Entity list (ordered least-dependent → most-dependent, one-line purpose each)",
@@ -172,14 +207,22 @@ function handleCheck(root: string): PlanResult {
 				"7. Reports & queries",
 				"8. Special behaviors (soft-delete, sorting, webhooks, print templates)",
 				"8a. Visibility (who sees which records, child records, how people bind to departments/roles)",
-				"8b. Rules & Constraints (each rule with its enforcing MECHANISM: CHECK / trigger / action body / canExecute own-record fields / text only)",
+				"8b. Rules & Constraints (each rule with its enforcing MECHANISM: CHECK / trigger / action body / " +
+					"canExecute own-record fields / text only)",
 				"8c. Notifications (event -> recipient -> channel -> text)",
 				"8d. Permissions Matrix (every role x entity and action, incl. trigger-only actions)",
 			],
 			gapDetection:
-				"After drafting: run gap detection pass (FK optionality, status recovery, boolean-to-status smell, set aggregation risk, deep navigation, self-referential FK, security coverage, seed data circular refs). Add a 'Gaps & Proposals' section for each issue found. ALL gaps must be resolved before Phase 0d.",
+				"After drafting: run gap detection pass (FK optionality, status recovery, boolean-to-status smell, " +
+				"set aggregation risk, deep navigation, self-referential FK, security coverage, seed data circular " +
+				"refs). Add a 'Gaps & Proposals' section for each issue found. ALL gaps must be resolved before " +
+				"Phase 0d.",
 			writeAction:
-				"Once gaps are resolved, write docs/DESIGN.md directly to disk (do not paste it into chat). Tell the user it's ready: give a short outline (entity/status-machine counts, section headings) and Gaps & Proposals status ('No gaps' or a one-line summary), then ask them to review and reply YES, or describe what to change. If they request changes, edit the file directly and ask again. Once they reply YES, call dforge_module_plan({ action: 'write_design', moduleDir, userConfirmed: true }).",
+				"Once gaps are resolved, write docs/DESIGN.md directly to disk (do not paste it into chat). Tell the " +
+				"user it's ready: give a short outline (entity/status-machine counts, section headings) and Gaps & " +
+				"Proposals status ('No gaps' or a one-line summary), then ask them to review and reply YES, or " +
+				"describe what to change. If they request changes, edit the file directly and ask again. Once they " +
+				"reply YES, call dforge_module_plan({ action: 'write_design', moduleDir, userConfirmed: true }).",
 		};
 	}
 
@@ -191,7 +234,9 @@ function handleCheck(root: string): PlanResult {
 		pending,
 		readyToScaffold: false,
 		nextStep:
-			"Phase 0d — Validation. Call dforge_module_plan({ action: 'validate', moduleDir }) to run structural checks. If all pass, evaluate the returned semantic checks, then call validate again with checkResults.",
+			"Phase 0d — Validation. Call dforge_module_plan({ action: 'validate', moduleDir }) to run structural " +
+			"checks. If all pass, evaluate the returned semantic checks, then call validate again with " +
+			"checkResults.",
 	};
 }
 
@@ -213,7 +258,11 @@ function handleWriteIdentity(root: string, args: Args): PlanResult {
 		summary: `Phase 0a complete — CLAUDE.md prepared for module '${code}'.`,
 		files: { [P0.identity]: claudeMd },
 		nextStep:
-			"Write CLAUDE.md to disk. Then start Phase 0b intake: ask the user (1) 'In one sentence, what does this module do?' (2) 'Who will use this, and what does each type DO with it?' — capture as verb-led sentences, not role labels. Ask domain ambiguity follow-ups until no open questions remain. Draft REQUIREMENTS.md and write it directly to docs/REQUIREMENTS.md on disk, give the user a short outline + gap status, wait for explicit YES, then call write_requirements with userConfirmed: true.",
+			"Write CLAUDE.md to disk. Then start Phase 0b intake: ask the user (1) 'In one sentence, what does " +
+			"this module do?' (2) 'Who will use this, and what does each type DO with it?' — capture as verb-led " +
+			"sentences, not role labels. Ask domain ambiguity follow-ups until no open questions remain. Draft " +
+			"REQUIREMENTS.md and write it directly to docs/REQUIREMENTS.md on disk, give the user a short " +
+			"outline + gap status, wait for explicit YES, then call write_requirements with userConfirmed: true.",
 	};
 }
 
@@ -272,7 +321,9 @@ function handleWriteRequirements(root: string, args: Args): PlanResult {
 
 	if (!args.userConfirmed) {
 		throw new Error(
-			'User confirmation required — ask the user to review docs/REQUIREMENTS.md (already written to disk) and wait for an explicit YES ("yes", "looks good", "confirmed", "LGTM", or equivalent) before calling write_requirements with userConfirmed: true.',
+			"User confirmation required — ask the user to review docs/REQUIREMENTS.md (already written to disk) " +
+				'and wait for an explicit YES ("yes", "looks good", "confirmed", "LGTM", or equivalent) before ' +
+				"calling write_requirements with userConfirmed: true.",
 		);
 	}
 
@@ -284,7 +335,9 @@ function handleWriteRequirements(root: string, args: Args): PlanResult {
 	const updatedClaude = tickChecklist(
 		readFile(claudePath),
 		"0b",
-		'Phase 0c — design docs/DESIGN.md (8 design items + gap detection pass), write it to disk, get explicit user YES, then call `dforge_module_plan({ action: "write_design", moduleDir, userConfirmed: true })`.',
+		"Phase 0c — design docs/DESIGN.md (8 design items + gap detection pass), write it to disk, get " +
+			'explicit user YES, then call `dforge_module_plan({ action: "write_design", moduleDir, ' +
+			"userConfirmed: true })`.",
 	);
 
 	return {
@@ -294,7 +347,12 @@ function handleWriteRequirements(root: string, args: Args): PlanResult {
 		},
 		designTemplate: DESIGN_TEMPLATE,
 		nextStep:
-			"Write the updated CLAUDE.md to disk. Now design DESIGN.md using the designTemplate above: 8 design items (entity list, fields per entity, relationship map, status machines, actions, seed data, reports, special behaviors). Run gap detection pass, add Gaps & Proposals section, resolve all gaps. Write docs/DESIGN.md to disk, give the user a short outline (entity/status-machine counts, section headings) plus Gaps & Proposals status, wait for explicit YES, then call write_design with userConfirmed: true.",
+			"Write the updated CLAUDE.md to disk. Now design DESIGN.md using the designTemplate above: 8 design " +
+			"items (entity list, fields per entity, relationship map, status machines, actions, seed data, " +
+			"reports, special behaviors). Run gap detection pass, add Gaps & Proposals section, resolve all " +
+			"gaps. Write docs/DESIGN.md to disk, give the user a short outline (entity/status-machine counts, " +
+			"section headings) plus Gaps & Proposals status, wait for explicit YES, then call write_design with " +
+			"userConfirmed: true.",
 	};
 }
 
@@ -306,7 +364,9 @@ function handleWriteDesign(root: string, args: Args): PlanResult {
 
 	if (!args.userConfirmed) {
 		throw new Error(
-			"User confirmation required — ask the user to review docs/DESIGN.md (already written to disk, including the Gaps & Proposals section) and wait for an explicit YES before calling write_design with userConfirmed: true. Ensure all Gaps & Proposals items are resolved.",
+			"User confirmation required — ask the user to review docs/DESIGN.md (already written to disk, " +
+				"including the Gaps & Proposals section) and wait for an explicit YES before calling write_design " +
+				"with userConfirmed: true. Ensure all Gaps & Proposals items are resolved.",
 		);
 	}
 
@@ -319,7 +379,8 @@ function handleWriteDesign(root: string, args: Args): PlanResult {
 	const updatedClaude = tickChecklist(
 		readFile(claudePath),
 		"0c",
-		'Phase 0d — call `dforge_module_plan({ action: "validate", moduleDir: "..." })` to run structural checks, then provide semantic checkResults.',
+		'Phase 0d — call `dforge_module_plan({ action: "validate", moduleDir: "..." })` to run structural ' +
+			"checks, then provide semantic checkResults.",
 	);
 
 	return {
@@ -328,6 +389,8 @@ function handleWriteDesign(root: string, args: Args): PlanResult {
 			[P0.identity]: updatedClaude,
 		},
 		nextStep:
-			"Write the updated CLAUDE.md to disk. Now run Phase 0d validation: call dforge_module_plan({ action: 'validate', moduleDir }) for the structural pre-check, evaluate the returned semantic checks, then call validate again with all checkResults.",
+			"Write the updated CLAUDE.md to disk. Now run Phase 0d validation: call dforge_module_plan({ action: " +
+			"'validate', moduleDir }) for the structural pre-check, evaluate the returned semantic checks, then " +
+			"call validate again with all checkResults.",
 	};
 }

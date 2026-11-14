@@ -17,7 +17,10 @@ function markdownFiles(dir: string): string[] {
 	});
 }
 
-const skillText = markdownFiles(SKILLS).map((f) => ({ file: path.relative(ROOT, f), text: fs.readFileSync(f, "utf8") }));
+const skillText = markdownFiles(SKILLS).map((f) => ({
+	file: path.relative(ROOT, f),
+	text: fs.readFileSync(f, "utf8"),
+}));
 const registeredUris = new Set(resources.map((r) => r.uri));
 const serverSource = fs.readFileSync(path.join(ROOT, "src/server.ts"), "utf8");
 

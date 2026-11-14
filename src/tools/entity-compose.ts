@@ -88,13 +88,15 @@ export const entityReferenceAddSchema = {
 		.string()
 		.regex(DOTTED_CODE_RE)
 		.describe(
-			"The PARENT entity being pointed at. Cross-module dotted form ('fin.invoice') is allowed when it's a declared dependency.",
+			"The PARENT entity being pointed at. Cross-module dotted form ('fin.invoice') is allowed when it's a " +
+				"declared dependency.",
 		),
 	name: z
 		.string()
 		.regex(/^[a-z][a-z0-9_]*$/)
 		.describe(
-			"Name of the VISIBLE reference column, e.g. 'list' or 'customer'. The hidden FK column is named '<name>_id' unless fkField overrides it.",
+			"Name of the VISIBLE reference column, e.g. 'list' or 'customer'. The hidden FK column is named " +
+				"'<name>_id' unless fkField overrides it.",
 		),
 	fkField: z
 		.string()
@@ -113,9 +115,7 @@ export const entityReferenceAddSchema = {
 		.string()
 		.regex(/^[a-z][a-z0-9_]*$/)
 		.optional()
-		.describe(
-			"The parent's PK column. Default '{targetEntity}_id' (what the identity trait provides). Never 'id'.",
-		),
+		.describe("The parent's PK column. Default '{targetEntity}_id' (what the identity trait provides). Never 'id'."),
 	orderNum: z.number().int().optional().describe("Order of the reference column in the UI. Default: appended."),
 };
 
@@ -129,9 +129,7 @@ export const entityReferenceAddSchema = {
  * NOT NULL — and contradict its own Reference half, which says 'VE'.
  *   • `references` entry — from.field → to.entity/to.field
  */
-export function entityReferenceAdd(
-	args: z.infer<z.ZodObject<typeof entityReferenceAddSchema>>,
-): ToolResult {
+export function entityReferenceAdd(args: z.infer<z.ZodObject<typeof entityReferenceAddSchema>>): ToolResult {
 	const { paths, manifest, entity, entityPath } = loadEntity(args.moduleDir, args.entity);
 	const fields = fieldsOf(entity);
 
@@ -196,7 +194,9 @@ export function entityReferenceAdd(
 		// platform rejects at pack time. We are already forcing the flags, so drop
 		// the losing half rather than emitting a pair that cannot be packed.
 		if (args.required && existingFk.isNullable === true) {
-			fkFixes.push("dropped \"isNullable\": true (contradicts the 'M' flag on a required relation; pack rejects the pair)");
+			fkFixes.push(
+				"dropped \"isNullable\": true (contradicts the 'M' flag on a required relation; pack rejects the pair)",
+			);
 		}
 		if (existingFk.fieldTypeCd !== undefined) {
 			fkFixes.push(
@@ -306,31 +306,33 @@ export const entityRollupAddSchema = {
 		.string()
 		.regex(/^[a-z][a-z0-9_]*$/)
 		.describe(
-			"The child column to aggregate. MUST be physical (a plain data column or a same-row Generated one) — aggregating a virtual F/R/S column fails install.",
+			"The child column to aggregate. MUST be physical (a plain data column or a same-row Generated one) — " +
+				"aggregating a virtual F/R/S column fails install.",
 		),
-	agg: z
-		.enum(["SUM", "COUNT", "AVG", "MIN", "MAX"])
-		.default("SUM")
-		.describe("Aggregate function."),
+	agg: z.enum(["SUM", "COUNT", "AVG", "MIN", "MAX"]).default("SUM").describe("Aggregate function."),
 	setField: z
 		.string()
 		.regex(/^[a-z][a-z0-9_]*$/)
 		.optional()
 		.describe(
-			"Name of the Set column on the parent that lists the child rows. Reused if it already exists; created if not. Default: '<childEntity>s'.",
+			"Name of the Set column on the parent that lists the child rows. Reused if it already exists; " +
+				"created if not. Default: '<childEntity>s'.",
 		),
 	childFkField: z
 		.string()
 		.regex(/^[a-z][a-z0-9_]*$/)
 		.optional()
 		.describe(
-			"The FK column on the child pointing back at the parent — only needed when the Set column has to be created. Default: '{parentEntity}_id'.",
+			"The FK column on the child pointing back at the parent — only needed when the Set column has to be " +
+				"created. Default: '{parentEntity}_id'.",
 		),
 	label: z.string().optional().describe("Display label. Default: derived from name."),
 	dbDatatype: z
 		.string()
 		.optional()
-		.describe("SQL type of the total. Default: copied from the aggregated child column (numeric for AVG, int8 for COUNT)."),
+		.describe(
+			"SQL type of the total. Default: copied from the aggregated child column (numeric for AVG, int8 for COUNT).",
+		),
 	orderNum: z.number().int().optional(),
 };
 
@@ -340,9 +342,7 @@ export const entityRollupAddSchema = {
  * and refuses to aggregate a virtual child column (the documented
  * `column old.<field> does not exist` install failure).
  */
-export function entityRollupAdd(
-	args: z.infer<z.ZodObject<typeof entityRollupAddSchema>>,
-): ToolResult {
+export function entityRollupAdd(args: z.infer<z.ZodObject<typeof entityRollupAddSchema>>): ToolResult {
 	const { paths, manifest, entity, entityPath } = loadEntity(args.moduleDir, args.entity);
 	const fields = fieldsOf(entity);
 
@@ -467,7 +467,10 @@ const statusOption = z.union([
 
 export const entityStatusAddSchema = {
 	moduleDir: z.string().describe("Path to the module root."),
-	entity: z.string().regex(/^[a-z][a-z0-9_]*$/).describe("Entity to add the status column to."),
+	entity: z
+		.string()
+		.regex(/^[a-z][a-z0-9_]*$/)
+		.describe("Entity to add the status column to."),
 	name: z
 		.string()
 		.regex(/^[a-z][a-z0-9_]*$/)
@@ -477,13 +480,15 @@ export const entityStatusAddSchema = {
 		.array(statusOption)
 		.min(2)
 		.describe(
-			"The status values, in workflow order. Either bare strings ('draft') or objects ({ value, label?, color?, icon? }). A single-value status should be a checkbox instead.",
+			"The status values, in workflow order. Either bare strings ('draft') or objects ({ value, label?, " +
+				"color?, icon? }). A single-value status should be a checkbox instead.",
 		),
 	initial: z
 		.string()
 		.optional()
 		.describe(
-			"The value new records start at — emitted as a `formula` (entity fields have NO defaultValue key). Must be one of options. Default: the first option.",
+			"The value new records start at — emitted as a `formula` (entity fields have NO defaultValue key). " +
+				"Must be one of options. Default: the first option.",
 		),
 	label: z.string().optional().describe("Display label. Default: derived from name."),
 	required: z.boolean().default(true).describe("true → flags 'VEM'; false → 'VE' (ignored when editable is false)."),
@@ -502,9 +507,7 @@ export const entityStatusAddSchema = {
  * initial value — the two things hand-authored status columns get wrong
  * (options at the field root; a `defaultValue` key the entity schema rejects).
  */
-export function entityStatusAdd(
-	args: z.infer<z.ZodObject<typeof entityStatusAddSchema>>,
-): ToolResult {
+export function entityStatusAdd(args: z.infer<z.ZodObject<typeof entityStatusAddSchema>>): ToolResult {
 	const { paths, manifest, entity, entityPath } = loadEntity(args.moduleDir, args.entity);
 	const fields = fieldsOf(entity);
 
@@ -527,9 +530,7 @@ export function entityStatusAdd(
 
 	const initial = args.initial ?? values[0];
 	if (!values.includes(initial)) {
-		throw new Error(
-			`initial '${initial}' is not one of the declared options (${values.join(", ")}).`,
-		);
+		throw new Error(`initial '${initial}' is not one of the declared options (${values.join(", ")}).`);
 	}
 
 	const label = args.label ?? pascal(args.name).replace(/([a-z])([A-Z])/g, "$1 $2");
@@ -557,8 +558,8 @@ export function entityStatusAdd(
 			"manifest.json": jsonText(withTodayStamp(manifest)),
 		},
 		`Status values are now fixed in the entity. Any action's canExecute: guard must reference one of: ${values.join(", ")}.` +
-				(args.editable === false
-					? " The column is read-only (flags 'V'): only actions/DSL can change it."
-					: " The column is user-editable (flags include 'E'); pass editable:false if only actions should move it."),
+			(args.editable === false
+				? " The column is read-only (flags 'V'): only actions/DSL can change it."
+				: " The column is user-editable (flags include 'E'); pass editable:false if only actions should move it."),
 	);
 }

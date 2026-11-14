@@ -17,9 +17,7 @@ export function assertDocReady(absPath: string, relPath: string): void {
 		);
 	}
 	if (readFile(absPath).trim().length < 100) {
-		throw new Error(
-			`${relPath} appears empty or too short (under 100 chars) — write the full draft to disk first.`,
-		);
+		throw new Error(`${relPath} appears empty or too short (under 100 chars) — write the full draft to disk first.`);
 	}
 }
 
@@ -34,8 +32,5 @@ export function tickChecklist(claudeMd: string, phase: "0b" | "0c" | "0d", nextS
 	for (const ph of upTo) {
 		ticked = ticked.replace(new RegExp(`- \\[ \\] (\\*\\*${ph}\\*\\*)`), "- [x] $1");
 	}
-	return ticked.replace(
-		/\*\*Next step:\*\* .+/,
-		`**Next step:** ${nextStep}`,
-	);
+	return ticked.replace(/\*\*Next step:\*\* .+/, `**Next step:** ${nextStep}`);
 }

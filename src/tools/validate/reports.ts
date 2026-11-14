@@ -43,13 +43,15 @@ export function checkReports(ctx: ValidateContext): void {
 			if ("link" in p) {
 				err(
 					`${where} → ${loc}.${pcode}`,
-					"puts 'link' at the top level, where the installer does not read it — a lookup param with no `params.link` has no autocomplete. Nest it: \"params\": { \"link\": { \"entity\": \"…\" } }.",
+					"puts 'link' at the top level, where the installer does not read it — a lookup param with no " +
+						'`params.link` has no autocomplete. Nest it: "params": { "link": { "entity": "…" } }.',
 				);
 			}
 			if ("fieldTypeCd" in p && "domain" in p) {
 				err(
 					`${where} → ${loc}.${pcode}`,
-					"declares both 'fieldTypeCd' and 'domain' — install rejects the pair rather than picking a winner. A domain supplies the control; drop the fieldTypeCd.",
+					"declares both 'fieldTypeCd' and 'domain' — install rejects the pair rather than picking a winner. A " +
+						"domain supplies the control; drop the fieldTypeCd.",
 				);
 			}
 		};
@@ -86,8 +88,7 @@ export function checkReports(ctx: ValidateContext): void {
 			}
 
 			// Own-module prefix is redundant: 'crm.quote' inside crm is 'quote'.
-			const bare =
-				entityCd.startsWith(`${manifest.code}.`) ? entityCd.slice(manifest.code.length + 1) : entityCd;
+			const bare = entityCd.startsWith(`${manifest.code}.`) ? entityCd.slice(manifest.code.length + 1) : entityCd;
 
 			// UQ_Entity_Report is (entity_id, report_id): a second entry for the
 			// same entity is not a second attachment, it overwrites the first's
@@ -128,10 +129,7 @@ export function checkReports(ctx: ValidateContext): void {
 				if (!fields) continue;
 				const col = fields[source];
 				if (!col) {
-					err(
-						where,
-						`maps parameter '${paramCd}' from '${entityCd}.${source}', which is not a column of that entity.`,
-					);
+					err(where, `maps parameter '${paramCd}' from '${entityCd}.${source}', which is not a column of that entity.`);
 					continue;
 				}
 				if (col.columnType === "S" || col.columnType === "F") {
@@ -156,7 +154,10 @@ export function checkReports(ctx: ValidateContext): void {
 		if (seen.size > 0 && !deps.has("metadata")) {
 			warn(
 				where,
-				"declares record-report attachments but the manifest has no 'metadata' dependency. The 'entity_report' table ships with the metadata system module — add \"metadata\": \">=1.5.0\" to dependencies so install fails loudly on a platform without it, rather than the attachment quietly doing nothing.",
+				"declares record-report attachments but the manifest has no 'metadata' dependency. The " +
+					'\'entity_report\' table ships with the metadata system module — add "metadata": ">=1.5.0" to ' +
+					"dependencies so install fails loudly on a platform without it, rather than the attachment quietly " +
+					"doing nothing.",
 			);
 		}
 	}

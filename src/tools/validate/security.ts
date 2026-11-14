@@ -14,11 +14,21 @@ export function checkRoleRights(ctx: ValidateContext): void {
 	// report: and sp: may be qualified 'module.code'; only a foreign module's objects are out of sight.
 	// Codes are [a-z][a-z0-9_]* (no dots), so the single dot is unambiguous — a
 	// malformed ref is reported as such rather than as a phantom module or object.
-	const checkObjectKey = (rcode: string, key: string, kind: string, own: Record<string, unknown>, absFile: string, file: string): void => {
+	const checkObjectKey = (
+		rcode: string,
+		key: string,
+		kind: string,
+		own: Record<string, unknown>,
+		absFile: string,
+		file: string,
+	): void => {
 		const ref = key.slice(kind.length + 1);
 		const noun = kind === "sp" ? "stored procedure" : "report";
 		if (!DOTTED_CODE_RE.test(ref)) {
-			err(`roles → ${rcode}`, `malformed rights key '${key}' — expected '${kind}:code' or '${kind}:module.code', each part matching [a-z][a-z0-9_]*`);
+			err(
+				`roles → ${rcode}`,
+				`malformed rights key '${key}' — expected '${kind}:code' or '${kind}:module.code', each part matching [a-z][a-z0-9_]*`,
+			);
 			return;
 		}
 		const dot = ref.indexOf(".");
@@ -57,7 +67,10 @@ export function checkRoleRights(ctx: ValidateContext): void {
 				// An entity rights key: same-module, a system entity (user, document,
 				// …), or a declared cross-module dependency. Reuse the same resolver
 				// as FK targets so system/cross-module grants don't false-error.
-				err(`roles → ${rcode}`, `grants rights on '${key}', which is not a known entity (same-module, system, or a declared cross-module dependency)`);
+				err(
+					`roles → ${rcode}`,
+					`grants rights on '${key}', which is not a known entity (same-module, system, or a declared cross-module dependency)`,
+				);
 			}
 		}
 	}
@@ -90,33 +103,60 @@ export function checkPermissionsAgainstDesign(ctx: ValidateContext): void {
 	if (body === null) return;
 	const m = parsePermissionsMatrix(body);
 	if (!m.machine) {
-		warn("docs/DESIGN.md", `Permissions Matrix is not machine-readable, so it cannot be checked against security/roles.json. ${MATRIX_FORMAT_HINT}`, "perm:matrix-format");
+		warn(
+			"docs/DESIGN.md",
+			`Permissions Matrix is not machine-readable, so it cannot be checked against security/roles.json. ${MATRIX_FORMAT_HINT}`,
+			"perm:matrix-format",
+		);
 		return;
 	}
 	for (const p of m.problems) warn("docs/DESIGN.md → Permissions Matrix", p, "perm:matrix-row");
-	const rightsOf = (role: string): Record<string, string> => ((roles[role]?.rights as Record<string, string> | undefined) ?? {});
+	const rightsOf = (role: string): Record<string, string> =>
+		(roles[role]?.rights as Record<string, string> | undefined) ?? {};
 	const designRoles = new Set(m.rows.map((r) => r.role));
 	for (const role of designRoles) {
-		if (!(role in roles)) err("security → roles", `the design's Permissions Matrix names role '${role}' but security/roles.json has no such role`, "perm:role-missing");
+		if (!(role in roles))
+			err(
+				"security → roles",
+				`the design's Permissions Matrix names role '${role}' but security/roles.json has no such role`,
+				"perm:role-missing",
+			);
 	}
 	for (const r of m.rows) {
 		if (!(r.role in roles)) continue;
 		const have = rightsOf(r.role)[r.object];
 		const where = `roles → ${r.role}`;
 		if (r.rights === "-") {
-			if (have) err(where, `the design denies '${r.object}' (${r.statements.join(", ") || "no statement"}) but roles.json grants '${have}'`, "perm:denied-but-granted");
+			if (have)
+				err(
+					where,
+					`the design denies '${r.object}' (${r.statements.join(", ") || "no statement"}) but roles.json grants '${have}'`,
+					"perm:denied-but-granted",
+				);
 			continue;
 		}
 		if (!have && r.object.startsWith("folder:")) {
-			warn(where, `the design grants '${r.rights}' on '${r.object}', but role rights cannot carry folder: keys (the CLI refuses them) — the role-to-folder binding is an open platform question, so this row cannot be satisfied`, "perm:folder-binding");
+			warn(
+				where,
+				`the design grants '${r.rights}' on '${r.object}', but role rights cannot carry folder: keys (the CLI refuses them) — the role-to-folder binding is an open platform question, so this row cannot be satisfied`,
+				"perm:folder-binding",
+			);
 			continue;
 		}
 		if (!have) {
-			err(where, `the design grants '${r.rights}' on '${r.object}' (${r.statements.join(", ") || "no statement"}) but roles.json has no such key`, "perm:grant-missing");
+			err(
+				where,
+				`the design grants '${r.rights}' on '${r.object}' (${r.statements.join(", ") || "no statement"}) but roles.json has no such key`,
+				"perm:grant-missing",
+			);
 		} else if (sortRights(have) !== sortRights(r.rights)) {
 			const missing = [...r.rights].filter((c) => !have.includes(c)).join("");
 			const extra = [...have].filter((c) => !r.rights.includes(c)).join("");
-			err(where, `'${r.object}': design says '${r.rights}', roles.json has '${have}'${missing ? ` (missing ${missing})` : ""}${extra ? ` (beyond the design: ${extra})` : ""}`, "perm:rights-differ");
+			err(
+				where,
+				`'${r.object}': design says '${r.rights}', roles.json has '${have}'${missing ? ` (missing ${missing})` : ""}${extra ? ` (beyond the design: ${extra})` : ""}`,
+				"perm:rights-differ",
+			);
 		}
 	}
 	// Grants the design never approved (roles the matrix covers only).
@@ -125,7 +165,11 @@ export function checkPermissionsAgainstDesign(ctx: ValidateContext): void {
 		if (!(role in roles)) continue;
 		for (const [obj, rights] of Object.entries(rightsOf(role))) {
 			if (!listed.has(`${role}\u0000${obj}`)) {
-				warn(`roles → ${role}`, `roles.json grants '${rights}' on '${obj}' but the design's Permissions Matrix has no row for it`, "perm:grant-unapproved");
+				warn(
+					`roles → ${role}`,
+					`roles.json grants '${rights}' on '${obj}' but the design's Permissions Matrix has no row for it`,
+					"perm:grant-unapproved",
+				);
 			}
 		}
 	}
@@ -134,16 +178,23 @@ export function checkPermissionsAgainstDesign(ctx: ValidateContext): void {
 /** Each role can actually do what its rights imply. */
 export function checkRoleReachability(ctx: ValidateContext): void {
 	const { paths, roles, actions, reports, warn, isKnownEntity } = ctx;
-	const roleEntries = Object.entries(roles).map(([code, r]) => [code, ((r.rights as Record<string, string> | undefined) ?? {})] as const);
+	const roleEntries = Object.entries(roles).map(
+		([code, r]) => [code, (r.rights as Record<string, string> | undefined) ?? {}] as const,
+	);
 	const canSelect = (rights: Record<string, string>, entity: string) => hasLetter(rights[entity], "S");
 
 	for (const [code, rights] of roleEntries) {
 		const where = `roles → ${code}`;
-		if (Object.keys(rights).length === 0) warn(where, "role has no rights at all — it can do nothing", "perm:empty-role");
+		if (Object.keys(rights).length === 0)
+			warn(where, "role has no rights at all — it can do nothing", "perm:empty-role");
 		for (const [key, value] of Object.entries(rights)) {
 			if (key.includes(":")) continue;
 			if (/[IUD]/.test(value) && !hasLetter(value, "S")) {
-				warn(where, `'${key}' grants '${value}' without S — the role writes records it cannot see`, "perm:write-without-select");
+				warn(
+					where,
+					`'${key}' grants '${value}' without S — the role writes records it cannot see`,
+					"perm:write-without-select",
+				);
 			}
 		}
 		for (const key of Object.keys(rights)) {
@@ -151,14 +202,24 @@ export function checkRoleReachability(ctx: ValidateContext): void {
 				const a = actions[key.slice(7)] as { entityCode?: string } | undefined;
 				const ent = a?.entityCode;
 				if (ent && isKnownEntity(ent) && !canSelect(rights, ent)) {
-					warn(where, `can run '${key}' but has no S on '${ent}', the action's entity — the button never appears`, "perm:action-without-select");
+					warn(
+						where,
+						`can run '${key}' but has no S on '${ent}', the action's entity — the button never appears`,
+						"perm:action-without-select",
+					);
 				}
 			} else if (key.startsWith("report:")) {
-				const rep = reports[key.slice(7)] as { datasets?: Record<string, { query?: { entityCd?: string } }> } | undefined;
+				const rep = reports[key.slice(7)] as
+					| { datasets?: Record<string, { query?: { entityCd?: string } }> }
+					| undefined;
 				for (const ds of Object.values(rep?.datasets ?? {})) {
 					const ent = ds?.query?.entityCd;
 					if (ent && isKnownEntity(ent) && !canSelect(rights, ent)) {
-						warn(where, `can run '${key}' but has no S on '${ent}', which a dataset reads — the report comes back empty or fails`, "perm:report-without-select");
+						warn(
+							where,
+							`can run '${key}' but has no S on '${ent}', which a dataset reads — the report comes back empty or fails`,
+							"perm:report-without-select",
+						);
 					}
 				}
 			}
@@ -178,7 +239,12 @@ export function checkRoleReachability(ctx: ValidateContext): void {
 		if (!letter) continue; // unknown event: don't guess which right the writer needs
 		for (const [code, rights] of roleEntries) {
 			if (hasLetter(rights[entity], letter) && !hasLetter(rights[`action:${action}`], "E")) {
-				const e = lacking.get(action) ?? { trigger: String(t.code ?? "?"), entity, event: String(t.event ?? "write"), roles: [] };
+				const e = lacking.get(action) ?? {
+					trigger: String(t.code ?? "?"),
+					entity,
+					event: String(t.event ?? "write"),
+					roles: [],
+				};
 				e.roles.push(code);
 				lacking.set(action, e);
 			}
@@ -194,13 +260,18 @@ export function checkRoleReachability(ctx: ValidateContext): void {
 
 	// Every action is runnable by someone, run by a job or a trigger, or deliberately canExecute:false.
 	const granted = new Set<string>();
-	for (const [, rights] of roleEntries) for (const k of Object.keys(rights)) if (k.startsWith("action:")) granted.add(k.slice(7));
+	for (const [, rights] of roleEntries)
+		for (const k of Object.keys(rights)) if (k.startsWith("action:")) granted.add(k.slice(7));
 	const jobFile = readJsonOrDefault<{ jobs?: Array<Record<string, unknown>> }>(paths.jobs, {});
 	const jobActions = new Set((jobFile.jobs ?? []).map((j) => String(j.action ?? "")));
 	for (const [a, def] of Object.entries(actions)) {
 		if (granted.has(a) || jobActions.has(a) || triggerActions.has(a)) continue;
 		const d = def as { canExecute?: unknown };
 		if (d && d.canExecute === false) continue;
-		warn("security", `action '${a}' is granted (E) to no role and is not run by a job or trigger — nobody can run it`, "perm:action-unreachable");
+		warn(
+			"security",
+			`action '${a}' is granted (E) to no role and is not run by a job or trigger — nobody can run it`,
+			"perm:action-unreachable",
+		);
 	}
 }

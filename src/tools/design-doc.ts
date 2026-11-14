@@ -33,7 +33,11 @@ export function entityListCodes(designContent: string): Set<string> {
 }
 
 /** Codes named in a section's list items / first table cells (e.g. Actions). */
-export function sectionCodes(designContent: string, title: string, skip: string[] = ["action", "name", "code"]): Set<string> {
+export function sectionCodes(
+	designContent: string,
+	title: string,
+	skip: string[] = ["action", "name", "code"],
+): Set<string> {
 	const out = new Set<string>();
 	for (const line of (sectionBody(designContent, title) ?? "").split("\n")) {
 		const c = leadingCode(line);

@@ -31,7 +31,12 @@ beforeEach(() => {
 		fields: {
 			name: { dbDatatype: "varchar", fieldTypeCd: "text", flags: "VEM", params: { min: 1, hint: "x" } },
 			qty: { dbDatatype: "int", fieldTypeCd: "number", flags: "VE" },
-			parts: { columnType: "S", fieldTypeCd: "grid", flags: "VE", link: { entity: "part", thisKey: "req_id", otherKey: "req_id" } },
+			parts: {
+				columnType: "S",
+				fieldTypeCd: "grid",
+				flags: "VE",
+				link: { entity: "part", thisKey: "req_id", otherKey: "req_id" },
+			},
 		},
 		constraints: { ck_name: { type: "check", expression: "length(name) > 0" } },
 		views: { v1: { columns: { name: {}, qty: {} } } },
@@ -40,11 +45,19 @@ beforeEach(() => {
 		entityCode: "part",
 		dbObject: "part",
 		traits: ["identity"],
-		fields: { req_id: { dbDatatype: "cuid", flags: "EM" }, amount: { dbDatatype: "numeric(18,2)", fieldTypeCd: "currency", flags: "VEM" } },
+		fields: {
+			req_id: { dbDatatype: "cuid", flags: "EM" },
+			amount: { dbDatatype: "numeric(18,2)", fieldTypeCd: "currency", flags: "VEM" },
+		},
 	});
 	w("ui/reports.json", {
 		r1: {
-			datasets: { d: { query: { entityCd: "req", columns: ["name", "qty"], sort: [{ c: "name", d: "asc" }] }, columnsDef: { name: { label: "Name" } } } },
+			datasets: {
+				d: {
+					query: { entityCd: "req", columns: ["name", "qty"], sort: [{ c: "name", d: "asc" }] },
+					columnsDef: { name: { label: "Name" } },
+				},
+			},
 			layout: { panels: [{ datasetCd: "d", config: { categoryCol: "name" } }] },
 		},
 	});
@@ -57,7 +70,9 @@ afterEach(() => rmSync(dir, { recursive: true, force: true }));
 describe("field_add: formula columns", () => {
 	it("never derives dbDatatype for an F column and says so", () => {
 		const r = entityFieldAdd({
-			moduleDir: dir, entityName: "req", fieldName: "total",
+			moduleDir: dir,
+			entityName: "req",
+			fieldName: "total",
 			field: { columnType: "F", fieldTypeCd: "currency", baseDatatypeCd: "number", formula: "[qty] * 2", flags: "V" },
 		});
 		const f = parse(r.files, "entities/req.json").fields.total;
@@ -72,7 +87,12 @@ describe("baseDatatypeCd enum", () => {
 		expect(issues.some((i) => i.level === "error" && /'string'/.test(i.message))).toBe(true);
 		const schema = z.object(entityFieldAddSchema);
 		expect(
-			schema.safeParse({ moduleDir: dir, entityName: "req", fieldName: "x", field: { columnType: "F", baseDatatypeCd: "datetime", formula: "1", flags: "V" } }).success,
+			schema.safeParse({
+				moduleDir: dir,
+				entityName: "req",
+				fieldName: "x",
+				field: { columnType: "F", baseDatatypeCd: "datetime", formula: "1", flags: "V" },
+			}).success,
 		).toBe(false);
 		expect(checkFieldSpec("f", { columnType: "F", baseDatatypeCd: "timestamp", formula: "1", flags: "V" })).toEqual([]);
 	});
@@ -80,14 +100,42 @@ describe("baseDatatypeCd enum", () => {
 
 describe("rollup COUNT over the child PK", () => {
 	it("allows COUNT of the identity PK", () => {
-		const r = entityRollupAdd({ moduleDir: dir, entity: "req", name: "parts_count", childEntity: "part", childField: "part_id", agg: "COUNT", setField: "parts" });
+		const r = entityRollupAdd({
+			moduleDir: dir,
+			entity: "req",
+			name: "parts_count",
+			childEntity: "part",
+			childField: "part_id",
+			agg: "COUNT",
+			setField: "parts",
+		});
 		const f = parse(r.files, "entities/req.json").fields.parts_count;
 		expect(f.formula).toBe("COUNT([parts].[part_id])");
 		expect(f.dbDatatype).toBe("int8");
 	});
 	it("refuses SUM over the PK and points at the helper-column workaround for unknown columns", () => {
-		expect(() => entityRollupAdd({ moduleDir: dir, entity: "req", name: "x", childEntity: "part", childField: "part_id", agg: "SUM", setField: "parts" })).toThrow(/only COUNT/);
-		expect(() => entityRollupAdd({ moduleDir: dir, entity: "req", name: "x", childEntity: "part", childField: "nope", agg: "SUM", setField: "parts" })).toThrow(/helper numeric column/);
+		expect(() =>
+			entityRollupAdd({
+				moduleDir: dir,
+				entity: "req",
+				name: "x",
+				childEntity: "part",
+				childField: "part_id",
+				agg: "SUM",
+				setField: "parts",
+			}),
+		).toThrow(/only COUNT/);
+		expect(() =>
+			entityRollupAdd({
+				moduleDir: dir,
+				entity: "req",
+				name: "x",
+				childEntity: "part",
+				childField: "nope",
+				agg: "SUM",
+				setField: "parts",
+			}),
+		).toThrow(/helper numeric column/);
 	});
 });
 
@@ -108,14 +156,18 @@ describe("status_add editable", () => {
 describe("field_modify", () => {
 	it("merges params and null removes a key", () => {
 		const r = entityFieldModify({
-			moduleDir: dir, entityName: "req", fieldName: "name",
+			moduleDir: dir,
+			entityName: "req",
+			fieldName: "name",
 			field: { dbDatatype: "varchar", fieldTypeCd: "text", flags: "VEM", params: { max: 5, hint: null } },
 		});
 		expect(parse(r.files, "entities/req.json").fields.name.params).toEqual({ min: 1, max: 5 });
 	});
 	it("warns on a type change and lists dependants", () => {
 		const r = entityFieldModify({
-			moduleDir: dir, entityName: "req", fieldName: "name",
+			moduleDir: dir,
+			entityName: "req",
+			fieldName: "name",
 			field: { dbDatatype: "text", fieldTypeCd: "textarea", flags: "VEM" },
 		});
 		expect(r.warning).toMatch(/dbSchemaVersion/);

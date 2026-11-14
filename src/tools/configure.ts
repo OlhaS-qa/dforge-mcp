@@ -32,11 +32,14 @@ const CODE = /^[a-z][a-z0-9_]*$/;
 
 const numberSequenceSchema = z
 	.object({
-		column: z.string().describe("Column code that receives the generated number (must be an existing physical text column)."),
+		column: z
+			.string()
+			.describe("Column code that receives the generated number (must be an existing physical text column)."),
 		defaultPrefix: z
 			.string()
 			.describe(
-				"REQUIRED by entity.schema.json (the reference doc omits it): fallback prefix when no setting is configured. Use '' only if the pattern has no {prefix}.",
+				"REQUIRED by entity.schema.json (the reference doc omits it): fallback prefix when no setting is " +
+					"configured. Use '' only if the pattern has no {prefix}.",
 			),
 		prefixSettingCd: z.string().optional().describe("Module setting code the prefix is resolved from (folder-scoped)."),
 		pattern: z
@@ -66,29 +69,43 @@ export const entityConfigureSchema = {
 		.string()
 		.optional()
 		.describe(
-			"Sets the entity's `toString` (named toStringTemplate because a `toString` input key collides with Object.prototype.toString in validators). Record caption template, e.g. '{number} {name}'. Every {placeholder} must be an existing column of the entity (trait columns included) and not a set. Not allowed on extension entities.",
+			"Sets the entity's `toString` (named toStringTemplate because a `toString` input key collides with " +
+				"Object.prototype.toString in validators). Record caption template, e.g. '{number} {name}'. Every " +
+				"{placeholder} must be an existing column of the entity (trait columns included) and not a set. Not " +
+				"allowed on extension entities.",
 		),
 	description: z.string().optional().describe("Entity description."),
 	numberSequence: z
 		.union([numberSequenceSchema, z.null()])
 		.optional()
 		.describe(
-			"Automatic document numbering ({column, defaultPrefix, prefixSettingCd?, pattern?, resetPeriod?}). Pass null to remove it. See dforge://reference/number-sequences.",
+			"Automatic document numbering ({column, defaultPrefix, prefixSettingCd?, pattern?, resetPeriod?}). " +
+				"Pass null to remove it. See dforge://reference/number-sequences.",
 		),
 	constraints: z
 		.object({
 			add: z
 				.record(z.string(), constraintSchema)
 				.optional()
-				.describe("Constraints to add, keyed by constraint name ('uq_number'). Existing names are refused — remove first."),
-			remove: z.array(z.string()).optional().describe("Constraint names to remove (applied before `add`, so remove+add replaces)."),
+				.describe(
+					"Constraints to add, keyed by constraint name ('uq_number'). Existing names are refused — remove first.",
+				),
+			remove: z
+				.array(z.string())
+				.optional()
+				.describe("Constraint names to remove (applied before `add`, so remove+add replaces)."),
 		})
 		.optional()
-		.describe("Unique/check database constraints. Unique constraints name existing physical columns; every one should carry a `message`."),
+		.describe(
+			"Unique/check database constraints. Unique constraints name existing physical columns; every one " +
+				"should carry a `message`.",
+		),
 };
 
 const SQL_WORDS = new Set(
-	"and or not in is null between true false like ilike similar to case when then else end distinct escape any all some exists cast as current_date current_time current_timestamp now abs length lower upper coalesce nullif greatest least round floor ceil ceiling trim char_length date timestamp timestamptz numeric integer int bigint text varchar boolean interval year month day hour minute second extract age".split(" "),
+	"and or not in is null between true false like ilike similar to case when then else end distinct escape any all some exists cast as current_date current_time current_timestamp now abs length lower upper coalesce nullif greatest least round floor ceil ceiling trim char_length date timestamp timestamptz numeric integer int bigint text varchar boolean interval year month day hour minute second extract age".split(
+		" ",
+	),
 );
 
 /**
@@ -178,7 +195,9 @@ export function entityConfigure(args: z.infer<z.ZodObject<typeof entityConfigure
 				);
 			}
 			if (!physical(ns.column)) {
-				throw new Error(`numberSequence.column '${ns.column}' is a virtual (F/R/S) column — it must be a physical text column.`);
+				throw new Error(
+					`numberSequence.column '${ns.column}' is a virtual (F/R/S) column — it must be a physical text column.`,
+				);
 			}
 			if (ns.pattern !== undefined) {
 				for (const m of ns.pattern.matchAll(PLACEHOLDER)) {
@@ -189,13 +208,17 @@ export function entityConfigure(args: z.infer<z.ZodObject<typeof entityConfigure
 					}
 				}
 				if (!/\{seq:\d+\}/.test(ns.pattern)) {
-					warnings.push("numberSequence.pattern has no {seq:N} — generated numbers would repeat within a reset period.");
+					warnings.push(
+						"numberSequence.pattern has no {seq:N} — generated numbers would repeat within a reset period.",
+					);
 				}
 			}
 			if (ns.prefixSettingCd) {
 				const settings = readJsonOrDefault<Record<string, unknown>>(paths.settings, {});
 				if (!Object.prototype.hasOwnProperty.call(settings, ns.prefixSettingCd)) {
-					warnings.push(`prefixSettingCd '${ns.prefixSettingCd}' is not in settings.json yet — add it with dforge_setting_add.`);
+					warnings.push(
+						`prefixSettingCd '${ns.prefixSettingCd}' is not in settings.json yet — add it with dforge_setting_add.`,
+					);
 				}
 			}
 			const col = fieldDefs[ns.column];
@@ -213,29 +236,39 @@ export function entityConfigure(args: z.infer<z.ZodObject<typeof entityConfigure
 		const cons = { ...((entity.constraints as Record<string, unknown> | undefined) ?? {}) };
 		for (const name of args.constraints.remove ?? []) {
 			if (!Object.prototype.hasOwnProperty.call(cons, name)) {
-				throw new Error(`Constraint '${name}' does not exist on '${args.entity}'. Existing: ${Object.keys(cons).join(", ") || "(none)"}.`);
+				throw new Error(
+					`Constraint '${name}' does not exist on '${args.entity}'. Existing: ${Object.keys(cons).join(", ") || "(none)"}.`,
+				);
 			}
 			delete cons[name];
 		}
 		for (const [name, c] of Object.entries(args.constraints.add ?? {})) {
 			if (!CODE.test(name)) throw new Error(`Constraint name '${name}' must match ${CODE}.`);
 			if (Object.prototype.hasOwnProperty.call(cons, name)) {
-				throw new Error(`Constraint '${name}' already exists on '${args.entity}' — list it under constraints.remove in the same call to replace it.`);
+				throw new Error(
+					`Constraint '${name}' already exists on '${args.entity}' — list it under constraints.remove in the same call to replace it.`,
+				);
 			}
 			if (c.type === "unique") {
-				if (!c.fields || c.fields.length === 0) throw new Error(`Unique constraint '${name}' needs a non-empty \`fields\`.`);
+				if (!c.fields || c.fields.length === 0)
+					throw new Error(`Unique constraint '${name}' needs a non-empty \`fields\`.`);
 				if (c.expression !== undefined) throw new Error(`Unique constraint '${name}' must not have an \`expression\`.`);
 				for (const f of c.fields) {
 					if (!columns.has(f)) {
-						throw new Error(`Constraint '${name}': column '${f}' is not a column of '${args.entity}'. Columns: ${[...columns].sort().join(", ")}.`);
+						throw new Error(
+							`Constraint '${name}': column '${f}' is not a column of '${args.entity}'. Columns: ${[...columns].sort().join(", ")}.`,
+						);
 					}
 					if (!physical(f)) {
-						throw new Error(`Constraint '${name}': '${f}' is a virtual (F/R/S) column — use the hidden FK / a physical column.`);
+						throw new Error(
+							`Constraint '${name}': '${f}' is a virtual (F/R/S) column — use the hidden FK / a physical column.`,
+						);
 					}
 				}
 			} else {
-				if (!c.expression || !c.expression.trim()) throw new Error(`Check constraint '${name}' needs an \`expression\`.`);
-					checkCheckExpression(name, c.expression, new Set([...columns].filter(physical)));
+				if (!c.expression || !c.expression.trim())
+					throw new Error(`Check constraint '${name}' needs an \`expression\`.`);
+				checkCheckExpression(name, c.expression, new Set([...columns].filter(physical)));
 				for (const f of c.fields ?? []) {
 					if (!columns.has(f)) {
 						throw new Error(`Constraint '${name}': column '${f}' is not a column of '${args.entity}'.`);
@@ -251,7 +284,9 @@ export function entityConfigure(args: z.infer<z.ZodObject<typeof entityConfigure
 	}
 
 	if (changed.length === 0) {
-		throw new Error("Nothing to change: pass at least one of toStringTemplate, description, numberSequence, constraints.");
+		throw new Error(
+			"Nothing to change: pass at least one of toStringTemplate, description, numberSequence, constraints.",
+		);
 	}
 
 	return makeResult(
@@ -297,39 +332,43 @@ export const manifestSetSchema = {
 		.string()
 		.max(1000)
 		.optional()
-		.describe("Marketplace card text, at most 1000 characters (documented in references/manifest.md; absent from the vendored manifest.schema.json)."),
+		.describe(
+			"Marketplace card text, at most 1000 characters (documented in references/manifest.md; absent from " +
+				"the vendored manifest.schema.json).",
+		),
 	version: z.string().regex(SEMVER).optional().describe("Module semver."),
 	dbSchemaVersion: z.string().regex(SEMVER).optional().describe("DB schema semver."),
 	category: z.string().optional().describe("Marketplace category slug, e.g. 'sales'."),
 	tags: z.array(z.string()).optional().describe("Search tags (lowercase, hyphen-separated). [] removes the key."),
 	icon: z.string().optional().describe("Bootstrap icon class, e.g. 'bi-briefcase'."),
 	license: z.string().optional(),
-	author: z
-		.object({ name: z.string(), url: z.string().optional() })
-		.strict()
-		.optional()
-		.describe("{name, url?}."),
+	author: z.object({ name: z.string(), url: z.string().optional() }).strict().optional().describe("{name, url?}."),
 	auditHistory: z.enum(["basic", "fields", "full"]).optional(),
 	comments: z.boolean().optional(),
 	supportedLocales: z
 		.array(z.string().regex(LOCALE))
 		.optional()
 		.describe(
-			"Non-English locales the package translates, e.g. ['ru-RU','de-DE']. NEVER 'en' or 'en-*' (English is the default). Each needs translations/<locale>.json — run dforge_translation_sync after. [] removes the key.",
+			"Non-English locales the package translates, e.g. ['ru-RU','de-DE']. NEVER 'en' or 'en-*' (English " +
+				"is the default). Each needs translations/<locale>.json — run dforge_translation_sync after. [] " +
+				"removes the key.",
 		),
 	features: z
 		.array(z.enum(FEATURES))
 		.optional()
-		.describe("Opt-in platform behaviours; currently only 'report-security' (grant report:<code> 'E' to roles FIRST, then declare it in a later version). [] removes the key."),
+		.describe(
+			"Opt-in platform behaviours; currently only 'report-security' (grant report:<code> 'E' to roles " +
+				"FIRST, then declare it in a later version). [] removes the key.",
+		),
 	security: z
 		.object({ roles: z.string().optional(), folders: z.string().optional() })
 		.strict()
 		.optional()
-		.describe("Content declaration {roles?: './security/roles.json', folders?: './ui/folders.json'} (documented in references/manifest.md)."),
-	unset: z
-		.array(z.enum(SETTABLE))
-		.optional()
-		.describe("Optional keys to remove from the manifest."),
+		.describe(
+			"Content declaration {roles?: './security/roles.json', folders?: './ui/folders.json'} (documented in " +
+				"references/manifest.md).",
+		),
+	unset: z.array(z.enum(SETTABLE)).optional().describe("Optional keys to remove from the manifest."),
 };
 
 export function manifestSet(args: z.infer<z.ZodObject<typeof manifestSetSchema>>): ToolResult {
@@ -375,7 +414,10 @@ export function manifestSet(args: z.infer<z.ZodObject<typeof manifestSetSchema>>
 		const reports = Object.keys(readJsonOrDefault<Record<string, unknown>>(paths.reports, {}));
 		const roles = readJsonOrDefault<Record<string, { rights?: Record<string, string> }>>(paths.roles, {});
 		const ungranted = reports.filter(
-			(r) => !Object.values(roles).some((role) => typeof role?.rights?.[`report:${r}`] === "string" && role.rights[`report:${r}`].includes("E")),
+			(r) =>
+				!Object.values(roles).some(
+					(role) => typeof role?.rights?.[`report:${r}`] === "string" && role.rights[`report:${r}`].includes("E"),
+				),
 		);
 		if (ungranted.length > 0) {
 			warnings.push(
@@ -384,7 +426,9 @@ export function manifestSet(args: z.infer<z.ZodObject<typeof manifestSetSchema>>
 		}
 	}
 	if (typeof next.icon === "string" && args.icon !== undefined && !next.icon.startsWith("bi-")) {
-		warnings.push(`icon '${next.icon}' has no 'bi-' prefix; the manifest convention is a Bootstrap class like 'bi-briefcase'.`);
+		warnings.push(
+			`icon '${next.icon}' has no 'bi-' prefix; the manifest convention is a Bootstrap class like 'bi-briefcase'.`,
+		);
 	}
 	if (changed.length === 0) {
 		throw new Error(`Nothing to change: pass at least one of ${SETTABLE.join(", ")}.`);

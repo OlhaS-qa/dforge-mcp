@@ -128,20 +128,14 @@ describe("action_check reports what module_validate reports", () => {
 	const unknownColumn = "execute:\n\t[nope] = 1\n";
 
 	it("flags an unknown column on an on-disk action", () => {
-		writeAction(
-			{ label: "Archive", entityCode: "product", script: "archive", executionMode: "single" },
-			unknownColumn,
-		);
+		writeAction({ label: "Archive", entityCode: "product", script: "archive", executionMode: "single" }, unknownColumn);
 		const r = actionCheck({ moduleDir: dir, actionCode: "archive" });
 		const out = JSON.parse(r.files["_action_check.json"]);
 		expect(JSON.stringify(out.errors)).toMatch(/nope/);
 	});
 
 	it("agrees with module_validate on the same action", () => {
-		writeAction(
-			{ label: "Archive", entityCode: "product", script: "archive", executionMode: "single" },
-			unknownColumn,
-		);
+		writeAction({ label: "Archive", entityCode: "product", script: "archive", executionMode: "single" }, unknownColumn);
 		const checked = JSON.parse(actionCheck({ moduleDir: dir, actionCode: "archive" }).files["_action_check.json"]);
 		const checkedRules = checked.errors.map((e: { message: string }) => e.message).sort();
 		const validated = (validate().errors as Array<{ where?: string; message: string }>)

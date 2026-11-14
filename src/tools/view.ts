@@ -72,11 +72,7 @@ type DataView = z.infer<typeof dataViewSchema>;
  *   same set the view would fall back to with no `columns` at all). When they
  *   can't be derived, a warning is returned instead.
  */
-function prepareView(
-	paths: ModulePaths,
-	manifest: Manifest,
-	view: DataView,
-): { view: DataView; warnings: string[] } {
+function prepareView(paths: ModulePaths, manifest: Manifest, view: DataView): { view: DataView; warnings: string[] } {
 	const warnings: string[] = [];
 	const sources = view.dataSources.map((ds) => {
 		if (!ds.entityCode || !ds.entityCode.trim()) {
@@ -125,15 +121,11 @@ export const viewAddSchema = {
 	view: dataViewSchema,
 };
 
-export function viewAdd(
-	args: z.infer<z.ZodObject<typeof viewAddSchema>>,
-): ToolResult {
+export function viewAdd(args: z.infer<z.ZodObject<typeof viewAddSchema>>): ToolResult {
 	const { paths, manifest } = loadManifest(args.moduleDir);
 	const views = readJsonOrDefault<Record<string, unknown>>(paths.dataViews, {});
 	if (Object.prototype.hasOwnProperty.call(views, args.code)) {
-		throw new Error(
-			`View '${args.code}' already exists in ui/data_views.json. Use view_modify to change it.`,
-		);
+		throw new Error(`View '${args.code}' already exists in ui/data_views.json. Use view_modify to change it.`);
 	}
 	const { view, warnings } = prepareView(paths, manifest, args.view);
 	views[args.code] = view;
@@ -152,20 +144,14 @@ export function viewAdd(
 export const viewModifySchema = {
 	moduleDir: z.string(),
 	code: z.string().regex(/^[a-z][a-z0-9_]*$/),
-	view: dataViewSchema.describe(
-		"Replacement view spec — full shape, not a partial patch.",
-	),
+	view: dataViewSchema.describe("Replacement view spec — full shape, not a partial patch."),
 };
 
-export function viewModify(
-	args: z.infer<z.ZodObject<typeof viewModifySchema>>,
-): ToolResult {
+export function viewModify(args: z.infer<z.ZodObject<typeof viewModifySchema>>): ToolResult {
 	const { paths, manifest } = loadManifest(args.moduleDir);
 	const views = readJsonOrDefault<Record<string, unknown>>(paths.dataViews, {});
 	if (!Object.prototype.hasOwnProperty.call(views, args.code)) {
-		throw new Error(
-			`View '${args.code}' not found. Use view_add to create it.`,
-		);
+		throw new Error(`View '${args.code}' not found. Use view_add to create it.`);
 	}
 	const { view, warnings } = prepareView(paths, manifest, args.view);
 	views[args.code] = view;

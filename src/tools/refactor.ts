@@ -119,7 +119,8 @@ export function scanFieldReferences(
 			}
 			if (f.params && typeof f.params === "object") {
 				walkStrings(f.params, `fields.${fn}.params`, (v, w) => {
-					if (v === name || v.includes(`[${name}]`)) add("formulas", `entities/${entityName}.json ${w} mentions '${name}'`);
+					if (v === name || v.includes(`[${name}]`))
+						add("formulas", `entities/${entityName}.json ${w} mentions '${name}'`);
 				});
 			}
 		}
@@ -166,7 +167,8 @@ export function scanFieldReferences(
 					if (hit(v)) add("reports", `ui/reports.json ${rn}.${w}`);
 				});
 			}
-			const panels = ((r.layout as Record<string, unknown> | undefined)?.panels as Array<Record<string, unknown>> | undefined) ?? [];
+			const panels =
+				((r.layout as Record<string, unknown> | undefined)?.panels as Array<Record<string, unknown>> | undefined) ?? [];
 			panels.forEach((p, i) => {
 				if (typeof p.datasetCd !== "string" || !mine.has(p.datasetCd)) return;
 				walkStrings(p.config, `layout.panels[${i}].config`, (v, w, k) => {
@@ -179,7 +181,8 @@ export function scanFieldReferences(
 		// tests/*.test.json: any quoted use of the code in a test touching this entity.
 		for (const { file, text } of readDirText(path.join(paths.root, "tests"), /\.json$/)) {
 			if (!text.includes(`"${entityName}"`)) continue;
-			const n = (text.match(new RegExp(`"${escapeRe(name)}"\\s*:|"\\$?[a-z_]*\\.?${escapeRe(name)}"`, "g")) ?? []).length;
+			const n = (text.match(new RegExp(`"${escapeRe(name)}"\\s*:|"\\$?[a-z_]*\\.?${escapeRe(name)}"`, "g")) ?? [])
+				.length;
 			if (n > 0) add("tests", `tests/${file}: ${n} use(s) of '${name}' (check those on '${entityName}')`);
 		}
 
@@ -190,7 +193,10 @@ export function scanFieldReferences(
 				add("dsl", `logic/actions/${file} mentions '${name}' (possible, verify it is ${entityName}'s)`);
 			}
 		}
-		for (const [label, fp] of [["logic/triggers.json", paths.triggers], ["logic/jobs.json", paths.jobs]] as const) {
+		for (const [label, fp] of [
+			["logic/triggers.json", paths.triggers],
+			["logic/jobs.json", paths.jobs],
+		] as const) {
 			if (fs.existsSync(fp) && fs.readFileSync(fp, "utf8").includes(`[${name}]`)) {
 				add("dsl", `${label} mentions [${name}] (possible)`);
 			}
@@ -250,9 +256,7 @@ function renameKey<T>(obj: Record<string, T>, oldK: string, newK: string): Recor
 	return out;
 }
 
-export function entityFieldRename(
-	args: z.infer<z.ZodObject<typeof entityFieldRenameSchema>>,
-): ToolResult {
+export function entityFieldRename(args: z.infer<z.ZodObject<typeof entityFieldRenameSchema>>): ToolResult {
 	const { entityName, fieldName: oldName, newName } = args;
 	if (oldName === newName) throw new Error("newName must differ from fieldName.");
 
@@ -263,7 +267,8 @@ export function entityFieldRename(
 	const entity = readJson<Record<string, unknown>>(entityPath);
 	const fields = (entity.fields as Record<string, Record<string, unknown>> | undefined) ?? {};
 	if (!(oldName in fields)) throw new Error(`Field '${oldName}' not found on entity '${entityName}'.`);
-	if (newName in fields) throw new Error(`Field '${newName}' already exists on entity '${entityName}'. Pick another name.`);
+	if (newName in fields)
+		throw new Error(`Field '${newName}' already exists on entity '${entityName}'. Pick another name.`);
 
 	const changes: string[] = [];
 	const files: Record<string, string> = {};
@@ -312,9 +317,7 @@ export function entityFieldRename(
 			v.columns = renameKey(cols, oldName, newName);
 			changes.push(`views.${vname}.columns.${oldName}`);
 		}
-		for (const [cn, ov] of Object.entries(
-			v.columns as Record<string, Record<string, unknown> | null>,
-		)) {
+		for (const [cn, ov] of Object.entries(v.columns as Record<string, Record<string, unknown> | null>)) {
 			if (ov && typeof ov.formula === "string" && ov.formula.includes(oldToken)) {
 				ov.formula = ov.formula.split(oldToken).join(newToken);
 				changes.push(`views.${vname}.${cn}.formula`);
@@ -356,7 +359,7 @@ export function entityFieldRename(
 	// 3. OTHER entities whose FK targets this field (otherKey / references.to.field).
 	for (const [oname, orel] of Object.entries(manifest.entities ?? {})) {
 		if (oname === entityName || oname.includes(".")) continue;
-		const op = entityFilePath(paths.root, (orel as string));
+		const op = entityFilePath(paths.root, orel as string);
 		if (!fs.existsSync(op)) continue;
 		const oe = readJson<Record<string, unknown>>(op);
 		let touched = false;
@@ -368,7 +371,9 @@ export function entityFieldRename(
 				changes.push(`${oname}.${fn}.link.otherKey`);
 			}
 		}
-		for (const [rn, r] of Object.entries((oe.references as Record<string, Record<string, unknown>> | undefined) ?? {})) {
+		for (const [rn, r] of Object.entries(
+			(oe.references as Record<string, Record<string, unknown>> | undefined) ?? {},
+		)) {
 			const to = r.to as Record<string, unknown> | undefined;
 			if (to && to.entity === entityName && to.field === oldName) {
 				to.field = newName;
@@ -387,7 +392,10 @@ export function entityFieldRename(
 			if (s.entityCode !== entityName) continue;
 			if (Array.isArray(s.columns)) {
 				s.columns = (s.columns as unknown[]).map((c) => {
-					if (c === oldName) { viewsTouched = true; return newName; }
+					if (c === oldName) {
+						viewsTouched = true;
+						return newName;
+					}
 					if (c && typeof c === "object" && (c as Record<string, unknown>).column_cd === oldName) {
 						viewsTouched = true;
 						(c as Record<string, unknown>).column_cd = newName;
@@ -397,8 +405,14 @@ export function entityFieldRename(
 			}
 			if (Array.isArray(s.order)) {
 				s.order = (s.order as unknown[]).map((o) => {
-					if (o === oldName) { viewsTouched = true; return newName; }
-					if (o === "-" + oldName) { viewsTouched = true; return "-" + newName; }
+					if (o === oldName) {
+						viewsTouched = true;
+						return newName;
+					}
+					if (o === "-" + oldName) {
+						viewsTouched = true;
+						return "-" + newName;
+					}
 					if (o && typeof o === "object" && (o as Record<string, unknown>).c === oldName) {
 						viewsTouched = true;
 						return { ...(o as object), c: newName };
@@ -467,11 +481,19 @@ export function entityFieldRename(
 // ── data-view pruning (shared by field_remove) ─────────────────────────────
 
 const colCodeOf = (c: unknown): string | undefined =>
-	typeof c === "string" ? c : c && typeof c === "object" && typeof (c as Record<string, unknown>).column_cd === "string" ? ((c as Record<string, unknown>).column_cd as string) : undefined;
+	typeof c === "string"
+		? c
+		: c && typeof c === "object" && typeof (c as Record<string, unknown>).column_cd === "string"
+			? ((c as Record<string, unknown>).column_cd as string)
+			: undefined;
 
 /** Column code behind one `order` entry: "-col", "col" or {c, d}. */
 const orderCodeOf = (o: unknown): string | undefined =>
-	typeof o === "string" ? o.replace(/^-/, "") : o && typeof o === "object" && typeof (o as Record<string, unknown>).c === "string" ? ((o as Record<string, unknown>).c as string) : undefined;
+	typeof o === "string"
+		? o.replace(/^-/, "")
+		: o && typeof o === "object" && typeof (o as Record<string, unknown>).c === "string"
+			? ((o as Record<string, unknown>).c as string)
+			: undefined;
 
 /** Drop conditions on removed columns from a filter tree; returns undefined when nothing is left. */
 function pruneFilter(f: unknown, removed: Set<string>, hit: { n: number }): unknown {
@@ -568,9 +590,7 @@ export const entityFieldRemoveSchema = {
 	fieldName: code.describe("Field code to remove."),
 };
 
-export function entityFieldRemove(
-	args: z.infer<z.ZodObject<typeof entityFieldRemoveSchema>>,
-): ToolResult {
+export function entityFieldRemove(args: z.infer<z.ZodObject<typeof entityFieldRemoveSchema>>): ToolResult {
 	const { entityName, fieldName } = args;
 	const { paths, manifest } = loadManifest(args.moduleDir);
 	const entityRel = (manifest.entities ?? {})[entityName];
@@ -660,7 +680,9 @@ export function entityFieldRemove(
 				);
 				if (pick) {
 					ts = `{${pick}}`;
-					warnings.push(`toString lost all its fields; set to '${ts}' — change it to a sensible business label if needed`);
+					warnings.push(
+						`toString lost all its fields; set to '${ts}' — change it to a sensible business label if needed`,
+					);
 				} else {
 					warnings.push("toString lost all its fields and no replacement column was found — set it by hand");
 				}
@@ -691,7 +713,9 @@ export function entityFieldRemove(
 		for (const [vcode, v] of Object.entries(views)) {
 			for (const src of (v?.dataSources as Array<Record<string, unknown>> | undefined) ?? []) {
 				if (src?.entityCode === entityName && Array.isArray(src.columns) && src.columns.length === 0) {
-					warnings.push(`view '${vcode}' has no columns left after the removal — add real columns (an empty grid fails validation)`);
+					warnings.push(
+						`view '${vcode}' has no columns left after the removal — add real columns (an empty grid fails validation)`,
+					);
 				}
 			}
 		}
@@ -729,7 +753,7 @@ export function entityFieldRemove(
 	// Cross-entity FKs targeting a removed field → warn (don't touch other modules' columns).
 	for (const [oname, orel] of Object.entries(manifest.entities ?? {})) {
 		if (oname === entityName || oname.includes(".")) continue;
-		const op = entityFilePath(paths.root, (orel as string));
+		const op = entityFilePath(paths.root, orel as string);
 		if (!fs.existsSync(op)) continue;
 		let oe: Record<string, unknown>;
 		try {
@@ -767,7 +791,9 @@ export function entityFieldRemove(
 		warnings.length ? `Manual follow-up: ${warnings.join("; ")}.` : "",
 		refText ? `Remaining references (not rewritten): ${refText}.` : "",
 		"Run dforge_module_validate after writing to confirm nothing dangles.",
-	].filter(Boolean).join(" ");
+	]
+		.filter(Boolean)
+		.join(" ");
 
 	const result = makeResult(
 		`Removed '${entityName}.${fieldName}'${removed.size > 1 ? ` (+${removed.size - 1} paired column)` : ""}; cascade-cleaned ${changes.length} location(s): ${changes.join("; ")}.`,
@@ -794,9 +820,7 @@ export const entityRenameSchema = {
 	newName: code.describe("New entity code."),
 };
 
-export function entityRename(
-	args: z.infer<z.ZodObject<typeof entityRenameSchema>>,
-): ToolResult {
+export function entityRename(args: z.infer<z.ZodObject<typeof entityRenameSchema>>): ToolResult {
 	const { entityName: oldE, newName: newE } = args;
 	if (oldE === newE) throw new Error("newName must differ from entityName.");
 	if (SYSTEM_ENTITIES.has(newE)) throw new Error(`'${newE}' is a reserved system entity name.`);
@@ -867,7 +891,9 @@ export function entityRename(
 				if (usesIdentity && link.otherKey === oldPk) link.otherKey = newPk;
 			}
 		}
-		for (const [rn, r] of Object.entries((oe.references as Record<string, Record<string, unknown>> | undefined) ?? {})) {
+		for (const [rn, r] of Object.entries(
+			(oe.references as Record<string, Record<string, unknown>> | undefined) ?? {},
+		)) {
 			const to = r.to as Record<string, unknown> | undefined;
 			if (to && to.entity === oldE) {
 				to.entity = newE;
@@ -914,8 +940,14 @@ export function entityRename(
 	const actions = readJsonOrDefault<Record<string, Record<string, unknown>>>(paths.actions, {});
 	let actionsTouched = false;
 	for (const a of Object.values(actions)) {
-		if (a.entity === oldE) { a.entity = newE; actionsTouched = true; }
-		if (a.entityCode === oldE) { a.entityCode = newE; actionsTouched = true; }
+		if (a.entity === oldE) {
+			a.entity = newE;
+			actionsTouched = true;
+		}
+		if (a.entityCode === oldE) {
+			a.entityCode = newE;
+			actionsTouched = true;
+		}
 	}
 	if (actionsTouched) {
 		files[rel(paths.root, paths.actions)] = jsonText(actions);
@@ -960,8 +992,14 @@ export function entityRename(
 		}
 		let relTouched = false;
 		for (const r of diagramRelations(d)) {
-			if (r.from === oldE) { r.from = newE; relTouched = true; }
-			if (r.to === oldE) { r.to = newE; relTouched = true; }
+			if (r.from === oldE) {
+				r.from = newE;
+				relTouched = true;
+			}
+			if (r.to === oldE) {
+				r.to = newE;
+				relTouched = true;
+			}
 		}
 		if (relTouched) what.push("relations");
 		if (what.length === 0) continue;
@@ -982,7 +1020,9 @@ export function entityRename(
 			if (data?.entityCode !== oldE) continue;
 			data.entityCode = newE;
 			if (usesIdentity && Array.isArray(data.records)) {
-				data.records = (data.records as Array<Record<string, unknown>>).map((r) => (oldPk in r ? renameKey(r, oldPk, newPk) : r));
+				data.records = (data.records as Array<Record<string, unknown>>).map((r) =>
+					oldPk in r ? renameKey(r, oldPk, newPk) : r,
+				);
 			}
 			files[rel(paths.root, fp)] = jsonText(data);
 			changes.push(`seed-data/${file}`);
@@ -1026,9 +1066,7 @@ export const entityDeleteSchema = {
 	entityName: code.describe("Entity code to delete."),
 };
 
-export function entityDelete(
-	args: z.infer<z.ZodObject<typeof entityDeleteSchema>>,
-): ToolResult {
+export function entityDelete(args: z.infer<z.ZodObject<typeof entityDeleteSchema>>): ToolResult {
 	const { entityName: target } = args;
 	const { paths, manifest } = loadManifest(args.moduleDir);
 	const entityMap = (manifest.entities ?? {}) as Record<string, string>;
@@ -1182,7 +1220,9 @@ export function entityDelete(
 	const warnText = [
 		warnings.length ? `Manual follow-up: ${warnings.join("; ")}.` : "",
 		"Run dforge_module_validate after writing.",
-	].filter(Boolean).join(" ");
+	]
+		.filter(Boolean)
+		.join(" ");
 
 	return makeResult(
 		`Deleted entity '${target}'; cleaned ${changes.length} artifact(s)${deletes.length > 1 ? `, removed ${deletes.length} file(s)` : ""}.`,

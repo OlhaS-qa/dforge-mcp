@@ -24,7 +24,9 @@ export const applyInput = {
 		.boolean()
 		.default(false)
 		.describe(
-			"When true, WRITE the resulting files to disk (and remove any `deletes`) instead of returning their contents for the client to write. The response then lists the paths touched. Use it for routine patches the user isn't reviewing line-by-line; leave it false when you want to preview a diff first.",
+			"When true, WRITE the resulting files to disk (and remove any `deletes`) instead of returning their " +
+				"contents for the client to write. The response then lists the paths touched. Use it for routine " +
+				"patches the user isn't reviewing line-by-line; leave it false when you want to preview a diff first.",
 		),
 };
 
@@ -54,9 +56,7 @@ function resolveInside(root: string, relPath: string): string {
 	const abs = path.resolve(root, relPath);
 	const rel = path.relative(root, abs);
 	if (rel.startsWith("..") || path.isAbsolute(rel)) {
-		throw new Error(
-			`Refusing to write '${relPath}' — it resolves outside the module directory (${abs}).`,
-		);
+		throw new Error(`Refusing to write '${relPath}' — it resolves outside the module directory (${abs}).`);
 	}
 	return abs;
 }

@@ -25,46 +25,56 @@ export const triggerAddSchema = {
 		.describe("Trigger code, unique within the module."),
 	entity: z
 		.string()
-		.describe(
-			"Entity whose events fire this trigger. Cross-module dotted form supported ('fin.invoice').",
-		),
+		.describe("Entity whose events fire this trigger. Cross-module dotted form supported ('fin.invoice')."),
 	event: z
 		.enum(["insert", "update", "delete", "status_change", "any"])
 		.describe(
-			"insert/update/delete are obvious. status_change fires only when status field changes value. 'any' fires for all insert/update/delete.",
+			"insert/update/delete are obvious. status_change fires only when status field changes value. 'any' " +
+				"fires for all insert/update/delete.",
 		),
 	action: z
 		.string()
 		.describe(
-			"Action code to invoke. The trigger binds the affected record to the action as RECORD CONTEXT — the action reads it with [field] / [pk_column], and old[field] for pre-change values. The action's entityCode MUST match this trigger's entity, and its executionMode must not be 'batch' (both rejected at pack time). Cross-module dotted form ('module.action') supported.",
+			"Action code to invoke. The trigger binds the affected record to the action as RECORD CONTEXT — the " +
+				"action reads it with [field] / [pk_column], and old[field] for pre-change values. The action's " +
+				"entityCode MUST match this trigger's entity, and its executionMode must not be 'batch' (both " +
+				"rejected at pack time). Cross-module dotted form ('module.action') supported.",
 		),
 	description: z.string().optional(),
 	condition: z
 		.string()
 		.optional()
 		.describe(
-			"Optional formula expression (same shape as canExecute) using `[field]` syntax. Single-line boolean. If omitted, trigger fires on every matching event. Reference navigation (`[ref].[target]`) is REJECTED here — the event-time evaluator only reads columns of the changed row. Navigate inside the action instead.",
+			"Optional formula expression (same shape as canExecute) using `[field]` syntax. Single-line boolean. " +
+				"If omitted, trigger fires on every matching event. Reference navigation (`[ref].[target]`) is " +
+				"REJECTED here — the event-time evaluator only reads columns of the changed row. Navigate inside the " +
+				"action instead.",
 		),
 	params: z
 		.record(z.string(), z.unknown())
 		.optional()
 		.describe(
-			"STATIC params only — the literal values given here. Nothing is injected at runtime; there is no record_id param. The affected record arrives as record context ([field]), its pre-change values as old[field].",
+			"STATIC params only — the literal values given here. Nothing is injected at runtime; there is no " +
+				"record_id param. The affected record arrives as record context ([field]), its pre-change values as " +
+				"old[field].",
 		),
 	async: z
 		.boolean()
 		.default(true)
 		.describe(
-			"When true (the platform default), the action runs in background — recommended for slow actions. When false, it runs in the caller's transaction, so a failing action ROLLS BACK the user's original write. That applies to a trigger on ANOTHER module's entity too: a bridge module CAN veto its host's write, the same way a mandatory extension column already refuses one. So async:false is a refusal mechanism — pick it to enforce an invariant, not merely to react, because a bug in the action blocks the host's workflow just as effectively as a real violation. The rollback is reported to the user as TRIGGER_ACTION_FAIL, naming the blocking module and trigger.",
+			"When true (the platform default), the action runs in background — recommended for slow actions. " +
+				"When false, it runs in the caller's transaction, so a failing action ROLLS BACK the user's original " +
+				"write. That applies to a trigger on ANOTHER module's entity too: a bridge module CAN veto its " +
+				"host's write, the same way a mandatory extension column already refuses one. So async:false is a " +
+				"refusal mechanism — pick it to enforce an invariant, not merely to react, because a bug in the " +
+				"action blocks the host's workflow just as effectively as a real violation. The rollback is reported " +
+				"to the user as TRIGGER_ACTION_FAIL, naming the blocking module and trigger.",
 		),
 };
 
 export function triggerAdd(args: z.infer<z.ZodObject<typeof triggerAddSchema>>): ToolResult {
 	const { paths, manifest } = loadManifest(args.moduleDir);
-	const file = readJsonOrDefault<{ triggers: Array<Record<string, unknown>> }>(
-		paths.triggers,
-		{ triggers: [] },
-	);
+	const file = readJsonOrDefault<{ triggers: Array<Record<string, unknown>> }>(paths.triggers, { triggers: [] });
 	if (file.triggers.some((t) => t.code === args.code)) {
 		throw new Error(`Trigger '${args.code}' already exists.`);
 	}
@@ -100,21 +110,22 @@ export const jobAddSchema = {
 	action: z
 		.string()
 		.describe(
-			"Action code to invoke on schedule. MUST NOT use record-context (`[field]`) syntax — scheduled jobs run as system user with no current record. Wrap record-context actions in a thin action that queries first.",
+			"Action code to invoke on schedule. MUST NOT use record-context (`[field]`) syntax — scheduled jobs " +
+				"run as system user with no current record. Wrap record-context actions in a thin action that " +
+				"queries first.",
 		),
 	schedule: z
 		.string()
 		.describe(
-			"5-field cron expression (minute hour day-of-month month day-of-week). Evaluated in the tenant's time zone (auth.tenant.time_zone) or per-job override.",
+			"5-field cron expression (minute hour day-of-month month day-of-week). Evaluated in the tenant's " +
+				"time zone (auth.tenant.time_zone) or per-job override.",
 		),
 	timeout: z
 		.number()
 		.int()
 		.min(1)
 		.max(3600)
-		.describe(
-			"Hard kill timeout in seconds. Required. If > 300, you must also set `class: 'long_running'`.",
-		),
+		.describe("Hard kill timeout in seconds. Required. If > 300, you must also set `class: 'long_running'`."),
 	description: z.string().optional(),
 	concurrency: z
 		.number()
@@ -125,23 +136,16 @@ export const jobAddSchema = {
 	jobClass: z
 		.enum(["standard", "long_running"])
 		.default("standard")
-		.describe(
-			"Required to be 'long_running' when timeout > 300. Affects scheduler thread-pool routing.",
-		),
+		.describe("Required to be 'long_running' when timeout > 300. Affects scheduler thread-pool routing."),
 	paused: z.boolean().default(false),
 };
 
 export function jobAdd(args: z.infer<z.ZodObject<typeof jobAddSchema>>): ToolResult {
 	if (args.timeout > 300 && args.jobClass !== "long_running") {
-		throw new Error(
-			"Jobs with timeout > 300s must set jobClass: 'long_running' — see logic/jobs.json convention.",
-		);
+		throw new Error("Jobs with timeout > 300s must set jobClass: 'long_running' — see logic/jobs.json convention.");
 	}
 	const { paths, manifest } = loadManifest(args.moduleDir);
-	const file = readJsonOrDefault<{ jobs: Array<Record<string, unknown>> }>(
-		paths.jobs,
-		{ jobs: [] },
-	);
+	const file = readJsonOrDefault<{ jobs: Array<Record<string, unknown>> }>(paths.jobs, { jobs: [] });
 	if (file.jobs.some((j) => j.code === args.code)) {
 		throw new Error(`Job '${args.code}' already exists.`);
 	}
@@ -175,13 +179,8 @@ export const webhookAddSchema = {
 		.regex(/^[a-z][a-z0-9_]*$/)
 		.describe("Subscription code, unique within the module."),
 	entity: z.string().describe("Entity whose events fire this webhook."),
-	event: z
-		.enum(["insert", "update", "delete", "status_change", "any"])
-		.describe("Same event taxonomy as triggers."),
-	endpointUrl: z
-		.string()
-		.url()
-		.describe("Destination URL — receives POST with the payload."),
+	event: z.enum(["insert", "update", "delete", "status_change", "any"]).describe("Same event taxonomy as triggers."),
+	endpointUrl: z.string().url().describe("Destination URL — receives POST with the payload."),
 	description: z.string().optional(),
 	condition: z
 		.string()
@@ -189,10 +188,7 @@ export const webhookAddSchema = {
 		.describe("Optional formula filter; fires only when true. Same shape as trigger condition."),
 	payload: z
 		.object({
-			include: z
-				.array(z.string())
-				.optional()
-				.describe("Whitelist of field codes to include. Omit to send all fields."),
+			include: z.array(z.string()).optional().describe("Whitelist of field codes to include. Omit to send all fields."),
 			exclude: z
 				.array(z.string())
 				.optional()
@@ -200,28 +196,27 @@ export const webhookAddSchema = {
 			includeOld: z
 				.boolean()
 				.optional()
-				.describe(
-					"For update/status_change events, also include the pre-change record as `old`.",
-				),
+				.describe("For update/status_change events, also include the pre-change record as `old`."),
 		})
 		.optional()
 		.describe(
-			"Payload shape. If omitted, sends full new record. The platform always wraps in `{ event, entity, record, old?, occurred_at }`.",
+			"Payload shape. If omitted, sends full new record. The platform always wraps in `{ event, entity, " +
+				"record, old?, occurred_at }`.",
 		),
 	headers: z
 		.record(z.string(), z.string())
 		.optional()
 		.describe(
-			"Extra HTTP headers (e.g. authentication tokens). Use `getSecret(...)` semantics: header values starting with `$secret:` are resolved at fire time.",
+			"Extra HTTP headers (e.g. authentication tokens). Use `getSecret(...)` semantics: header values " +
+				"starting with `$secret:` are resolved at fire time.",
 		),
 };
 
 export function webhookAdd(args: z.infer<z.ZodObject<typeof webhookAddSchema>>): ToolResult {
 	const { paths, manifest } = loadManifest(args.moduleDir);
-	const file = readJsonOrDefault<{ subscriptions: Array<Record<string, unknown>> }>(
-		paths.webhooks,
-		{ subscriptions: [] },
-	);
+	const file = readJsonOrDefault<{ subscriptions: Array<Record<string, unknown>> }>(paths.webhooks, {
+		subscriptions: [],
+	});
 	if (file.subscriptions.some((s) => s.code === args.code)) {
 		throw new Error(`Webhook subscription '${args.code}' already exists.`);
 	}

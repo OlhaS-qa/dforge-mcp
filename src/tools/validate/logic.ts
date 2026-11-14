@@ -53,10 +53,7 @@ export function checkTriggersJobsWebhooks(ctx: ValidateContext): void {
 		return false;
 	};
 
-	const triggerFile = readJsonOrDefault<{ triggers?: Array<Record<string, unknown>> }>(
-		paths.triggers,
-		{},
-	);
+	const triggerFile = readJsonOrDefault<{ triggers?: Array<Record<string, unknown>> }>(paths.triggers, {});
 	for (const t of triggerFile.triggers ?? []) {
 		const where = `triggers → ${String(t.code ?? "?")}`;
 		const act = t.action as string | undefined;
@@ -109,10 +106,7 @@ export function checkTriggersJobsWebhooks(ctx: ValidateContext): void {
 		}
 	}
 
-	const webhookFile = readJsonOrDefault<{ subscriptions?: Array<Record<string, unknown>> }>(
-		paths.webhooks,
-		{},
-	);
+	const webhookFile = readJsonOrDefault<{ subscriptions?: Array<Record<string, unknown>> }>(paths.webhooks, {});
 	for (const w of webhookFile.subscriptions ?? []) {
 		const ent = w.entity as string | undefined;
 		if (ent && !isKnownEntity(ent)) {
@@ -150,20 +144,13 @@ export function checkActionDsl(ctx: ValidateContext): void {
 		// `shop.product` and `product` name the same entity inside module `shop`,
 		// so normalize before the lookup — otherwise the qualified spelling
 		// misses `columnsOf` and the column rules stand down on it.
-		const entityCode = localEntityCode(
-			(a as Record<string, unknown>).entityCode as string | undefined,
-			manifest.code,
-		);
-		const columns =
-			entityCode && !partialColumns.has(entityCode) ? columnsOf[entityCode] : undefined;
+		const entityCode = localEntityCode((a as Record<string, unknown>).entityCode as string | undefined, manifest.code);
+		const columns = entityCode && !partialColumns.has(entityCode) ? columnsOf[entityCode] : undefined;
 		for (const issue of checkDsl(body, {
 			executionMode: mode,
 			actionCode: acode,
 			moduleCode: manifest.code,
-			entity:
-				entityCode && columns
-					? { qualified: `${manifest.code}.${entityCode}`, columns }
-					: undefined,
+			entity: entityCode && columns ? { qualified: `${manifest.code}.${entityCode}`, columns } : undefined,
 			messageTranslations,
 			libraryFunctions,
 		})) {

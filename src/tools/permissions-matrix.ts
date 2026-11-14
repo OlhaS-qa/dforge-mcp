@@ -105,4 +105,4 @@ export const MATRIX_FORMAT_HINT =
 	"Use one table `| Role | Object | Rights | Statements |` — Role = full role code (shop.buyer), " +
 	"Object = the rights key as it will appear in roles.json (entity, dep.entity, action:x, report:x), " +
 	"Rights = S/I/U/D/C (entities) or E (action/report), `-` = explicitly denied, Statements = the " +
-	"S-/V-/N-/R- ids behind the row.";
+	"P-/V-/R- ids behind the row.";

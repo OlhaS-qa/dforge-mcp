@@ -84,7 +84,7 @@ plus verbs in Phase 5 — and entities don't exist yet.
 _"What must they be able to reach to do this work, and what must they NOT see or
 change?"_ Write the answers in `docs/REQUIREMENTS.md` under **`## Access Needs`**,
 one bullet per user type — `needs: …` / `must not: …`, verb-led, still no role
-codes. Define each id once: refer to a user type by its `U-` id inside the sentence, never at the start of a bullet (a leading `U-1` counts as a second definition); new needs get `V-`/`N-` ids so a matrix row can cite them.
+codes. Define each id once: refer to a user type by its `U-` id inside the sentence, never at the start of a bullet (a leading `U-1` counts as a second definition); new access needs get `P-` (permission) or `V-` (visibility) ids so a matrix row can cite them.
 This is what the Permissions Matrix in 0c and the Phase 5 check are measured
 against; `dforge_module_plan validate` warns when the section is missing.
 
@@ -134,7 +134,7 @@ backtrack:
 
 If `docs/REQUIREMENTS.md` (or `docs/SPEC.md`) numbers its statements with structured
 IDs — `S-n` (system), `N-n` (notification), `V-n` (visibility), `U-n` (user), `R-n`
-(rule), `P-n` (permission) — each ID must be defined once (at the start of a line,
+(rule), `P-n` (permission); output ids `O-n` are checked separately by the Outputs table — each ID must be defined once (at the start of a line,
 list item, table cell or bold) and every ID `DESIGN.md` cites must be defined.
 `validate` warns on duplicates and undefined references. Keep IDs stable; do not
 renumber after confirmation.

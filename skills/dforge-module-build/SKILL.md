@@ -318,8 +318,22 @@ dependency; add `"metadata": ">=1.5.0"` too. Source columns are limited to the
 PK, a reference column, or a bounded scalar. Full rules:
 `dforge://reference/reports`.
 
+**Actions that need no selected record** (generate a period's payroll, a nightly batch): omit `executionMode` in `actions.json` (a "general action"; `entityCode` stays required, the button sits in that entity's grid toolbar, never in a menu). Declare period etc. in the script's `params:` block; no `[field]` in the script or in `canExecute`, create rows with `insert()`/`select()`; it needs `E` on `action:<code>` like any action and can also be scheduled by a job. The test format's `action` step needs `record`/`records`, so such an action cannot be covered by a scenario yet.
+
+**3d. Outputs from the design.** Build every row of DESIGN.md `## Outputs` with
+the mechanism it names — `print:<code>` is a print template (`ui/print_templates.json`
+plus `print_templates/<code>.html`, `dforge://reference/print-templates`), `report:<code>`
+a report (3c), `export:<entity>` needs nothing built (the platform's `data.export`), `action:<code>` an action whose DSL calls `printPdf(entity, key, templateCd)` and/or `sendEmail(to, subject, html, attachment)`, `job:`/`webhook:` the
+matching tool. Use the sample from REQUIREMENTS as the layout, and read **only
+columns that exist** on the bound entity (`{{ column }}`, `{{ _fmt.column }}`; a typo
+prints an empty value). Print tips: `format_number` and `_fmt.<column>` group thousands by the form's culture (`pageSettings.culture`, e.g. `uk-UA` prints `42 000,00` with a no-break space and a decimal comma; `en-US` prints `42,000.00`), so match the sample's separators by choosing the culture; an unknown culture name is refused at pack. `format_date: '%Y-%m-%d'` prints ISO dates. An **export** is `data.export` on one entity (csv or xlsx): it writes the entity's `V`-flagged columns except identity, formula (`F`), set (`S`) and query (`Q`) columns, so every sampled field must be such a column (`out:export-column` flags the gaps); reports and views cannot be exported, only printed. `printPdf()` fails in a scheduled job (no signed-in user; `out:print-in-job`); mail needs a configured workspace mail provider and is queued after the action. Print templates have no patch tool: after writing one, run
+`dforge_module_validate` and read the `outputs` findings (`out:print-placeholder`,
+`out:print-file`, `out:not-built`). An output whose data the entities lack is a
+backtrack to Phase 1, not a placeholder.
+
 **Exit:** every entity has a grid and a menu entry; every specialized view has a
-stated trigger; every report's params sit on a dataset.
+stated trigger; every report's params sit on a dataset; every Outputs row has its
+mechanism built.
 
 ## Phase 4 — Polish (mostly optional)
 
@@ -377,17 +391,20 @@ stated trigger; every report's params sit on a dataset.
    the worked example: `references/security.md` → Column-level security.
 5. `dforge_role_add` for new roles; `dforge_role_right_set` per grant when
    amending an existing one.
-6. **Check the result.** Run `dforge_module_validate` and read the `permissions`
+6. **Check the result.** Run it only now (after 3d and 5): earlier runs list the not-yet-built roles and outputs as findings. (Also confirm each Outputs row's `Run by` roles hold the right the output needs — `out:no-access` names the gaps.) Run `dforge_module_validate` and read the `permissions`
    findings: `roles.json` must equal the design matrix (missing / extra / differing
    rights are errors), and each role must be able to do what its rights imply
    (write without `S`, an action or report whose entity it cannot read, an action
-   no role can run, a trigger action the writing roles hold no `E` on). Fix the
+   no role can run). A trigger or job action needs no `E` for the writer: triggers run it without checking Execute. Fix the
    rights — or change the design matrix with the user — until they agree.
 
 Rights are **additive** — multiple roles UNION, never revoke. Entities take any
-subset of `SIUDC`; actions/reports take `E`. Roles cannot be bound to a folder
-through rights (`folder:<code>` is refused); report that as an open platform
-question, never write `roles` into `folders.json`.
+subset of `SIUDC`; actions/reports take `E`. A role is not bound to a
+folder in `roles.json` (`folder:<code>` is refused): the tenant admin assigns
+`user_role(user, role, folder)`, and the module's roles go to the installer in the
+module root folder automatically. A folder only gives navigation; data access comes
+from entity rights plus the folder's row filter. So a design row for `folder:<x>`
+is a note for the admin, not a rights key — never write `roles` into `folders.json`.
 
 **5b. Security folders** only if intake said data must be partitioned
 (multi-warehouse, multi-region). Default: root only.

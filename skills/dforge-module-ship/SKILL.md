@@ -62,6 +62,14 @@ Read `files["_validate.json"]`. **Every `error` must be fixed** (apply the
 backtrack protocol in `dforge-module-build`) before continuing. Review the
 `warning`s with the user. Re-run `dforge_module_validate` until `ok: true`.
 
+**Outputs gate.** Findings in the `outputs` family (`out:*`) mean the module does not
+yet produce what the design promised: `out:not-built` (a print template/report/job
+named in DESIGN.md Outputs is missing), `out:print-placeholder` (a template reads a
+column the entity lacks), `out:no-access` (a runner lacks the right), `out:test-missing`.
+Treat them as errors for release: fix them, or change the design row with the user.
+Then walk the Outputs table and, for each `manual:` row, tell the user what to open
+and check against the sample — the validator cannot render a document.
+
 If `dforge_module_validate` returns a tool error or is unavailable, halt and
 tell the user: the automated gate cannot be bypassed; resolve the tooling issue
 before continuing.

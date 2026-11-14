@@ -84,9 +84,21 @@ plus verbs in Phase 5 — and entities don't exist yet.
 _"What must they be able to reach to do this work, and what must they NOT see or
 change?"_ Write the answers in `docs/REQUIREMENTS.md` under **`## Access Needs`**,
 one bullet per user type — `needs: …` / `must not: …`, verb-led, still no role
-codes. Give each bullet statement ids (`S-`/`V-`/`N-`) so a matrix row can cite it.
+codes. Define each id once: refer to a user type by its `U-` id inside the sentence, never at the start of a bullet (a leading `U-1` counts as a second definition); new needs get `V-`/`N-` ids so a matrix row can cite them.
 This is what the Permissions Matrix in 0c and the Phase 5 check are measured
 against; `dforge_module_plan validate` warns when the section is missing.
+
+**And capture outputs.** Ask what the module must *produce*, not only what people
+do on screens: printed documents (hire/dismissal orders, contracts, acts,
+invoices), management and statutory reports (tax, accounting), data exports
+(Excel/CSV/XML, to another system), feeds and mails. For each, ask: who receives it,
+in what format, how often or on what event, and **ask for a real sample or the
+regulatory form it must follow** — a sample is the only reliable source of the
+fields. Write them in `docs/REQUIREMENTS.md` under **`## Outputs`**, ids `O-1`,
+`O-2` …, one bullet each (or `None` when it is screens only). Do not guess legal
+forms from memory: a regulatory report or a labour order has exact fields, a form
+version and a signatory — ask for them, and if the user has none yet, record that
+as a Gap instead of inventing the layout.
 
 ### Requirements gap scan
 
@@ -139,11 +151,36 @@ check is warn-level, but Phase 3-5 read them):
   One table `| Role | Object | Rights | Statements |`: Role = the full code the role
   will have (`<module>.<type>`), Object = the key exactly as `roles.json` spells
   it (`order`, `comm.contact`, `action:approve`, `report:summary`), Rights =
-  `SIUDC` / `E`, or `-` for an explicit denial (a "must not" from Access Needs),
-  Statements = the ids behind the row. Include **every action** — trigger-only
-  and job-only ones too — and every report. A role that writes an entity also
+  `SIUDC` / `E`, or `-` for an explicit denial on an object the role has no other rights on ("must not edit" while it may read = just omit `I`/`U`/`D`),
+  Statements = the ids behind the row. Include every action a person runs and every
+  report; an action only a trigger or job fires needs no row (triggers do not check
+  Execute). A role that writes an entity also
   needs `S` on every lookup target it fills. `dforge_module_validate` later
   compares `security/roles.json` to this table row by row.
+
+- **Outputs** — one table row per `O-n` from REQUIREMENTS:
+  `| Output | Kind | Source | Mechanism | Run by | Verified by |`. Kind = print /
+  report / export / api / mail / file. Source = the entities or `entity.field` it
+  reads — **every datum on the sample must exist as a field in Fields per Entity**
+  (legal names, ids, dates, totals, reference numbers); add the missing ones now.
+  Mechanism — what the platform can really do:
+  `print:<code>` = a print template the user prints from a record (needs `S` on the
+  entity; there is no separate print right); `action:<code>` = an action whose
+  script calls `printPdf(entity, key, template)` (PDF, needs a signed-in user: **not
+  in a scheduled job**) and/or `sendEmail(...)` (mail: queued, needs the workspace's
+  mail provider configured; no `comm` dependency needed); `export:<entity>` =
+  `data.export`, csv or xlsx of ONE entity (its visible, non-identity,
+  non-formula/set/query columns, a filter, an order; **no export of a report or a
+  view**); `report:<code>`; `job:<code>`; `webhook:<code>`. Reading mail is
+  `fetchMail()` inside an action (IMAP); inbound mail through `comm` is not
+  ready, so do not promise it. Run by = the
+  full role codes that run it (each needs a matching Permissions Matrix row:
+  `E` on `report:`/`action:` keys, `S` on the source entity for print/export) or
+  `system`/`schedule`/`external`. Verified by = `test:<scenario name>` (only when
+  the output writes data a scenario can read back) or `manual: <how>`.
+  `dforge_module_plan validate` warns when an id has no row, a source is
+  unknown, or a runner has no access; `dforge_module_validate` later traces each
+  row into the built module.
 
 ## 0d validation — what it does and doesn't certify
 

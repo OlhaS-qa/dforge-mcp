@@ -537,13 +537,13 @@ execute:
         error('Adjustment would result in negative stock (' + newQty + ')')
     }
 
-    var movementType = IF(params[adjustment_qty] >= 0, 'Adjustment', 'Write-off')
+    var movementType = params[adjustment_qty] >= 0 ? 'Adjustment' : 'Write-off'
 
     insert('stock_movement', {
         movement_type: movementType,
         warehouse_id: [warehouse_id],
         product_id: [product_id],
-        quantity: IF(params[adjustment_qty] >= 0, params[adjustment_qty], params[adjustment_qty] * -1),
+        quantity: params[adjustment_qty] >= 0 ? params[adjustment_qty] : params[adjustment_qty] * -1,
         movement_date: now(),
         reference_no: params[reason]
     })

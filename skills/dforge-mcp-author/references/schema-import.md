@@ -11,6 +11,16 @@ When the user provides an existing database schema (DBML file, SQL DDL, or a des
 | Pasted table description | Treat as informal spec, ask clarifying questions |
 | ERD image / diagram | Describe what you see and confirm with the user |
 
+## What the tools do (`dforge_dbml_import`, `dforge_module_import`)
+
+For DBML (and a normalized table-spec) the tools do Steps 1-5 below for you; use the manual process for SQL DDL, informal descriptions and images.
+
+- **ADDITIVE.** New entities are merged into `ui/*.json` and `security/roles.json`; existing views, menus and roles are never regenerated. An entity that already exists makes the call fail unless you pass `onExisting: 'skip'` (keep the entity on disk) or `'replace'` (overwrite `entities/<name>.json` only; UI and security stay, so re-check view columns).
+- **Carried:** DBML `Enum` as a `dropdown` with `params.options`, `unique` (as a unique constraint / flag), `default` (as the column's `formula`, since entity fields have no `defaultValue`), `varchar(n)` as `maxLen`, `numeric(p,s)` as `dbDatatype: numeric(p,s)`, `int`/`bigint` kept as integers, a simple CHECK as a check constraint, and column/table notes (used for options and descriptions).
+- **Relationships:** each `ref` becomes the FK + Reference pair with `link.otherKey` = `<entity>_id` (the identity-trait key of the target); a nullable source column gives a non-mandatory FK.
+- **Loss report:** everything it could not carry (an unknown type, a complex CHECK or default, float precision, composite keys, ...) is returned as a list of `{where, what}`; copy it into `IMPORT_NOTES.md` and tell the user. It is not exhaustive for objects the DBML does not describe (views, procedures, triggers).
+- **After the import:** run `dforge_module_validate`, then fix types the registry guessed.
+
 ## Conversion process
 
 ### Step 1: Identify entities
@@ -38,7 +48,7 @@ For each column, determine `fieldTypeCd`, `baseDatatypeCd`, `dbDatatype`, `flags
 | `text` (large / multiline context) | `textarea` | `string` | `text` | |
 | `int`, `integer`, `int4`, `smallint` | `number` | `number` | `int` | |
 | `bigint`, `int8` | `number` | `number` | `bigint` | |
-| `numeric(p,s)`, `decimal(p,s)` | `number` | `number` | `numeric` | Set `params.scale` |
+| `numeric(p,s)`, `decimal(p,s)` | `number` | `number` | `numeric(p,s)` | `dforge_dbml_import` / `module_import` write the precision and scale into `dbDatatype` as `numeric(p,s)`. What the platform does with p/s (rounding, display scale) is **unconfirmed**; do not promise it to the user |
 | Column named `*price*`, `*amount*`, `*cost*`, `*total*` | `currency` | `number` | `numeric` | Ask user for currency code |
 | `numeric` with CHECK `>= 0 AND <= 100` | `percent` | `number` | `numeric` | |
 | `boolean`, `bool`, `bit` | `checkbox` | `bool` | `bool` | |

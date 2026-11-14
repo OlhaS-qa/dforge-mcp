@@ -15,7 +15,11 @@ already provided and get approval before any tool call; if that context is
 insufficient, ask the user for the missing information without calling tools.
 Immediately after approval, run the inspection before any file changes.
 **After each phase:** record it with
-`dforge_module_plan({ action: "complete_phase", moduleDir, phase: "N", note: "..." })`.
+`dforge_module_plan({ action: "complete_phase", moduleDir, phase: "N", note: "...", apply: true })`.
+With `apply: true` the tool writes `docs/phase.json` and `CLAUDE.md` itself; without it you MUST
+write the returned files before the next call. **Never run `complete_phase` calls in parallel**
+(each reads the ledger from disk). Same for `dforge_action_add` / `dforge_action_modify`:
+one call at a time.
 If `dforge_module_inspect` or `dforge_module_plan` fails or is unavailable, stop,
 report the tool name and error to the user, and do not proceed to the next phase
 or patch files.
@@ -102,12 +106,16 @@ Enough to author inline; load the linked reference for the full detail.
   placeholder. → `formulas` (Computed toString)
 - **Data views:** `dataSources` array at root — never a root-level `entityCode` +
   `columns`. Sort is `"order": ["-col", "col"]`. → `data-views`
-- **Menus:** leaf items use `dataViewCode` (not `viewCode`); section nodes omit
-  `itemType`; icons are Bootstrap names **without** `bi-`. Use
-  `dforge_menu_add`. → `menus`
+- **Menus:** leaf items use `dataViewCode` (not `viewCode`) or `reportCode`;
+  section nodes omit `itemType`; icons are Bootstrap names **without** `bi-`. Use
+  `dforge_menu_add` (`reportCode` for a report leaf, `folders` to scope the root
+  menu to folders). Only the root menu key has `items`; a nested section's entries go
+  under `children` — never write nested `items` by hand, use `parentPath`. → `menus`
 - **Rights keys:** same-module entity bare (`product`); cross-module entity
-  dotted (`fin.invoice`); actions/reports/folders take a **colon** —
-  `action:approve`, `report:summary`, `folder:east` (never a dot). Deny by
+  dotted (`fin.invoice`); actions/reports take a **colon** —
+  `action:approve`, `report:summary` (never a dot). Never `folder:<code>`:
+  the CLI rejects it and the tools refuse it (folder-to-role binding is an open
+  platform question, tell the user). Deny by
   omitting the key, never `""`. `roles.json` carries `description` + `rights`
   only — no `label`. → `security`
 - **Action `script`** in `ui/actions.json` is a bare filename (no path, no
@@ -160,13 +168,15 @@ surface it and go back to Phase 0 and re-run the design step that produced
 
 Then: `dforge_module_create` → per-entity loop.
 
+Every scaffolded entity gets a stub `name` field and `toString` `{name}`. An entity that has no name (a document, a line, a register row) is declared with `nameField: false` in `dforge_module_create` / `dforge_entity_add` (and `toStringTemplate` when its caption is known), so there is no stub to delete afterwards; add its first visible field right away, the grid needs one.
+
 **Per-entity loop.** For each entity, propose fields + traits + relations, get
 approval, then patch. Reach for the **composite tools first**:
 
 - relation → `dforge_entity_reference_add`
 - roll-up total → `dforge_entity_rollup_add`
 - status column → `dforge_entity_status_add`
-- plain scalar → `dforge_entity_field_add`
+- plain scalar → `dforge_entity_field_add` (`orderNum` and `description` are filled in when omitted: the entity schema requires both)
 - change an existing field (label, flags, type, …) → `dforge_entity_field_modify`
 
 **Field batching rule** — the only Phase 1 exception to one-at-a-time. A field
@@ -241,6 +251,9 @@ Every test starts from the module, its dependencies and their demo data, so `giv
 only creates what the scenario needs. Do not write `fixture` or `isolation` in a
 suite: the schema refuses them and the runner fails every test of that suite.
 `refused: "canExecute"` matches the `ACTION_NOT_AVAILABLE` refusal.
+`expect: [{"error": …}]` needs at least one of `code` / `contains` — `{"error": {}}` is rejected by the schema.
+
+**Hand-written JSON.** Patch tools refuse to write a file that the vendored schema rejects (nothing is written; the message lists the new violations). That guard does not see files you edit by hand, so after any manual edit of a module JSON run `dforge_module_validate` and read its schema warnings — the editor shows each one as an error. Typical slips: a field without `orderNum`/`description`, a `numberSequence` without `defaultPrefix`, a report filter mixing `{c,o,v}` with `{g,i}`.
 
 ## Phase 3 — Views + menus (3a required), reports (optional)
 
@@ -257,7 +270,14 @@ entity view — show the full column set", and any other name the entity does no
 declare **fails the install**. See `references/security.md`.
 
 Then wire menus with `dforge_menu_add` — a section node per group, leaves
-pointing at the views.
+pointing at the views (`dataViewCode`) or reports (`reportCode`).
+
+**Menu / folder / entity coverage.** `module pack` requires every folder a menu
+is linked to to contain the entities behind every item of that menu (a view's
+entities, a report's entities). A menu without `folders` is linked to EVERY
+folder. When the module has several folders, restrict each menu with
+`dforge_menu_add({ folders: [...] })` (menu-level `folders`), or add the entity to
+the folder. `dforge_module_validate` reports the gaps grouped per folder.
 
 **Do not propose any specialized view until every entity has its grid.**
 
@@ -304,13 +324,23 @@ stated trigger; every report's params sit on a dataset.
 ## Phase 4 — Polish (mostly optional)
 
 - **Settings** — `dforge_setting_add` per configurable value the user asked for.
+- **Entity / manifest keys** — use `dforge_entity_configure` (toStringTemplate,
+  numberSequence with the REQUIRED `defaultPrefix`, unique/check constraints,
+  description) and `dforge_manifest_set` (supportedLocales, features, description,
+  category, tags, icon, ...) instead of hand-editing the JSON; change an existing
+  action with `dforge_action_modify`. Hand-edit only when no tool covers the key.
 - **Translations** — only for the locales in `supportedLocales`; English needs
   no file. Run **`dforge_translation_sync`**. It generates every
-  required key from the module's own contents, never overwrites existing
+  required key from the module's own contents (entity/field labels, views, menus,
+  roles, actions **and their param labels**, reports incl. param labels and dataset
+  captions, registers, constraint messages, dropdown options), never overwrites existing
   translated text, and fills the **role labels that are completeness-enforced at
   install**. Run it after any entity/view/role change, and always before Phase 6.
   For a non-English locale the seeded values are English placeholders — tell the
-  user they still need real translation.
+  user they still need real translation. **Menu keys are FLAT**
+  (`menus.<menu>.items.<code>.label`, sections and leaves alike) and a report
+  entry never carries `description`; do not hand-write nested menu `items`.
+  `prune: true` removes only orphaned keys.
 - **Seed data** — `dforge_seed_add`, only when the module needs reference data on
   install. Parents get a lower `order` than children.
 
@@ -343,25 +373,33 @@ stated trigger; every report's params sit on a dataset.
    amending an existing one.
 
 Rights are **additive** — multiple roles UNION, never revoke. Entities take any
-subset of `SIUDC`; actions/reports/folders take `E`.
+subset of `SIUDC`; actions/reports take `E`. Roles cannot be bound to a folder
+through rights (`folder:<code>` is refused); report that as an open platform
+question, never write `roles` into `folders.json`.
 
 **5b. Security folders** only if intake said data must be partitioned
 (multi-warehouse, multi-region). Default: root only.
 
 **Folder codes must be unique across the whole tree**, not just among siblings.
 A folder is addressed flat and path-less everywhere outside `ui/folders.json` —
-role rights say `folder:<code>`, translations key on `folders.<code>.label` — so
-two folders both coded `admin` under different parents are ambiguous in the
-rights matrix and collide in the translation files. `dforge_folder_add` refuses
+menus list folder codes, translations key on `folders.<code>.label` — so
+two folders both coded `admin` under different parents are ambiguous and
+collide in the translation files. `dforge_folder_add` refuses
 a duplicate and `dforge_module_validate` errors on one; name them distinctly
 (`north_admin`, `south_admin`).
+
+To change an EXISTING folder (add an entity so a menu is covered, set a
+label or icon) use `dforge_folder_modify` — `dforge_folder_add` only creates.
+If the module forbids deleting records, pass `adminRights` (e.g. `SIUC`) to
+`dforge_entity_add` / the import tools instead of fixing the admin role by hand.
 
 > ⛔ **`dforge_module_pack` refuses to build** if any entity has no role granting
 > `S`. Don't lean on the gate — derive real persona roles here, and grant `E` on
 > the actions/reports each persona uses.
 
-**Exit:** every entity appears in at least one role's rights with at least `S`;
-every folder declared has security mapped.
+**Exit:** every entity appears in at least one role's rights with at least `S`.
+Folder-to-role binding is not expressible through role rights (no `folder:`
+keys); state it as an open platform question to the user.
 
 ## Backtrack protocol
 
@@ -376,7 +414,9 @@ When a later phase exposes a problem in an earlier one, in order:
    `dforge_entity_field_add` over `dforge_entity_add`;
    `dforge_entity_field_rename` over remove+add;
    `dforge_role_right_set` over `dforge_role_add`;
-   `dforge_view_modify` over remove+add.
+   `dforge_view_modify` over remove+add;
+   `dforge_action_modify` over editing `ui/actions.json` / the `.dsl` by hand;
+   `dforge_entity_configure` / `dforge_manifest_set` over hand-editing JSON.
 6. **Re-run `dforge_module_inspect`**, fix knock-on impacts, resume.
 
 **Multi-trigger rule:** if several phases expose gaps at once, resolve the
@@ -404,5 +444,5 @@ After every backtrack, append to `_brief/changelog.md`:
 
 When Phases 1, 3a and 5a are done (and 2/4 done or recorded as skipped):
 
-1. Record each with `dforge_module_plan({ action: "complete_phase", ... })`.
+1. Record each with `dforge_module_plan({ action: "complete_phase", ..., apply: true })`, one call at a time.
 2. **Hand off:** invoke the **`dforge-module-ship`** skill for Phase 6.

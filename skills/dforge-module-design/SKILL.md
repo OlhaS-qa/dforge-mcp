@@ -21,13 +21,18 @@ re-derive them from memory.
 
 | Sub-phase | You do | Then call |
 |---|---|---|
-| **0a** Identity | Ask the 5 returned questions, ONE at a time | `write_identity` → write the returned `CLAUDE.md` to disk |
+| **0a** Identity | Ask the 5 returned questions, ONE at a time | `write_identity` with `apply: true` (the tool writes `CLAUDE.md`; without `apply` write the returned file yourself before the next call) |
 | **0b** Intake | Ask the returned questions in free-form prose; write `docs/REQUIREMENTS.md` to disk; get an explicit YES | `write_requirements { userConfirmed: true }` |
 | **0c** Design | Draft `docs/DESIGN.md` from the returned `designTemplate` covering all 8 `designItems`; run the gap scan; write to disk; get an explicit YES | `write_design { userConfirmed: true }` |
 | **0d** Validate | `validate` (structural) → evaluate the returned `semanticChecks` against the docs → `validate` again with `checkResults` | unlocks `readyToScaffold: true` |
 
 After every user answer: **restate what you understood and confirm** before
 moving on.
+
+Pass `apply: true` on every `dforge_module_plan` call that returns files, so
+`CLAUDE.md` and `docs/phase.json` are written for you. Without it, write the
+returned files to disk BEFORE the next call (the next call reads them). Never run
+two `dforge_module_plan` calls in parallel.
 
 ## Document-write ordering (the one exception to preview-first)
 
@@ -105,6 +110,25 @@ backtrack:
 - **A field with 3+ discrete states is a status**, not a boolean — and a 3+ value
   status is the objective trigger for a kanban view in Phase 3.
 
+## Statement IDs and the DESIGN.md sections
+
+If `docs/REQUIREMENTS.md` (or `docs/SPEC.md`) numbers its statements with structured
+IDs — `S-n` (system), `N-n` (notification), `V-n` (visibility), `U-n` (user), `R-n`
+(rule), `P-n` (permission) — each ID must be defined once (at the start of a line,
+list item, table cell or bold) and every ID `DESIGN.md` cites must be defined.
+`validate` warns on duplicates and undefined references. Keep IDs stable; do not
+renumber after confirmation.
+
+The `designTemplate` has four sections older templates lacked; fill all of them (the
+check is warn-level, but Phase 3-5 read them):
+
+- **Visibility** — who sees which entities / columns / views (feeds views, entity views, folders).
+- **Rules & Constraints** — every business rule, each with the **enforcing mechanism**
+  (check constraint, unique, required flag, `canExecute`, action refusal, trigger, ...).
+  A rule with no mechanism is a gap.
+- **Notifications** — what notifies whom, on what event (feeds triggers / jobs / actions).
+- **Permissions Matrix** — role x object rights, derived from the user-type verbs (feeds Phase 5).
+
 ## 0d validation — what it does and doesn't certify
 
 `docs/VALIDATION.md` / `readyToScaffold: true` certifies only that the **design
@@ -119,7 +143,7 @@ install.** Say so if the user reads it that way.
 
 When `validate` returns `readyToScaffold: true`:
 
-1. Write the returned `CLAUDE.md`, `docs/VALIDATION.md` and `docs/phase.json`.
+1. With `apply: true` the tool wrote `CLAUDE.md`, `docs/VALIDATION.md` and `docs/phase.json`; otherwise write the returned files now.
 2. Tell the user Phase 0 is complete and summarize the design in two lines.
 3. **Hand off:** invoke the **`dforge-module-build`** skill to scaffold and build
    Phases 1–5. Do not call `dforge_module_create` from this skill.

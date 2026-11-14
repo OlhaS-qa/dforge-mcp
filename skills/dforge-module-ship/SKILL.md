@@ -39,6 +39,25 @@ otherwise only surfaces at install:
   as `cli: <check name>`. A `cli` warning means they were skipped (CLI missing or
   too old), so pack can still fail
 
+Beyond the list above it also:
+
+- runs every module JSON file against the **vendored schemas**; those findings are
+  **warnings**. Neither `dforge-cli module validate` nor `module pack` (0.2.43) runs
+  JSON-schema validation, so this is the only offline schema check: read them.
+- validates `tests/*.test.json`
+- flags empty seed stubs, views with `columns: []`, `folder:` keys in role rights,
+  manifest dependencies with no `deps/<code>.json`, and menu / folder / entity
+  coverage gaps (grouped per folder; fix by restricting the menu with `folders` or
+  adding the entity to the folder)
+
+Pass `format: "summary"` on a big module: repeated findings are grouped and the full
+list is written to a file the result names. Read that file before dismissing anything.
+
+**Known false warnings:** `X() is not a DSL host function` for a function declared in
+`logic/functions/*.dsl` (the checker has no library-function list yet). Confirm the
+function exists in `logic/functions/` and tell the user it is a known false positive;
+do not "fix" the call.
+
 Read `files["_validate.json"]`. **Every `error` must be fixed** (apply the
 backtrack protocol in `dforge-module-build`) before continuing. Review the
 `warning`s with the user. Re-run `dforge_module_validate` until `ok: true`.
@@ -63,8 +82,10 @@ the platform validator rejects:
    `SUM([set].[field])`, never a Formula (`F`), and it aggregates a **physical**
    child column (`D` or same-row `G`). A virtual `F`/`R`/`S` child fails with
    `column old.<field> does not exist`.
-3. **Rights keys** — actions/reports/folders take a **colon** (`action:x`);
-   entities are bare or cross-module-dotted; deny by omitting, never `""`.
+3. **Rights keys** — actions/reports take a **colon** (`action:x`); no
+   `folder:<code>` keys (the CLI rejects them; folder-to-role binding is an open
+   platform question); entities are bare or cross-module-dotted; deny by
+   omitting, never `""`.
 4. **Manifest** — no `translations` key; non-English locales in
    `supportedLocales` (never `en`/`en-US`); `moduleId` a valid UUID; `version`
    and `dbSchemaVersion` set; `security` has both `roles` and `folders`.
@@ -213,7 +234,10 @@ scenario is a module defect: fix it, then re-install.
 
 ## Step 6 — Record and close out
 
-1. `dforge_module_plan({ action: "complete_phase", moduleDir, phase: "6", note: "installed v<x.y.z>" })`.
+1. `dforge_module_plan({ action: "complete_phase", moduleDir, phase: "6", note: "installed v<x.y.z>", apply: true })` (one call at a time; never parallel).
+   Coming back to a finished module for a second iteration: open it with
+   `dforge_module_plan({ action: "begin_change", moduleDir, note })`, build, ship
+   again, then `end_change`.
 2. **Ask the user**: "Delete `_brief/` (session scratch), or move it to `docs/`
    as committed design rationale?" Wait for the answer — don't act unilaterally.
 3. Suggest a `git commit` summarizing the module. **Do not commit unless the user

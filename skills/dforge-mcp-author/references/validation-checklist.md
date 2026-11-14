@@ -8,7 +8,7 @@ These five have each caused a real install failure. Check them before the sectio
 
 - [ ] **DSL dates** — `execute:` blocks use lowercase `now()`, never `TODAY()`/`NOW()` (formula-only; otherwise install fails `'TODAY' is not defined`)
 - [ ] **Roll-up totals** — a sum over a child set is a Generated (`G`) column with `SUM([set].[field])` (`dbDatatype` + `formula`, no `link`/`baseDatatypeCd`), **not** a Formula (`F`) column (an `F` set-aggregate silently renders empty). The aggregated child column must be physical (`D` or same-row `G`) — never a virtual `F`/`R`/`S` child (otherwise `db_error: column old.<field> does not exist`)
-- [ ] **Rights keys** — actions/reports/folders use a **colon** (`action:x`, `report:x`, `folder:x`); entities bare or cross-module-dotted; deny by omitting the key, never `""`
+- [ ] **Rights keys** — actions/reports/stored procedures use a **colon** (`action:x`, `report:x`, `sp:x`); NO `folder:x` keys (the CLI rejects them; folder-to-role binding is an open platform question); entities bare or cross-module-dotted; deny by omitting the key, never `""`
 - [ ] **Manifest** — no `translations` key (auto-discovered; non-English locales go in `supportedLocales`)
 - [ ] **Column defaults** — set via `formula` / `numberSequence` / DSL, never a `defaultValue` key on an entity field
 - [ ] **Seed + traits** — seeded `audit-full` entities set `created_by`/`last_updated_by: 0` (System user) in every record (or use `audit` / don't seed them); otherwise install fails on the missing user columns

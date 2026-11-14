@@ -1,6 +1,6 @@
 # @dforge-core/dforge-mcp
 
-MCP server for dForge module authoring. Exposes 35 composable tools and the canonical schemas so AI agents (Claude Code, Cursor, Zed, etc.) can drive the full module lifecycle — scaffold → entities → actions → views → security → install — through structured tool calls instead of free-form JSON generation.
+MCP server for dForge module authoring. Exposes 38 composable tools and the canonical schemas so AI agents (Claude Code, Cursor, Zed, etc.) can drive the full module lifecycle — scaffold → entities → actions → views → security → install — through structured tool calls instead of free-form JSON generation.
 
 Ships with **five Claude Skills** (`skills/`): a router plus one skill per lifecycle stage — design (Phase 0), build (Phases 1-5), and ship (Phase 6) — and `dforge-1c-import` for porting a 1C infobase, with its Python toolkit. The router directory carries 25 reference files (field types, flags, traits, formulas, DSL, security, etc.) and two annotated example modules.
 
@@ -74,7 +74,7 @@ claude mcp list
 # Should show: dforge — npx -y @dforge-core/dforge-mcp — connected
 ```
 
-Or inside a Claude Code session, type `/mcp` to see all connected servers + their tools. The 35 `dforge_*` tools should be listed.
+Or inside a Claude Code session, type `/mcp` to see all connected servers + their tools. The 38 `dforge_*` tools should be listed.
 
 ### Cursor / Zed
 
@@ -91,24 +91,24 @@ Phase 0 (identity → requirements → design → validation) is orchestrated by
 **Module-level**
 | Tool | Behavior |
 |---|---|
-| `dforge_module_plan` | **Lifecycle orchestrator** — drives Phase 0 (identity → requirements → design → validation), gates `dforge_module_create` until `readyToScaffold: true`, then tracks Phases 1-6 via a ledger in `docs/phase.json`. `action: "check"` returns `currentPhase` + `nextSkill`; `complete_phase` records a phase done or skipped. Call first in any session |
-| `dforge_module_create` | New module scaffold (blocked until Phase 0 passes) |
-| `dforge_module_import` | Import a normalized **table-spec** (tables → columns → relationships) into an existing module as entities. Infers `fieldTypeCd` from SQL type / sample values / name (metadata-validated, `dbDatatype` derived) and builds the FK+Reference pair per relationship. Fed by DBML/SQL, Excel/CSV, or a hand-authored spec |
+| `dforge_module_plan` | **Lifecycle orchestrator** — drives Phase 0 (identity → requirements → design → validation), gates `dforge_module_create` until `readyToScaffold: true`, then tracks Phases 1-6 via a ledger in `docs/phase.json`. `action: "check"` returns `currentPhase` + `nextSkill` (and reports a ledger that lags behind the module); `complete_phase` records a phase done or skipped. `apply: true` writes `docs/phase.json` and `CLAUDE.md` itself (without it the caller must write the returned files before the next call; never run `complete_phase` in parallel). `begin_change` / `end_change` open and close an iteration on a finished module. Structured statement IDs (S-/N-/V-/U-/R-/P-n) are checked. Call first in any session |
+| `dforge_module_create` | New module scaffold (blocked until Phase 0 passes). `dependencies` items are `{module, version?, entities}` and write `deps/<module>.json` with the manifest entry; `supportedLocales` supported; no empty seed stubs or column-less views |
+| `dforge_module_import` | Import a normalized **table-spec** (tables → columns → relationships) into an existing module as entities. Infers `fieldTypeCd` from SQL type / sample values / name (metadata-validated, `dbDatatype` derived) and builds the FK+Reference pair per relationship. Fed by DBML/SQL, Excel/CSV, or a hand-authored spec. **Additive**: merges into `ui/*.json` and `security/roles.json`, never regenerates; `onExisting: error\|skip\|replace` |
 | `dforge_module_inspect` | Read current module state. Full structured data is in `files["_inspect.json"]`; `summary` is one-line stats |
-| `dforge_module_validate` | Offline check (run before pack): dangling FK targets, missing hidden-FK columns, view/menu/role refs to non-existent things, uncovered entities, **field-spec rules re-run across every field**, `toString` templates, Formula-vs-Generated set aggregates, missing action DSL files, triggers/jobs firing non-existent actions, DSL static checks, and translation completeness. Errors + warnings in `files["_validate.json"]` |
+| `dforge_module_validate` | Offline check (run before pack): dangling FK targets, missing hidden-FK columns, view/menu/role refs to non-existent things, uncovered entities, **field-spec rules re-run across every field**, `toString` templates, Formula-vs-Generated set aggregates, missing action DSL files, triggers/jobs firing non-existent actions, DSL static checks, and translation completeness; also `tests/*.test.json`, every module JSON file against the vendored schemas (findings are **warnings**; the CLI's validate/pack do not run schema validation), empty seed stubs, column-less views, `folder:` rights keys, missing `deps/<code>.json`, and menu/folder/entity coverage. `format: "summary"` groups repeats and writes the full list to a file. Known false warnings "X() is not a DSL host function" for `logic/functions/*.dsl` functions remain. Errors + warnings in `files["_validate.json"]` |
 | `dforge_module_pack` | Shells to `dforge-cli module pack` via bundled CLI, PATH fallback, or `DFORGE_CLI_BINARY`. Returns tarball path + size |
 | `dforge_module_install` | Shells to `dforge-cli module install`. Args: `pathOrTarball`, optional `tenantUrl` / `token` / `tenantCode` — fall back to `DFORGE_URL` / `DFORGE_TOKEN` env. Returns `ok`, `exitCode`, `command`, and raw CLI `output` so the AI can fix install-time module defects and retry |
 
 **Entities (Phase 1)**
 | Tool | Behavior |
 |---|---|
-| `dforge_entity_add` | Add an entity to an existing module. `traits` accepts the full platform set — identity, audit, audit-full, soft-delete, sorting, postable, accumulation, ledger, period |
+| `dforge_entity_add` | Add an entity to an existing module (additive; formula columns get no `dbDatatype`; `baseDatatypeCd` must be in the entity-schema enum, e.g. `string`/`timestamp`, not `text`/`datetime`). `traits` accepts the full platform set — identity, audit, audit-full, soft-delete, sorting, postable, accumulation, ledger, period |
 | `dforge_entity_rename` | **Refactor-safe entity rename** — moves the file (see `deletes`), cascades the PK `{old}_id → {new}_id`, repoints link.entity / references / view entityCode / role keys / action entity / folder bindings / seed |
 | `dforge_entity_delete` | **Refactor-safe entity delete** — drops the file + seed (see `deletes`), manifest entry, role key, folder binding, view sources; warns on dangling cross-entity FKs |
 | `dforge_entity_field_add` | Patch a single field |
-| `dforge_entity_field_modify` | Replace a field's spec (same name) |
-| `dforge_entity_field_rename` | **Refactor-safe rename** — propagates the new name to the paired Reference, formulas, view columns + order, seed data, and other entities' FKs |
-| `dforge_entity_field_remove` | **Refactor-safe remove** — cascade-cleans paired Reference, view columns + order, seed keys; warns on formula/cross-entity dependents |
+| `dforge_entity_field_modify` | Replace a field's spec (same name); `params` is merged (null removes a key); warns about data/dbSchemaVersion/migrations |
+| `dforge_entity_field_rename` | **Refactor-safe rename** — propagates the new name to the paired Reference, formulas, view columns + order, seed data, and other entities' FKs; lists remaining `references` |
+| `dforge_entity_field_remove` | **Refactor-safe remove** — cascade-cleans paired Reference, view columns + order, seed keys; warns on formula/cross-entity dependents and lists remaining `references` |
 
 **Composite entity tools (Phase 1) — one call per concept, prefer these**
 
@@ -117,8 +117,8 @@ Each of these spans several coordinated keys that hand-assembly gets wrong. They
 | Tool | Emits |
 |---|---|
 | `dforge_entity_reference_add` | A whole relation: hidden FK (`cuid`/`EM`) **+** Reference column (`R`/`lookup`/`link`) **+** the `references` entry. The documented #1 source of broken modules, in one call. Also completes a half-built relation by reusing an FK an import already created |
-| `dforge_entity_rollup_add` | A child total as a **Generated** (`G`) column — never a Formula, whose set-aggregates silently render empty — creating the parent's Set column if needed, and refusing to aggregate a virtual `F`/`R`/`S` child (`column old.<field> does not exist`) |
-| `dforge_entity_status_add` | A dropdown with `params.options` objects and the initial value as a `formula` — entity fields have no `defaultValue` key |
+| `dforge_entity_rollup_add` | A child total as a **Generated** (`G`) column — never a Formula, whose set-aggregates silently render empty — creating the parent's Set column if needed, and refusing to aggregate a virtual `F`/`R`/`S` child (`column old.<field> does not exist`); COUNT over the child's PK is allowed |
+| `dforge_entity_status_add` | A dropdown with `params.options` objects and the initial value as a `formula` — entity fields have no `defaultValue` key; `editable: false` for action-only status |
 
 The field/entity tools validate against the `@dforge-core/metadata` registry: an unknown `fieldTypeCd` (e.g. `integer`, `reference`), `columnType`, or trait code is rejected at authoring time with a "did you mean" hint, and `dbDatatype` is auto-derived from the field type (currency → `numeric(18,2)`, text → `varchar`; reference/formula columns get none) unless you set it explicitly.
 
@@ -126,6 +126,7 @@ The field/entity tools validate against the `@dforge-core/metadata` registry: an
 | Tool | Behavior |
 |---|---|
 | `dforge_action_add` | DSL script + `ui/actions.json` entry. Runs the DSL static checker first — errors reject the call |
+| `dforge_action_modify` | Update an existing action (label, description, entityCode, executionMode, icon, isAsync, isTransacted, orderNum, `dslBody` full replacement) with the same DSL static check |
 | `dforge_action_check` | Statically check a **draft** `dslBody` before committing, or an `actionCode` already on disk. Catches `TODAY()` in `execute:`, `[field]` in batch/job context, block order, top-level `return`, `:param` placeholders, unknown host functions |
 | `dforge_trigger_add` | DB-event trigger in `logic/triggers.json` (entity event + optional condition → action) |
 | `dforge_job_add` | Scheduled job in `logic/jobs.json` (5-field cron + timeout + action) |
@@ -136,29 +137,31 @@ The field/entity tools validate against the `@dforge-core/metadata` registry: an
 |---|---|
 | `dforge_view_add` | Add a data view |
 | `dforge_view_modify` | Replace a view's spec |
-| `dforge_menu_add` | Add a menu leaf or section. Validates `dataViewCode` against `data_views.json`, emits `itemType: "V"` on leaves only, and normalizes icons to the bare form menus require (strips `bi-`) |
+| `dforge_menu_add` | Add a menu leaf or section. Validates `dataViewCode` against `data_views.json`, emits `itemType: "V"` on leaves only, and normalizes icons to the bare form menus require (strips `bi-`). `reportCode` makes a report leaf (`itemType: "R"`); `folders` scopes the root menu to folder codes |
 | `dforge_report_add` | Add a report |
 
 **Polish (Phase 4)**
 | Tool | Behavior |
 |---|---|
 | `dforge_setting_add` | Configurable module-level setting |
-| `dforge_translation_sync` | Generate/refresh `translations/<locale>.json` from the module's own contents. Never overwrites existing translated text; fills the role labels that are **completeness-enforced at install**. Defaults to every `supportedLocales` entry; writes no English file (install skips `en*.json` — English lives in the definitions) |
+| `dforge_translation_sync` | Generate/refresh `translations/<locale>.json` from the module's own contents (entities/fields, views, FLAT menu items, roles, folders, settings, actions + param labels, reports + param labels + dataset captions, registers, constraint messages, dropdown options; `prune` removes only orphaned keys). Never overwrites existing translated text; fills the role labels that are **completeness-enforced at install**. Defaults to every `supportedLocales` entry; writes no English file (install skips `en*.json` — English lives in the definitions) |
 | `dforge_seed_add` | Write a seed file for one entity. Enforces numeric `{entity}_id` PKs, parent-before-child load order, `audit-full` System-user columns, and FKs that point at seeded parents |
 
 **Security (Phase 5)**
 | Tool | Behavior |
 |---|---|
-| `dforge_role_add` | Add a role + rights matrix. **Fails if role already exists** — the scaffolder pre-creates `<code>.admin`, so use `role_right_set` to amend it instead |
+| `dforge_role_add` | Add a role + rights matrix (`folder:<code>` keys are refused: the CLI rejects them and folder-to-role binding is an open platform question). **Fails if role already exists** — the scaffolder pre-creates `<code>.admin`, so use `role_right_set` to amend it instead |
 | `dforge_role_right_set` | Grant/revoke one right on one object (cheap backtrack) |
 | `dforge_folder_add` | Add a security folder (optional — most modules ship with just root) |
 
 **Cross-cutting**
 | Tool | Behavior |
 |---|---|
-| `dforge_dependency_add` | Add a dep on another dForge module |
+| `dforge_dependency_add` | Add a dep on another dForge module: writes the manifest entry AND `deps/<module>.json`; idempotent, repairs a missing contract |
+| `dforge_entity_configure` | Entity-level keys: `toStringTemplate`, `numberSequence` (`defaultPrefix` REQUIRED), unique/check `constraints`, `description` |
+| `dforge_manifest_set` | Manifest metadata: supportedLocales, features, description, category, tags, icon, ... (identity/content keys are not settable) |
 | `dforge_diagram_add` | Create or extend a named entity diagram, `docs/diagrams/<code>.json` (design-time only) — one per functional area of a large module. Takes entity keys and/or `fromFolder` (a folder's entities plus its descendants'); appends only, keeping placed positions. Rejects a key that resolves to no own or dependency entity |
-| `dforge_dbml_import` | **DBML front-end** to `module_import` — parses DBML (Table blocks, typed columns, inline + top-level refs) into the table-spec, drops the source PK (identity provides `{entity}_id`), and imports. Pass `module` for a greenfield import |
+| `dforge_dbml_import` | **DBML front-end** to `module_import` — parses DBML (Table blocks, typed columns, inline + top-level refs) into the table-spec, drops the source PK (identity provides `{entity}_id`), and imports. Carries Enum, unique, default, varchar length, numeric(p,s), int/bigint, simple CHECK and notes; returns a loss report; additive, `onExisting: error\|skip\|replace`. Pass `module` for a greenfield import |
 
 ### Writing files: preview vs `apply`
 
@@ -318,7 +321,7 @@ scripts/publish.sh 0.1.0-rc.N --tag latest --otp <code>
 - [ ] `@dforge-core/dforge-cli` dep is a real version (not `file:...`)
 - [ ] `pnpm typecheck` passes
 - [ ] `pnpm test` passes
-- [ ] Smoke test stdio: `tools/list` returns 27 tools
+- [ ] Smoke test stdio: `tools/list` returns 38 tools
 - [ ] Skill updated for any new/changed tools (it's a SEPARATE artifact; users sync it manually after upgrades)
 
 ### Adding a new tool

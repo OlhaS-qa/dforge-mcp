@@ -60,19 +60,17 @@ From formulas, reference settings with `$[setting_name]`:
 [total] * (1 + $[vat_rate] / 100)
 ```
 
-From DSL actions (check your dForge version for exact syntax):
+From DSL actions use `getSetting('<code>')` (resolved through the folder chain; see `action-dsl`). There is no `settings.x` object in `execute:`:
 
 ```
 execute:
-    rate = settings.vat_rate
-    tax = [total] * rate / 100
+    var rate = getSetting('vat_rate')
+    var tax = [total] * rate / 100
 ```
 
-From number sequence patterns:
+`$[setting]` is **not allowed in `canExecute:`** (install refuses it; the client cannot evaluate it). Read the setting in `execute:` with `getSetting()` and refuse with `error()` there.
 
-```
-"pattern": "$[invoice_prefix]-{yyyy}-{seq:4}"
-```
+From a number sequence, point `numberSequence.prefixSettingCd` at the setting and use `{prefix}` in the pattern (see `number-sequences`); `$[...]` is not written in the pattern.
 
 ## Folder-scoped inheritance
 

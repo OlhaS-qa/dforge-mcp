@@ -20,16 +20,22 @@ Generated on 2026-04-08
 
 import argparse
 import sys
-import uuid
 import psycopg
 from datetime import datetime
 from typing import Dict
 
-MIGRATION_USER_ID = "00000000-0000-0000-0000-000000000001"  # override with --migration-user
+MIGRATION_USER_ID = 0  # the System user id (see traits.md, audit-full); override with --migration-user
 
-def cuid() -> str:
-    """Generate a new cuid-like identifier for target PKs."""
-    return str(uuid.uuid4())
+def cuid() -> int:
+    """Return a new PK for a target row.
+
+    The platform key type `cuid` is a 64-bit INTEGER (int8), NOT a uuid or a string, and the
+    platform's ids are 58-bit snowflakes. This script cannot invent a valid one on its own:
+    plug in the platform's own id generator, or let the platform assign the key (insert
+    through the API / an import instead of raw SQL). Raising here is deliberate; a uuid in an
+    int8 column fails at insert.
+    """
+    raise NotImplementedError("wire up the platform id generator, or insert via the platform API")
 
 def main():
     parser = argparse.ArgumentParser()
@@ -44,7 +50,7 @@ def main():
 
     try:
         with tgt.transaction():
-            pk_map: Dict[str, Dict[int, str]] = {}  # source_table → {source_id → target_id}
+            pk_map: Dict[str, Dict[int, int]] = {}  # source_table → {source_id → target_id}
 
             # Phase 1: parents (no FK deps)
             migrate_accounts(src, tgt, pk_map, args.migration_user)
@@ -153,7 +159,7 @@ CREATE EXTENSION IF NOT EXISTS dblink;
 CREATE TEMP TABLE pk_map (
     source_table text NOT NULL,
     source_id    bigint NOT NULL,
-    target_id    text NOT NULL,
+    target_id    bigint NOT NULL,
     PRIMARY KEY (source_table, source_id)
 );
 
@@ -161,14 +167,14 @@ CREATE TEMP TABLE pk_map (
 INSERT INTO crm.account
     (account_id, name, phone, website, created_date, created_by, last_updated, last_updated_by)
 SELECT
-    gen_random_uuid()::text,
+    <platform-generated int8 key>,  -- NOT gen_random_uuid(): the key column is int8
     src.name,
     src.phone,
     src.website,
     COALESCE(src.created_at, NOW()),
-    '00000000-0000-0000-0000-000000000001'::text,
+    0,  -- System user id
     COALESCE(src.created_at, NOW()),
-    '00000000-0000-0000-0000-000000000001'::text
+    0
 FROM dblink(
     'host=legacy.local dbname=old_crm user=readonly',
     'SELECT id, name, phone, website, created_at FROM accounts'
@@ -190,7 +196,9 @@ Pure SQL is faster but harder to read and debug. **Prefer the Python script unle
 
 ### PK generation
 
-Source uses integer PKs, dForge uses cuid (string). Generate a **new cuid for every row** and record it in the mapping table. Never preserve source integer PKs.
+The dForge key type `cuid` is a 64-bit **integer** (int8; `dforge_seed_add` requires an explicit INTEGER under `{entity}_id`, and `traits.md` calls it the platform type name for an int8 column). It is **not** a uuid or a string. Generate a **new key for every row** and record it in the mapping table; do not reuse source integer keys (they would collide with platform-issued ones).
+
+**Where a script cannot produce a valid key:** the platform issues its ids as 58-bit snowflakes, and this reference does not document the generator. A plain Python/SQL script therefore cannot mint keys the platform will accept as its own. Either obtain the generator from the platform owners, or load the rows through a platform path that assigns the key (API / import), and tell the user which you chose. Never fall back to uuids.
 
 ### FK resolution order
 
@@ -198,7 +206,7 @@ Topologically sort the entities by FK dependencies. Parents first, then children
 
 ### Audit fields
 
-Set `created_by` / `last_updated_by` to a designated migration user. The zero user (`00000000-0000-0000-0000-000000000001`) is a common convention for "system-generated" rows. Ask the user if you're unsure which user to attribute to. (Note: `created_by`/`last_updated_by` only exist if the entity uses `audit-full` trait; with just `audit`, only timestamps exist.)
+Set `created_by` / `last_updated_by` to a designated migration user. The System user (id `0`, the same value `traits.md` prescribes for seeded `audit-full` rows) is the convention for "system-generated" rows. Ask the user if you're unsure which user to attribute to. (Note: `created_by`/`last_updated_by` only exist if the entity uses `audit-full` trait; with just `audit`, only timestamps exist.)
 
 Set `created_date` / `last_updated` from source timestamps if available, otherwise `NOW()`. Note: dForge audit column names are `created_date` and `last_updated` — NOT `created_at`/`updated_at`.
 

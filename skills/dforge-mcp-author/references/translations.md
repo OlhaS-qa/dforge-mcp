@@ -107,7 +107,7 @@ Translation files mirror the module's content structure. Each translatable objec
 | `views` | Data view labels and descriptions (`label`, `desc`) | View codes (keys from `ui/data_views.json`) → `{ label, desc }` |
 | `menus` | Menu node labels (root + nested items) | Menu root key → `{ label, items: { item_code: { label } } }` matching `ui/menus.json` structure |
 | `actions` | Action labels, descriptions, param labels **and param dropdown option labels** | Action codes (keys from `ui/actions.json`) → `{ label, desc, params: { param_cd: { label, options: { value: … } } } }` |
-| `reports` | Report `label`, `desc`, dataset captions, param labels **and param dropdown option labels** | Report codes → `{ datasets: { ds_cd: { caption } }, params: { param_cd: { label, options: { value: … } } } }` |
+| `reports` | Report `label`, `desc`, dataset captions, param labels **and param dropdown option labels**, and **panel titles** (opt-in) | Report codes → `{ datasets: { ds_cd: { caption } }, params: { param_cd: { label, options: { value: … } } }, panels: { "<title as authored>": "<translation>" } }` |
 | `storedProcedures` | Result-column headers of a stored procedure (`logic/stored_procedures.json`), shared by every report bound to it | Procedure codes → `{ columns: { column_cd: { label } } }` |
 | `entities.<e>.constraints` | Check/unique constraint violation messages (opt-in — warned, not enforced) | Constraint codes → `{ message }` under the owning entity |
 | `messages` | DSL `info` / `warn` / `error` / `exit` texts (opt-in — warned, not enforced) | Exact English text → translated text |
@@ -199,6 +199,10 @@ A `dropdown` **parameter** carries per-value labels exactly like a column, and t
 - A param may translate **only** its options and keep the authored caption — omit `label`.
 - **This requires base labels in the DSL.** `options=bank_transfer,cash` stores bare codes, and the dialog shows `bank_transfer` in *every* locale including English until you write `options=[bank_transfer:Bank transfer, cash:Cash]` (or the JSON object form). See `action-dsl.md`.
 - **Prefer a domain.** If the param's choices are the same list a column uses — which they usually are, since the value normally ends up written to that column — declare the param as `domain <domainCd>` and skip this section entirely: it inherits the domain's translated options. Reach for per-param `options` only when the list belongs to that one parameter and matches no column.
+
+### Report panel titles (opt-in)
+
+A report panel has no code, so its title is translated by the title itself: under `reports.<report_cd>.panels`, the key is the panel's `title` exactly as written in `ui/reports.json` `layout.panels[]`, the value the translation. Not required by `module pack` / `validate`. A user's saved layout keeps translating as long as the panel still carries the authored title; a panel the user renamed shows as typed. Changing a panel's authored title orphans its translations — update the keys with it. Translations are written at install, so a module ships them with a version bump.
 
 ### Action messages ARE translatable (opt-in)
 

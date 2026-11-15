@@ -152,6 +152,7 @@ See https://icons.getbootstrap.com/ for the full catalog. Common choices:
 5. **`orderNum` controls display order** within a level.
 6. **`label` is required** on every node.
 7. **`icon` is optional** but recommended. Use Bootstrap icon names **without** `bi-` prefix.
+8. **Turning a module into an entities-only module.** Remove both `ui/folders.json` and `ui/menus.json` (and the views that only they reached). On upgrade the platform removes the module's folders with their menu, role assignments, folder settings and entity links — the same state a fresh install of that version gets; menu items a user created in the app are kept, and the menu goes only once it is empty. Keep either file and the folders stay: dropping one folder from several removes nothing.
 
 ## Common mistakes
 

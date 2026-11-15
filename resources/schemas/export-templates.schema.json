@@ -1,0 +1,25 @@
+{
+	"$schema": "https://json-schema.org/draft/2020-12/schema",
+	"title": "dForge Module Export Templates",
+	"description": "Excel export template declarations for a dForge module package (ui/export_templates.json). Each key is the template_cd; the value binds an .xlsx file under export_templates/ to an entity. A user picks it from the grid's Export menu, and data.export with that template pours the entity's rows into the workbook: a cell {{rows.column_cd}} repeats once per row, {{_count}} is the row count and {{_today}} today's date.",
+	"type": "object",
+	"additionalProperties": {
+		"type": "object",
+		"properties": {
+			"entityCd": {
+				"type": "string",
+				"description": "Entity code whose rows the template receives. Cross-module form 'module.entity' is supported."
+			},
+			"description": {
+				"type": "string",
+				"description": "Label shown in the Export menu. Defaults to the template code."
+			},
+			"file": {
+				"type": "string",
+				"description": "Relative path of the .xlsx under the module's export_templates/ directory (e.g. 'invoices.xlsx')."
+			}
+		},
+		"required": ["entityCd", "file"],
+		"additionalProperties": false
+	}
+}

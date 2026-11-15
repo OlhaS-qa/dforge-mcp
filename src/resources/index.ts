@@ -178,6 +178,12 @@ export const resources: ResourceDef[] = [
 			"to entities for the print menu.",
 	),
 	schema(
+		"export-templates",
+		"Export templates JSON schema",
+		"JSON Schema for ui/export_templates.json — Excel (.xlsx) export templates bound to an entity; the " +
+			"entity's rows are poured into the workbook by data.export or the exportXlsx() DSL function.",
+	),
+	schema(
 		"translations",
 		"Translations JSON schema",
 		"JSON Schema for translations/<locale>.json — per-section labels (entities, fields, options, " +

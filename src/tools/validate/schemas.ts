@@ -21,6 +21,7 @@ const FILE_SCHEMAS: Array<[string, string]> = [
 	["ui/menus.json", "menus"],
 	["ui/reports.json", "reports"],
 	["ui/print_templates.json", "print-templates"],
+	["ui/export_templates.json", "export-templates"],
 	["security/roles.json", "roles"],
 	["logic/jobs.json", "jobs"],
 	["logic/triggers.json", "triggers"],

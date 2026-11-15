@@ -41,6 +41,7 @@ export interface ModulePaths {
 	triggers: string;
 	webhooks: string;
 	printTemplates: string;
+	exportTemplates: string;
 	settings: string;
 	domains: string;
 }
@@ -65,6 +66,7 @@ export function modulePaths(moduleDir: string): ModulePaths {
 		queries: path.join(root, "ui", "queries.json"),
 		storedProcedures: path.join(root, "logic", "stored_procedures.json"),
 		printTemplates: path.join(root, "ui", "print_templates.json"),
+		exportTemplates: path.join(root, "ui", "export_templates.json"),
 		roles: path.join(root, "security", "roles.json"),
 		jobs: path.join(root, "logic", "jobs.json"),
 		triggers: path.join(root, "logic", "triggers.json"),

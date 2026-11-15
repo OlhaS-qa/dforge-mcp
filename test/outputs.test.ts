@@ -154,6 +154,33 @@ describe("Outputs in module validate", () => {
 		expect(out).not.toMatch(/'full_name'/);
 	});
 
+	it("flags a print template that reads an undeclared setting", () => {
+		w("settings.json", { director_name: { fieldTypeCd: "text", baseDatatypeCd: "string" } });
+		w("ui/print_templates.json", {
+			o: { entityCd: "employee", template: "{{ full_name }} {{ _settings.director_name }} {{ _settings.stamp }}" },
+		});
+		const out = run().join("\n");
+		expect(out).toMatch(/out:print-setting.*'_settings.stamp'/);
+		expect(out).not.toMatch(/_settings.director_name/);
+	});
+
+	it("checks Excel export templates and an xlsx output row", () => {
+		w("ui/export_templates.json", {
+			list: { entityCd: "employee", file: "list.xlsx" },
+			bad: { entityCd: "ghost", file: "x.csv" },
+		});
+		w(
+			"docs/DESIGN.md",
+			`# D\n\n## Outputs\n${HEAD}| O-1 List | export | employee.full_name | xlsx:list | hr.officer | manual: x |\n| O-2 Other | export | employee.full_name | xlsx:nope | hr.officer | manual: x |\n`,
+		);
+		const out = run().join("\n");
+		expect(out).toMatch(/out:xlsx-file.*export_templates\/list.xlsx/);
+		expect(out).toMatch(/out:xlsx-entity.*'ghost'/);
+		expect(out).toMatch(/out:xlsx-file.*not an .xlsx/);
+		expect(out).toMatch(/out:not-built.*xlsx:nope/);
+		expect(out).not.toMatch(/no-access/);
+	});
+
 	it("flags a missing template file and an unknown entity", () => {
 		w("ui/print_templates.json", {
 			a: { entityCd: "employee", file: "nope.html" },

@@ -27,12 +27,6 @@ const SEMANTIC_CHECK_DESCRIPTIONS = [
 			"Does every user persona listed in REQUIREMENTS.md map to at least one entity in DESIGN.md that they interact with?",
 	},
 	{
-		name: "Core process coverage",
-		description:
-			"Does every process in REQUIREMENTS.md Core Processes have a corresponding entity, action, or status " +
-			"machine in DESIGN.md?",
-	},
-	{
 		name: "Output data coverage",
 		description:
 			"For every output (O-n) in DESIGN.md Outputs: does the Fields per Entity section hold every datum its " +
@@ -53,8 +47,8 @@ const SEMANTIC_CHECK_DESCRIPTIONS = [
 	{
 		name: "Action completeness",
 		description:
-			"Does every verb in REQUIREMENTS.md Core Processes that implies a user-triggered operation appear in " +
-			"DESIGN.md Actions table?",
+			"Does every user-triggered operation named in REQUIREMENTS.md (user-type verbs, rules, outputs) " +
+			"appear in the DESIGN.md Actions table or as a status transition?",
 	},
 	{
 		name: "Seed data coverage",
@@ -65,8 +59,8 @@ const SEMANTIC_CHECK_DESCRIPTIONS = [
 		name: "Visibility & permissions completeness",
 		description:
 			"Does DESIGN.md say who sees which records (including child records and how people bind to " +
-			"departments/roles) and give a Permissions Matrix covering every role x entity and every action, " +
-			"trigger-only actions included?",
+			"departments/roles) and give a Permissions Matrix covering every role x entity and every action a person runs " +
+			"(an action only a trigger or job fires needs no row)?",
 	},
 	{
 		name: "Rules enforcement mechanism",

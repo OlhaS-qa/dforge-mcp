@@ -12,14 +12,14 @@
 //
 // Kind = print | report | export | api | mail | file. Source = entities (or
 // entity.field) the output reads. Mechanism = <type>:<code> where type is one
-// of print, report, export, job, webhook, action. `export:<entity>` is the platform's data.export (csv/xlsx of an entity: its visible columns, a filter, an order); `print:<template>` is the UI print form; mail and PDF produced by an action are `action:<code>` (printPdf / sendEmail in its script). Run by = full role codes, or
+// of print, report, export, xlsx, job, webhook, action. `xlsx:<template>` is an Excel export template (ui/export_templates.json, one entity's rows poured into a workbook; also `exportXlsx()` in an action). `export:<entity>` is the platform's data.export (csv/xlsx of an entity: its visible columns, a filter, an order); `print:<template>` is the UI print form; mail and PDF produced by an action are `action:<code>` (printPdf / sendEmail in its script). Run by = full role codes, or
 // system / schedule / external. Verified by = `test:<scenario name>` or
 // `manual: <how>`.
 
 import { cells, isSeparator } from "./permissions-matrix";
 
 export const OUTPUT_KINDS = ["print", "report", "export", "api", "mail", "file"] as const;
-export const MECHANISM_TYPES = ["print", "report", "export", "job", "webhook", "action"] as const;
+export const MECHANISM_TYPES = ["print", "report", "export", "xlsx", "job", "webhook", "action"] as const;
 export const NON_ROLE_RUNNERS = ["system", "schedule", "external"] as const;
 
 export interface OutputRow {
@@ -45,7 +45,7 @@ export interface ParsedOutputs {
 export const OUTPUT_FORMAT_HINT =
 	"Use one table `| Output | Kind | Source | Mechanism | Run by | Verified by |` with one row per output id " +
 	"(O-1 …); Kind = print/report/export/api/mail/file, Mechanism = print:<code> / report:<code> / export:<entity> / " +
-	"job:<code> / webhook:<code> / action:<code>, Run by = full role codes or system/schedule/external.";
+	"xlsx:<template> / job:<code> / webhook:<code> / action:<code>, Run by = full role codes or system/schedule/external.";
 
 const OUTPUT_ID = /\bO-(\d+)\b/;
 
@@ -161,6 +161,6 @@ export function rightsKeyFor(
 	const first = row.sources[0];
 	if (!first) return null;
 	if (type === "export") return { key: code, need: "S" };
-	if (type === "print") return { key: splitSource(first, knownEntity).entity, need: "S" };
+	if (type === "print" || type === "xlsx") return { key: splitSource(first, knownEntity).entity, need: "S" };
 	return null;
 }

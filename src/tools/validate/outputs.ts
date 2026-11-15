@@ -33,10 +33,18 @@ export function placeholdersOf(body: string): Set<string> {
 	return out;
 }
 
+/** Setting codes a template reads through `_settings.<code>`. */
+export function settingRefsOf(body: string): Set<string> {
+	const out = new Set<string>();
+	for (const m of body.matchAll(/\b_settings\.([a-z][a-z0-9_]*)/g)) out.add(m[1]);
+	return out;
+}
+
 const RESERVED = new Set(["true", "false", "nil", "null", "empty", "blank", "forloop", "include", "with", "and", "or"]);
 
 export function checkOutputs(ctx: ValidateContext): void {
 	checkPrintTemplates(ctx);
+	checkExportTemplates(ctx);
 	checkOutputsAgainstDesign(ctx);
 }
 
@@ -66,6 +74,14 @@ function checkPrintTemplates(ctx: ValidateContext): void {
 			warn(where, "has no template body — it prints an empty page.", "out:print-empty");
 			continue;
 		}
+		const settings = readJsonOrDefault<Record<string, unknown>>(paths.settings, {});
+		const badSettings = [...settingRefsOf(body)].filter((n) => !(n in settings));
+		if (badSettings.length)
+			warn(
+				where,
+				`reads ${badSettings.map((n) => `'_settings.${n}'`).join(", ")}, which ${badSettings.length === 1 ? "is" : "are"} not declared in settings.json (it prints empty)`,
+				"out:print-setting",
+			);
 		const cols = columnsOf[local];
 		if (!cols || partialColumns.has(local)) continue;
 		const unknown = [...placeholdersOf(body)].filter((n) => !cols.has(n) && !n.startsWith("_") && !RESERVED.has(n));
@@ -76,6 +92,27 @@ function checkPrintTemplates(ctx: ValidateContext): void {
 					"(a typo prints an empty value; a child set is only read inside a {% for %} loop).",
 				"out:print-placeholder",
 			);
+		}
+	}
+}
+
+/** ui/export_templates.json: each template is bound to a known entity and its .xlsx exists. */
+function checkExportTemplates(ctx: ValidateContext): void {
+	const { paths, warn, manifest, isKnownEntity } = ctx;
+	const defs = readJsonOrDefault<Record<string, PrintDef>>(paths.exportTemplates, {});
+	for (const [code, def] of Object.entries(defs)) {
+		const where = `ui/export_templates.json → ${code}`;
+		const ent = typeof def.entityCd === "string" ? def.entityCd : undefined;
+		if (ent) {
+			const local = ent.startsWith(`${manifest.code}.`) ? ent.slice(manifest.code.length + 1) : ent;
+			if (!isKnownEntity(local) && !isKnownEntity(ent))
+				warn(where, `is bound to entity '${ent}', which is not a known entity.`, "out:xlsx-entity");
+		}
+		if (typeof def.file === "string") {
+			if (!def.file.toLowerCase().endsWith(".xlsx"))
+				warn(where, `names '${def.file}', which is not an .xlsx workbook.`, "out:xlsx-file");
+			else if (!fs.existsSync(path.join(paths.root, "export_templates", def.file)))
+				warn(where, `names file export_templates/${def.file}, which does not exist.`, "out:xlsx-file");
 		}
 	}
 }
@@ -109,6 +146,7 @@ function checkOutputsAgainstDesign(ctx: ValidateContext): void {
 			(w) => String(w.code),
 		),
 	);
+	const exportDefs = readJsonOrDefault<Record<string, PrintDef>>(paths.exportTemplates, {});
 	const testNames = readTestNames(paths.root);
 
 	for (const r of o.rows) {
@@ -122,11 +160,13 @@ function checkOutputsAgainstDesign(ctx: ValidateContext): void {
 						? code in reports || code.includes(".")
 						: type === "export"
 							? isKnownEntity(code)
-							: type === "job"
-								? jobCodes.has(code)
-								: type === "webhook"
-									? hookCodes.has(code)
-									: code in actions;
+							: type === "xlsx"
+								? code in exportDefs
+								: type === "job"
+									? jobCodes.has(code)
+									: type === "webhook"
+										? hookCodes.has(code)
+										: code in actions;
 			if (!exists)
 				warn(
 					where,
@@ -135,18 +175,26 @@ function checkOutputsAgainstDesign(ctx: ValidateContext): void {
 				);
 		}
 		// data.export writes the entity's visible columns: V flag, not identity, not a formula/set/query column.
-		if (r.mechanism?.type === "export" && columnsOf[r.mechanism.code]) {
-			const defs = ctx.fieldDefsOf[r.mechanism.code] ?? {};
+		// An Excel template is fed by the same export, so the same columns reach it.
+		const exportEntity = (() => {
+			if (r.mechanism?.type === "export") return r.mechanism.code;
+			if (r.mechanism?.type !== "xlsx") return undefined;
+			const ent = exportDefs[r.mechanism.code]?.entityCd;
+			if (typeof ent !== "string") return undefined;
+			return ent.startsWith(`${ctx.manifest.code}.`) ? ent.slice(ctx.manifest.code.length + 1) : ent;
+		})();
+		if (exportEntity && columnsOf[exportEntity]) {
+			const defs = ctx.fieldDefsOf[exportEntity] ?? {};
 			for (const src of r.sources) {
 				const { entity, field } = splitSource(src, isKnownEntity);
-				if (!field || entity !== r.mechanism.code || !defs[field]) continue;
+				if (!field || entity !== exportEntity || !defs[field]) continue;
 				const f = defs[field];
 				const flags = String(f.flags ?? "");
 				const ct = String(f.columnType ?? "");
 				if (!flags.includes("V") || flags.includes("I") || ["F", "S", "Q"].includes(ct))
 					warn(
 						where,
-						`export of '${r.mechanism.code}' will not carry '${field}': ${!flags.includes("V") ? "it lacks the V flag" : flags.includes("I") ? "it is an identity column" : `columnType '${ct}' is not exported`} (data.export writes visible, non-identity, non-formula/set/query columns)`,
+						`export of '${exportEntity}' will not carry '${field}': ${!flags.includes("V") ? "it lacks the V flag" : flags.includes("I") ? "it is an identity column" : `columnType '${ct}' is not exported`} (data.export writes visible, non-identity, non-formula/set/query columns)`,
 						"out:export-column",
 					);
 			}
@@ -155,6 +203,12 @@ function checkOutputsAgainstDesign(ctx: ValidateContext): void {
 		if (r.mechanism?.type === "action" && r.mechanism.code in actions) {
 			const script = actionScript(paths.root, actions[r.mechanism.code]);
 			if (script !== null) {
+				if (r.kind === "export" && !/\bexportXlsx\s*\(/.test(script))
+					warn(
+						where,
+						`is an export output but action '${r.mechanism.code}' never calls exportXlsx()`,
+						"out:mechanism-mismatch",
+					);
 				if (r.kind === "print" && !/\bprintPdf\s*\(/.test(script))
 					warn(
 						where,
@@ -176,6 +230,12 @@ function checkOutputsAgainstDesign(ctx: ValidateContext): void {
 			);
 			const act = job && typeof job.action === "string" ? job.action : "";
 			const script = act && act in actions ? actionScript(paths.root, actions[act]) : null;
+			if (script && /\bexportXlsx\s*\(/.test(script))
+				warn(
+					where,
+					`job '${r.mechanism.code}' runs action '${act}', which calls exportXlsx(): a scheduled job has no signed-in user, so exportXlsx() is refused there`,
+					"out:print-in-job",
+				);
 			if (script && /\bprintPdf\s*\(/.test(script))
 				warn(
 					where,

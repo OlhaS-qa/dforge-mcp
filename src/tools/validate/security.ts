@@ -6,6 +6,17 @@ import { sectionBody } from "../design-doc";
 import { DOTTED_CODE_RE, readJsonOrDefault, checkSecurityCoverage } from "../_helpers";
 import type { ValidateContext } from "./context";
 import { MATRIX_FORMAT_HINT, parsePermissionsMatrix, sortRights } from "../permissions-matrix";
+import { buildPhaseCheck } from "../plan/build-phases";
+
+/** Roles are built in Phase 5; before it a missing matrix role is expected, not a defect. */
+function rolesDue(moduleDir: string): boolean {
+	try {
+		const p = buildPhaseCheck(moduleDir).currentPhase;
+		return p === "5" || p === "6" || p === "complete";
+	} catch {
+		return true;
+	}
+}
 
 // Role rights keyed on real objects.
 export function checkRoleRights(ctx: ValidateContext): void {
@@ -115,12 +126,14 @@ export function checkPermissionsAgainstDesign(ctx: ValidateContext): void {
 		(roles[role]?.rights as Record<string, string> | undefined) ?? {};
 	const designRoles = new Set(m.rows.map((r) => r.role));
 	for (const role of designRoles) {
-		if (!(role in roles))
-			err(
+		if (!(role in roles)) {
+			const due = rolesDue(moduleDir);
+			(due ? err : warn)(
 				"security → roles",
-				`the design's Permissions Matrix names role '${role}' but security/roles.json has no such role`,
+				`the design's Permissions Matrix names role '${role}' but security/roles.json has no such role${due ? "" : " (expected until Phase 5)"}`,
 				"perm:role-missing",
 			);
+		}
 	}
 	for (const r of m.rows) {
 		if (!(r.role in roles)) continue;

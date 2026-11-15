@@ -104,6 +104,7 @@ These facts come from the core team and drive both the skills and the checks.
 | PDF from an action | `printPdf(entity, key, templateCd)` | Needs a signed-in user. Fails in a scheduled job or a background action. |
 | Mail from an action | `sendEmail(...)` | Queued; needs the workspace mail provider. No dependency on `comm`. |
 | Reading mail | `fetchMail()` in an action (IMAP) | Inbound mail through `comm` is not ready; do not promise it. |
+| Excel form of a list | `xlsx:<template>` in `ui/export_templates.json` plus `export_templates/*.xlsx`; the grid's Export menu, or `exportXlsx(entity, template, {filter, orderBy, fileName})` in an action | Rows of ONE entity (same columns as data.export). Cells `{{rows.column_cd}}`, `{{_count}}`, `{{_today}}`, totals `$=SUM(D{{$enumrowstart}}:D{{$enumrowend}})`. Needs Select. `exportXlsx()` is refused in a job. Nothing goes in `manifest.json`. |
 | Data export | `data.export` of **one entity**, csv or xlsx | Writes visible, non-identity columns, excluding formula, set and query columns. No export of a report or a view. Needs Select. |
 | Action without a selected record | omit `executionMode` | Appears in the entity grid toolbar, not in a menu. No `[field]` in the script. |
 | Triggers | run in the writer's name | Execute is **not** checked for trigger actions. |
@@ -145,6 +146,7 @@ Prefer a warning with a clear next step to an error. Promote to an error only wh
 - Rendering: no check proves a print form or report looks right. The Outputs table marks such rows `manual`.
 - The test runner cannot act as another role or render documents. Role permissions are verified statically against the matrix, not by acting as the role.
 - Whether the row filter of a folder applies to `data.export` called without a folder was not verified.
+- Excel templates cannot hold a record with its child sets, be attached to an email, or run in a job; the platform does not implement those yet. The tool cannot read inside the `.xlsx`, so it does not check that `{{rows.column}}` cells name real columns.
 - Inbound mail through `comm` is not implemented in the platform yet.
 - The vendored manifest schema may lag the platform (`shortDescription`, `security`).
 - Library functions declared in `logic/functions/*.dsl` still produce false "not a DSL host function" warnings; this is a known core-side gap.

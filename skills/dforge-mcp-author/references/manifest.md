@@ -72,7 +72,6 @@ The manifest lists every file in the package by logical key. The installer reads
 | `security` | object | `{ "roles": "./security/roles.json", "folders": "./ui/folders.json" }` |
 | `seedData` | array | List of paths to seed files, in install order |
 | `supportedLocales` | string[] | IETF locale tags that the module ships translations for, e.g. `["de-DE", "uk-UA"]`. Files are **auto-discovered** at `./translations/{locale}.json` — there is no per-file manifest entry. English (`en`/`en-*`) is the default and must not be listed. |
-| `printTemplates` | object | `{ "template_code": "./print_templates/template.scriban" }` |
 | `webhooks` | string | path to `./webhooks.json` |
 | `features` | string[] | Opt-in platform behaviours this package was authored for, e.g. `["report-security"]`. Absent/empty = the pre-feature behaviour. See **Feature opt-ins** below. |
 

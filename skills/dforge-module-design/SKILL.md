@@ -171,7 +171,7 @@ check is warn-level, but Phase 3-5 read them):
   mail provider configured; no `comm` dependency needed); `export:<entity>` =
   `data.export`, csv or xlsx of ONE entity (its visible, non-identity,
   non-formula/set/query columns, a filter, an order; **no export of a report or a
-  view**); `report:<code>`; `job:<code>`; `webhook:<code>`. Reading mail is
+  view**); `xlsx:<template>` = an Excel form of ONE entity's rows (a `.xlsx` workbook in `export_templates/` registered in `ui/export_templates.json`; picked from the grid's Export menu or filled by `exportXlsx(entity, template, {filter, orderBy, fileName})` in an action, **not in a job**; same columns as `export:`; needs `S`; no child sets or per-record form, no mail attachment yet); `report:<code>`; `job:<code>`; `webhook:<code>`. Reading mail is
   `fetchMail()` inside an action (IMAP); inbound mail through `comm` is not
   ready, so do not promise it. Run by = the
   full role codes that run it (each needs a matching Permissions Matrix row:

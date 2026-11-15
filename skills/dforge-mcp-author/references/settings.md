@@ -68,7 +68,7 @@ execute:
     var tax = [total] * rate / 100
 ```
 
-`$[setting]` is **not allowed in `canExecute:`** (install refuses it; the client cannot evaluate it). Read the setting in `execute:` with `getSetting()` and refuse with `error()` there.
+`$[setting]` **is allowed in `canExecute:`** on current platforms (`[amount] > $[limit_high]`; the button hides and the server refuses outside the condition; see `dforge://pattern/approval-by-amount`). Older platforms refuse the install: read the setting in `execute:` with `getSetting()` and refuse with `error()` there.
 
 From a number sequence, point `numberSequence.prefixSettingCd` at the setting and use `{prefix}` in the pattern (see `number-sequences`); `$[...]` is not written in the pattern.
 

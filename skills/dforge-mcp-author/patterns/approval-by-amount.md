@@ -18,27 +18,33 @@ canExecute:
 execute:
     if ([amount] <= getSetting('limit_low')) { [status] = 'approved' } else { [status] = 'submitted' }
 
-# approve_manager.dsl   (role: manager)
+# approve_manager.dsl   (role: manager) — the limits are in canExecute
 canExecute:
-    [status] = 'submitted'
+    [status] = 'submitted' AND [amount] > $[limit_low] AND [amount] <= $[limit_high]
 execute:
-    if ([amount] > getSetting('limit_high')) {
-        error('Above {lim} only the director approves', { lim: getSetting('limit_high') })
-    }
     [status] = 'approved'
 
-# approve_director.dsl  (role: director) — mirror image: error when amount <= limit_high
+# approve_director.dsl  (role: director)
+canExecute:
+    [status] = 'submitted' AND [amount] > $[limit_high]
+execute:
+    [status] = 'approved'
 ```
 
-**Why the amount check sits in `execute:`, not in `canExecute`.** `canExecute` is a
-formula the server evaluates without settings (its scalar walker and SQL translator have no
-rule for a `$[setting]` reference; the browser's `getSetting` is a stub returning null): install
-refuses `$[x]` or an unknown function and says to read settings inside `execute:`. Core
-confirmed the fix is feasible but it is not built or scheduled; do not use `$[x]` in
-`canExecute` until it ships. The cost: a manager sees the
-button on a large expense and gets the error on click. Hiding the button needs the
-limit as a column (a copied value on the record), which then freezes the limit at
-submit time — decide which you want and say it in the design.
+**`$[setting]` in `canExecute`** (needs a core release that has it; the MCP's dev tenant has it).
+The server evaluates the setting for the folder the call runs in (nearest folder, then the
+module default) and the browser reads the same value, so the button is hidden **and** the
+server refuses (`ACTION_NOT_AVAILABLE`) when the amount is outside the role's band. Verified
+on a tenant: with limits 1000/1000000 the manager action ran on 5000 and was refused on 500
+and 2 000 000; the director action ran on 2 000 000 and was refused on 500; after the tenant
+admin set `limit_high` = 3000, the manager action ran on 2000 and was refused on 5000, at once,
+without reinstalling. A tenant on an older core refuses the install (`$[x]` in canExecute);
+there, keep the amount test in `execute:` with `error('Above {lim} only the director approves',
+{ lim: getSetting('limit_high') })`, and say in the design that the button stays visible.
+
+Core states that an **unset** setting reads as NULL, so the comparison is false and the action is refused for
+everyone (not run by us): give every limit a default in `settings.json`. Changing a setting needs the `M`
+right on the folder (not `E`), so a director cannot move the limits unless granted it.
 
 ## Design rows
 
@@ -49,13 +55,15 @@ submit time — decide which you want and say it in the design.
   manager `E` on `action:approve_manager`; director `E` on `action:approve_director`.
   Each action needs `S` on the document for its role, or the button never appears.
 - Rules: "limits are read at click time; changing a setting does not re-route documents
-  already submitted".
+  already submitted" (a document that fell out of the manager's band waits for the director).
 - Gap to raise with the user: a limit boundary (is exactly 1000 approved?). The sample
   above is `<=` low, `>` high.
 
 ## Verified by
 
-Scenarios as `admin`: 500 approved at submit; 50000 waits, the director action errors,
-the manager action approves; 2 000 000 the manager action errors, the director approves.
-"The manager role cannot run the director action" is a Permissions Matrix row checked by
-`validate`; the runner cannot act as another role.
+On a tenant, as three real users (author/manager, director, tenant admin): the band
+checks above, the hidden actions (a manager cannot run the director action even by its
+`actionId`: `PERMISSION_DENIED`), and a setting change taking effect at once. The test
+runner acts only as `admin`, so a module test covers the status results (500 approved at
+submit; 5000 `submitted`; the band actions with `refused: canExecute` outside it), while "the
+manager role cannot run the director action" is a Permissions Matrix row checked by `validate`.

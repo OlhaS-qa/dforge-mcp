@@ -41,7 +41,7 @@ trigger's action needs no Execute right.
 - Status Machines: every value, every transition, who may do it, what happens on
   refusal. A reject must say whether it is terminal or returns to draft (recovery
   path), or it is a gap.
-- Actions: `submit_<doc>`, `approve_<doc>`, `reject_<doc>` (each `canExecute: [status] = '<from>'`). Keep `canExecute` a plain comparison on columns joined with AND. Install refuses a `canExecute` that calls a function the server cannot evaluate (`FOO()`), and says to read settings or count children inside `execute:` instead; core also warned that some forms fail open (arithmetic and `ABS()` were evaluated correctly in our run, so the warning is unreproduced).
+- Actions: `submit_<doc>`, `approve_<doc>`, `reject_<doc>` (each `canExecute: [status] = '<from>'`). Keep `canExecute` a plain comparison on columns joined with AND. Install refuses a `canExecute` that calls a function the server cannot evaluate (`FOO()`), and says to count children inside `execute:` instead (`$[setting]` is allowed, see `approval-by-amount`); core also warned that some forms fail open (arithmetic and `ABS()` were evaluated correctly in our run, so the warning is unreproduced).
 - Permissions Matrix: `E` on `action:approve_<doc>` only for the approver role;
   the author role gets `SIU` on `<doc>` and `E` on `action:submit_<doc>`.
 - Rules: "approved cannot be edited" is enforced by trigger `doc_status_guard`

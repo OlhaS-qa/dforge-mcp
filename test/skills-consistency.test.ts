@@ -47,6 +47,16 @@ describe("skills consistency", () => {
 		expect(missing).toEqual([]);
 	});
 
+	it("every pattern file is served as dforge://pattern/<name>", () => {
+		const dir = path.join(SKILLS, "dforge-mcp-author/patterns");
+		const orphans = fs
+			.readdirSync(dir)
+			.filter((f) => f.endsWith(".md") && f !== "README.md")
+			.map((f) => f.slice(0, -3))
+			.filter((n) => !registeredUris.has(`dforge://pattern/${n}`));
+		expect(orphans).toEqual([]);
+	});
+
 	it("every reference file is served as dforge://reference/<name>", () => {
 		const dir = path.join(SKILLS, "dforge-mcp-author/references");
 		const orphans = fs

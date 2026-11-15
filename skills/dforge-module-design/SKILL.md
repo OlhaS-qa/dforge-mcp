@@ -122,6 +122,8 @@ The scan covers: FK optionality, status recovery paths, boolean-that-should-be-a
 status, set aggregation risk, deep navigation (2+ FK hops), self-referential FKs,
 security coverage, and seed-data circular references.
 
+**Check the pattern library.** When the user's words match a trigger in `dforge://pattern/` (an index is in `skills/dforge-mcp-author/patterns/README.md`: posted document with print form, Excel export, own-card role, approval status machine), load that pattern and propose its design rows as a Gap/Proposal; adapt names to the domain, do not copy. Anything a pattern marks **unverified** is not promised to the user.
+
 Two design decisions to get right here, because fixing them in Phase 1 is a
 backtrack:
 

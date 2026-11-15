@@ -54,6 +54,16 @@ function reference(name: string, description: string): ResourceDef {
 	};
 }
 
+function pattern(name: string, description: string): ResourceDef {
+	return {
+		uri: `dforge://pattern/${name}`,
+		name: `Pattern: ${name}`,
+		description,
+		mimeType: "text/markdown",
+		read: () => readSkill(`patterns/${name}.md`),
+	};
+}
+
 // A file from the canonical simple-todo example module. These are the
 // mandatory structure validators — copy their shapes, don't invent.
 function example(relPath: string, description: string): ResourceDef {
@@ -317,6 +327,20 @@ export const resources: ResourceDef[] = [
 			"wiring any OCR/intake action.",
 	),
 	reference("print-templates", "Liquid HTML print templates."),
+	pattern(
+		"posted-document-print",
+		"Pattern: a document that is posted by an action and printed (orders, acts, invoices).",
+	),
+	pattern("approval-by-amount", "Pattern: approval limits from module settings, one action per approver."),
+	pattern(
+		"own-card-role",
+		"Pattern: a role that sees only its own records (isCurrentUser row filter, admin assigns the role).",
+	),
+	pattern(
+		"status-machine-document",
+		"Pattern: approval status machine — read-only status, actions change it, sync trigger refuses bad transitions.",
+	),
+	pattern("excel-export", "Pattern: Excel register or export, data.export vs Excel template, what reaches the file."),
 	reference("translations", "Translation files: locale-keyed, every trait-provided field needs an entry."),
 	reference("queries", "Pre-built saved queries."),
 	reference("schema-import", "Importing entities from DBML/SQL (use dforge_dbml_import for the parse)."),

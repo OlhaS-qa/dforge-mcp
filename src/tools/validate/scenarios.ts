@@ -74,6 +74,11 @@ export function checkTestScenarios(ctx: ValidateContext): void {
 	}
 }
 
+// A suite entry the schema pass already flagged (`do: [42]`, `expect: [false]`) must not crash the
+// reference pass: `"insert" in 42` throws, and the whole validation report would be lost.
+const asObject = (x: unknown): Record<string, unknown> =>
+	x && typeof x === "object" && !Array.isArray(x) ? (x as Record<string, unknown>) : {};
+
 function checkReferences(ctx: ValidateContext, where: string, doc: Record<string, unknown>): void {
 	const { warn, isKnownEntity, actions, columnsOf, manifest, deps } = ctx;
 	const tests = Array.isArray(doc.tests) ? (doc.tests as unknown[]) : [];
@@ -124,7 +129,7 @@ function checkReferences(ctx: ValidateContext, where: string, doc: Record<string
 		const base = `${where} → tests[${i}]${typeof test.name === "string" ? ` (${test.name})` : ""}`;
 		if (Array.isArray(test.given)) {
 			test.given.forEach((g, gi) => {
-				const block = (g ?? {}) as Record<string, unknown>;
+				const block = asObject(g);
 				const at = `${base} → given[${gi}]`;
 				entityRef(block.entityCode, at);
 				if (Array.isArray(block.records)) block.records.forEach((r) => columnsRef(block.entityCode, r, at));
@@ -132,7 +137,7 @@ function checkReferences(ctx: ValidateContext, where: string, doc: Record<string
 		}
 		if (Array.isArray(test.do)) {
 			test.do.forEach((s, si) => {
-				const step = (s ?? {}) as Record<string, unknown>;
+				const step = asObject(s);
 				const at = `${base} → do[${si}]`;
 				if ("insert" in step) {
 					entityRef(step.insert, at);
@@ -149,7 +154,7 @@ function checkReferences(ctx: ValidateContext, where: string, doc: Record<string
 		}
 		if (Array.isArray(test.expect)) {
 			test.expect.forEach((x, xi) => {
-				const exp = (x ?? {}) as Record<string, unknown>;
+				const exp = asObject(x);
 				const at = `${base} → expect[${xi}]`;
 				if ("record" in exp) recordRef(exp.record, at);
 				if ("count" in exp) entityRef(exp.count, at);

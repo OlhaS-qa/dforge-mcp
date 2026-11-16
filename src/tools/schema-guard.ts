@@ -25,8 +25,10 @@ function problemsOf(schemaName: string, text: string): Array<{ path: string; mes
 	let doc: unknown;
 	try {
 		doc = JSON.parse(text);
-	} catch {
-		return undefined;
+	} catch (e) {
+		// Unparseable output is a violation, not "no schema": returning undefined here let a
+		// malformed file skip the guard and be written.
+		return [{ path: "", message: `is not valid JSON: ${(e as Error).message}` }];
 	}
 	return validateAgainstSchema(schema, doc);
 }

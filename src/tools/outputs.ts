@@ -138,12 +138,23 @@ export function parseOutputs(sectionBody: string | null): ParsedOutputs {
 	return out;
 }
 
-/** "employee.full_name" → entity + field. A source naming a known entity as a whole is not split. */
-export function splitSource(s: string, knownEntity: (e: string) => boolean): { entity: string; field?: string } {
-	if (knownEntity(s)) return { entity: s };
+/**
+ * "employee.full_name" → entity + field; "fin.invoice.total" → entity "fin.invoice" + field "total".
+ * A source that names a known entity as a whole ("hr.employee", "fin.invoice") is not split.
+ * An entity spelled with this module's own prefix comes back bare ("hr.employee" in module hr →
+ * "employee"), the key roles.json and the column maps use.
+ */
+export function splitSource(
+	s: string,
+	knownEntity: (e: string) => boolean,
+	moduleCode?: string,
+): { entity: string; field?: string } {
+	const local = (e: string) => (moduleCode && e.startsWith(`${moduleCode}.`) ? e.slice(moduleCode.length + 1) : e);
 	const dot = s.lastIndexOf(".");
-	if (dot > 0) return { entity: s.slice(0, dot), field: s.slice(dot + 1) };
-	return { entity: s };
+	if (dot > 0 && knownEntity(s.slice(0, dot))) return { entity: local(s.slice(0, dot)), field: s.slice(dot + 1) };
+	if (knownEntity(s)) return { entity: local(s) };
+	if (dot > 0) return { entity: local(s.slice(0, dot)), field: s.slice(dot + 1) };
+	return { entity: local(s) };
 }
 
 /**
@@ -153,6 +164,7 @@ export function splitSource(s: string, knownEntity: (e: string) => boolean): { e
 export function rightsKeyFor(
 	row: OutputRow,
 	knownEntity: (e: string) => boolean,
+	moduleCode?: string,
 ): { key: string; need: string } | null {
 	if (!row.mechanism) return null;
 	const { type, code } = row.mechanism;
@@ -160,7 +172,8 @@ export function rightsKeyFor(
 	if (type === "action") return { key: `action:${code}`, need: "E" };
 	const first = row.sources[0];
 	if (!first) return null;
-	if (type === "export") return { key: code, need: "S" };
-	if (type === "print" || type === "xlsx") return { key: splitSource(first, knownEntity).entity, need: "S" };
+	if (type === "export") return { key: splitSource(code, knownEntity, moduleCode).entity, need: "S" };
+	if (type === "print" || type === "xlsx")
+		return { key: splitSource(first, knownEntity, moduleCode).entity, need: "S" };
 	return null;
 }

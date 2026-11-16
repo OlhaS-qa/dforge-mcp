@@ -7,7 +7,7 @@ import type { ValidateContext } from "./context";
 // so an empty visible-column set is not an error for them. Mirrors the server's
 // DataViewVisibleColumnValidator.ColumnAgnosticViewTypes and the frontend view
 // registrations that set hasFieldsPanel:false.
-const COLUMN_AGNOSTIC_VIEW_TYPES = new Set(["diagram", "matrix", "library"]);
+export const COLUMN_AGNOSTIC_VIEW_TYPES = new Set(["diagram", "matrix", "library"]);
 
 /**
  * True when a merged field-def map has at least one VISIBLE SCALAR column — a

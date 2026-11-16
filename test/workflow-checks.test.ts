@@ -86,7 +86,9 @@ describe("workflow (status machine) checks", () => {
 	});
 
 	it("warns when canExecute names an unknown status", () => {
-		setup({ scripts: { ...good, ghost: "canExecute:\n    [status] = 'closed'\nexecute:\n    [status] = 'approved'\n" } });
+		setup({
+			scripts: { ...good, ghost: "canExecute:\n    [status] = 'closed'\nexecute:\n    [status] = 'approved'\n" },
+		});
 		expect(rules()).toContain("wf:status-unknown-from");
 	});
 

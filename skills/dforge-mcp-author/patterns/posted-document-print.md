@@ -11,9 +11,17 @@ print form renders the posted document. Verified on the HR orders module
   (`pattern: "{yyyy}-{seq:4}"`, `resetPeriod: "year"`); `status` dropdown
   `draft` → `posted` (3+ states → status machine, not a boolean).
 - **Every printed datum is a field of `<doc>`.** A datum that lives on another
-  entity (employee name, tax id) is a **formula column that copies it** into the
-  document: `[employee].[full_name]` (F, flag `V`). Copying matters: a posted
-  order must keep what was true when it was signed.
+  entity (employee name, tax id) is copied into the document. A navigation
+  formula (`[employee].[full_name]`, flag `F`) is evaluated **on read**, so it is
+  only the *current* value: edit the employee and a reprinted, already posted
+  order changes (`references/print-templates.md`: formula columns are read in the
+  same SQL as the record). A posted order must keep what was true when it was
+  signed, so store a **snapshot**: a plain column (no formula, flag `V`, no `E`)
+  that `post_<doc>` fills (`[employee_name] = [employee].[full_name]`), and print
+  that column. Use a live formula column only for data that must follow the
+  source. Not verified on a tenant yet: that `execute:` can read
+  `[employee].[full_name]` (a `canExecute` can; see `references/action-dsl.md`).
+  If it cannot, pass the value in as an action parameter.
 - Actions table: `post_<doc>`, `executionMode: single`, runs from the card.
 - Permissions Matrix: the role that types the document `SIU` on `<doc>`; the role
   that posts it adds `action:post_<doc>` = `E`; every lookup target the role

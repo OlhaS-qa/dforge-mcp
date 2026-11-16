@@ -30,6 +30,7 @@ const FILE_SCHEMAS: Array<[string, string]> = [
 	["settings.json", "settings"],
 	["domains.json", "domains"],
 	["traits.json", "traits"],
+	["registers.json", "registers"],
 ];
 
 /** Directory mappings: every *.json inside → schema name. */
@@ -104,8 +105,11 @@ export function checkJsonSchemas(ctx: ValidateContext): void {
 		let doc: unknown;
 		try {
 			doc = JSON.parse(fs.readFileSync(abs, "utf8"));
-		} catch {
-			return; // unparseable files are reported by the check that owns them
+		} catch (e) {
+			// Not every mapped file has another checker that reports broken JSON (a deps/<m>.json
+			// is only tested for existence), so say it here; a duplicate beats a silent pass.
+			warn(rel, `is not valid JSON: ${(e as Error).message}`, "schema:invalid-json");
+			return;
 		}
 		for (const p of validateAgainstSchema(schema, doc)) {
 			warn(

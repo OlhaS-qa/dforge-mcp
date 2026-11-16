@@ -44,8 +44,14 @@ trigger's action needs no Execute right.
 - Actions: `submit_<doc>`, `approve_<doc>`, `reject_<doc>` (each `canExecute: [status] = '<from>'`). Keep `canExecute` a plain comparison on columns joined with AND. Install refuses a `canExecute` that calls a function the server cannot evaluate (`FOO()`), and says to count children inside `execute:` instead (`$[setting]` is allowed, see `approval-by-amount`); core also warned that some forms fail open (arithmetic and `ABS()` were evaluated correctly in our run, so the warning is unreproduced).
 - Permissions Matrix: `E` on `action:approve_<doc>` only for the approver role;
   the author role gets `SIU` on `<doc>` and `E` on `action:submit_<doc>`.
-- Rules: "approved cannot be edited" is enforced by trigger `doc_status_guard`
-  (name the mechanism, or it is a gap).
+- Rules: say exactly what is guarded. `doc_status_guard` (a `status_change`
+  trigger) only refuses **leaving** `approved`. It does **not** stop an author with
+  `SIU` from editing other fields (amount, title) while the status stays
+  `approved`. If "an approved document is frozen" is a requirement, add an update
+  trigger that refuses a change to any column when `old[status] == 'approved'`, or
+  take `U` away from the author and let only actions write (name which). Without
+  one of these the rule is a gap; do not write "approved cannot be edited" in the
+  design.
 
 ## Scenario
 

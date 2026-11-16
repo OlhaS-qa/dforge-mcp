@@ -4,6 +4,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import type { ValidateContext } from "./context";
+import { COLUMN_AGNOSTIC_VIEW_TYPES } from "./views";
 
 // Seed / demo data files with no entity or no records do nothing: the empty
 // stubs `module_create` leaves behind, or a file whose entity was renamed away.
@@ -46,6 +47,8 @@ export function checkEmptySeedData(ctx: ValidateContext): void {
 export function checkEmptyViewColumns(ctx: ValidateContext): void {
 	const { warn, views } = ctx;
 	for (const [vcode, v] of Object.entries(views)) {
+		// A diagram / matrix / library view does not render scalar columns: an empty list is fine there.
+		if (COLUMN_AGNOSTIC_VIEW_TYPES.has((v.viewType as string | undefined) ?? "grid")) continue;
 		const sources = (v.dataSources as Array<Record<string, unknown>> | undefined) ?? [];
 		for (const s of sources) {
 			if (Array.isArray(s.columns) && s.columns.length === 0) {

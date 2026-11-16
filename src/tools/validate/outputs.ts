@@ -186,7 +186,7 @@ function checkOutputsAgainstDesign(ctx: ValidateContext): void {
 		if (exportEntity && columnsOf[exportEntity]) {
 			const defs = ctx.fieldDefsOf[exportEntity] ?? {};
 			for (const src of r.sources) {
-				const { entity, field } = splitSource(src, isKnownEntity);
+				const { entity, field } = splitSource(src, isKnownEntity, ctx.manifest.code);
 				if (!field || entity !== exportEntity || !defs[field]) continue;
 				const f = defs[field];
 				const flags = String(f.flags ?? "");
@@ -244,7 +244,7 @@ function checkOutputsAgainstDesign(ctx: ValidateContext): void {
 				);
 		}
 		for (const src of r.sources) {
-			const { entity, field } = splitSource(src, isKnownEntity);
+			const { entity, field } = splitSource(src, isKnownEntity, ctx.manifest.code);
 			if (entity.includes(".")) continue;
 			if (!isKnownEntity(entity)) {
 				warn(where, `reads '${src}', but '${entity}' is not an entity of the module`, "out:source");
@@ -252,7 +252,7 @@ function checkOutputsAgainstDesign(ctx: ValidateContext): void {
 				warn(where, `reads '${src}', but '${entity}' has no column '${field}'`, "out:source");
 			}
 		}
-		const need = rightsKeyFor(r, isKnownEntity);
+		const need = rightsKeyFor(r, isKnownEntity, ctx.manifest.code);
 		if (need) {
 			for (const role of r.runBy) {
 				if ((NON_ROLE_RUNNERS as readonly string[]).includes(role)) continue;

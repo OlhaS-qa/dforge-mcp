@@ -93,6 +93,15 @@ function run(args: string[], cwd?: string): { stdout: string; stderr: string; co
 				`Install with: npm install -g @dforge-core/dforge-cli (or set DFORGE_CLI_BINARY=/path/to/binary).`,
 		);
 	}
+	// The dforge-cli launcher stays installed when its per-platform binary package was skipped
+	// (optional dependency); say so instead of letting callers guess an old CLI.
+	if (/platform package .* not installed/i.test(r.stderr ?? "")) {
+		throw new Error(
+			`${cli.display} is installed without its native binary (${(r.stderr ?? "").trim()}). ` +
+				`Reinstall dependencies with optional packages enabled (no --no-optional / --omit=optional), ` +
+				`or set DFORGE_CLI_BINARY=/path/to/dforge-cli.`,
+		);
+	}
 	return {
 		stdout: r.stdout ?? "",
 		stderr: r.stderr ?? "",

@@ -11,6 +11,8 @@ Load one by URI, only when its trigger matches what the user said.
 | Approval by amount | "up to X no approval, above Y the director" | `dforge://pattern/approval-by-amount` |
 | Own-card role | "employee sees only their own records" | `dforge://pattern/own-card-role` |
 | Approval status machine | "submit", "approve", "reject", status only changed by actions | `dforge://pattern/status-machine-document` |
+| Multi-step approval | "first the manager, then the director", "a reject goes back to the author" | `dforge://pattern/multi-step-approval` |
+| Escalation by time | "if nobody approves in N days", "remind", "overdue goes to the head" | `dforge://pattern/escalation-by-time` |
 | Excel register / export | "export to Excel", "register", "report for the accountant", "upload to another system" | `dforge://pattern/excel-export` |
 
 Rules for every pattern:

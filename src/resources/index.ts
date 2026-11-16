@@ -332,6 +332,8 @@ export const resources: ResourceDef[] = [
 		"Pattern: a document that is posted by an action and printed (orders, acts, invoices).",
 	),
 	pattern("approval-by-amount", "Pattern: approval limits from module settings, one action per approver."),
+	pattern("multi-step-approval", "Pattern: a chain of approver roles with a reject path back to the author."),
+	pattern("escalation-by-time", "Pattern: scheduled job that escalates or reminds about documents waiting too long."),
 	pattern(
 		"own-card-role",
 		"Pattern: a role that sees only its own records (isCurrentUser row filter, admin assigns the role).",

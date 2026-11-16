@@ -49,6 +49,7 @@ import * as os from "node:os";
 import * as path from "node:path";
 import { checkReports } from "./validate/reports";
 import { checkOutputs } from "./validate/outputs";
+import { checkWorkflow } from "./validate/workflow";
 
 export const moduleValidateSchema = {
 	moduleDir: z.string().describe("Path to the module root. Run this after authoring and before dforge_module_pack."),
@@ -84,6 +85,7 @@ const CHECKS: Array<(ctx: ValidateContext) => void> = [
 	checkActions,
 	checkTriggersJobsWebhooks,
 	checkActionDsl,
+	checkWorkflow,
 	checkFolders,
 	checkDiagrams,
 	checkReports,

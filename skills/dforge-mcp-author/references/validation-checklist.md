@@ -22,7 +22,7 @@ These five have each caused a real install failure. Check them before the sectio
 - [ ] `version` is valid semver
 - [ ] `dbSchemaVersion` is valid semver
 - [ ] `displayName` and `description` are present
-- [ ] `dependencies` includes `admin` (almost always required)
+- [ ] `dependencies` lists only modules the module really uses; do not list `admin` or `metadata` unless a feature needs a minimum version of them (the `dforge_module_create` rule)
 - [ ] Every `entities` entry points to a file that exists
 - [ ] Every other content pointer (`dataViews`, `menus`, `security`, etc.) points to existing files
 
@@ -125,7 +125,7 @@ For each action:
 
 - [ ] Registered in `ui/actions.json` with `label`, `script`, `executionMode`, `entityCode`
 - [ ] DSL file exists at `logic/actions/<script>.dsl`, where `<script>` is the bare filename in the action's `script` field (no path, no `.dsl` extension)
-- [ ] DSL file has `params:`, `canExecute:`, and `execute:` blocks
+- [ ] DSL file has an `execute:` block; `params:` and `canExecute:` are optional (write `canExecute:` whenever the action starts from a status, `canExecute: false` for job-only actions)
 - [ ] `canExecute:` is a valid formula expression
 - [ ] `canExecute:` uses only constructs the server can evaluate — fields,
       literals, comparisons, arithmetic, `IN`, formula functions, a bare boolean

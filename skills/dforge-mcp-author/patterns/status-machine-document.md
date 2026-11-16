@@ -59,3 +59,5 @@ acts as admin only, so "the author cannot approve" stays a matrix row checked by
 For a document whose posting must freeze it in the database, registers have
 `lockedFields` (a DB-level lock of a posted document); that is a different
 mechanism from approval.
+
+`dforge_module_validate` reads such a column as a machine and reports `wf:*` findings: an action setting a value that is not an option (error), no default, an `E` flag, an option nothing leads into or leaves, an action that sets the status without testing it.

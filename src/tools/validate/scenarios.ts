@@ -65,9 +65,11 @@ export function checkTestScenarios(ctx: ValidateContext): void {
 		});
 
 		if (schema) {
-			for (const p of validateAgainstSchema(schema, forSchema)) {
+			const problems = validateAgainstSchema(schema, forSchema);
+			for (const p of problems) {
 				err(`${where}${p.path ? ` → ${p.path}` : ""}`, `${p.message} (test-scenario schema).`);
 			}
+			if (problems.length > 0) continue;
 		}
 
 		checkReferences(ctx, where, doc as Record<string, unknown>);

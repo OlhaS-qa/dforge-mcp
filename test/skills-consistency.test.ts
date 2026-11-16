@@ -17,7 +17,10 @@ function markdownFiles(dir: string): string[] {
 	});
 }
 
-const skillText = markdownFiles(SKILLS).map((f) => ({ file: path.relative(ROOT, f), text: fs.readFileSync(f, "utf8") }));
+const skillText = markdownFiles(SKILLS).map((f) => ({
+	file: path.relative(ROOT, f),
+	text: fs.readFileSync(f, "utf8"),
+}));
 const registeredUris = new Set(resources.map((r) => r.uri));
 const serverSource = fs.readFileSync(path.join(ROOT, "src/server.ts"), "utf8");
 
@@ -42,6 +45,16 @@ describe("skills consistency", () => {
 			}
 		}
 		expect(missing).toEqual([]);
+	});
+
+	it("every pattern file is served as dforge://pattern/<name>", () => {
+		const dir = path.join(SKILLS, "dforge-mcp-author/patterns");
+		const orphans = fs
+			.readdirSync(dir)
+			.filter((f) => f.endsWith(".md") && f !== "README.md")
+			.map((f) => f.slice(0, -3))
+			.filter((n) => !registeredUris.has(`dforge://pattern/${n}`));
+		expect(orphans).toEqual([]);
 	});
 
 	it("every reference file is served as dforge://reference/<name>", () => {

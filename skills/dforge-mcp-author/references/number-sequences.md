@@ -12,7 +12,8 @@ dForge has built-in **automatic document numbering**. Declare a sequence on an e
     "traits": ["identity", "audit"],
     "numberSequence": {
         "column": "number",
-        "pattern": "INV-{yyyy}-{seq:4}",
+        "defaultPrefix": "INV",
+        "pattern": "{prefix}-{yyyy}-{seq:4}",
         "resetPeriod": "year"
     },
     "fields": {
@@ -35,12 +36,15 @@ The platform:
 2. If empty, atomically increments the counter and formats the value.
 3. Writes it into the column before the row is committed.
 
+`column` and **`defaultPrefix` are REQUIRED** by `entity.schema.json` (an earlier version of this page omitted `defaultPrefix`). `defaultPrefix` is the fallback for `{prefix}` when no setting resolves it. `dforge_entity_configure` writes the block with both and checks the placeholders.
+
 No code needed on your side. No DSL. No race conditions (the counter uses a database-level atomic operation).
 
 ## Pattern placeholders
 
 | Placeholder | Meaning | Example |
 |---|---|---|
+| `{prefix}` | The prefix: the `prefixSettingCd` setting, else `defaultPrefix` | `INV` |
 | `{yyyy}` | 4-digit year | `2026` |
 | `{yy}` | 2-digit year | `26` |
 | `{mm}` | 2-digit month | `04` |
@@ -84,10 +88,15 @@ For multi-tenant or multi-folder setups, prefixes can come from module settings 
 }
 ```
 
-And reference it in the pattern:
+And point the sequence at it with `prefixSettingCd`; the pattern uses `{prefix}`:
 
-```
-"pattern": "$[invoice_prefix]-{yyyy}-{seq:4}"
+```json
+"numberSequence": {
+    "column": "number",
+    "prefixSettingCd": "invoice_prefix",
+    "defaultPrefix": "INV",
+    "pattern": "{prefix}-{yyyy}-{seq:4}"
+}
 ```
 
 Folder-scoped settings mean different folders can have different prefixes (e.g. `US-INV-2026-0001` in the US folder, `EU-INV-2026-0001` in the EU folder).
@@ -114,4 +123,5 @@ Counters are stored in `dForge.number_sequence` (definitions) and `dForge.number
 - Using `{seq}` without a width — the counter has no padding. Use `{seq:N}`.
 - Mismatching `resetPeriod` and placeholders — e.g. `resetPeriod: "month"` with a pattern like `{yyyy}-{seq:4}` (no month) means Jan and Feb start at 1 producing duplicate numbers.
 - Trying to set the number column manually on INSERT — it will be overwritten (unless you provide a non-null value, in which case the sequence respects it).
+- Omitting `defaultPrefix` — the schema requires it, validate reports it.
 - Forgetting `numberSequence` declaration and expecting it to "just work" — needs to be declared per entity.

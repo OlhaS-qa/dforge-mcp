@@ -135,16 +135,20 @@ Two consequences worth designing around:
   (`[ref].target`), on **`SUM` / `COUNT` / `AVG`** (deliberately not formula
   functions — counting is a Generated `G` column's job) and on **any name it does
   not know, a typo included** (install refuses the last two, see below).
-- **`$[setting]` references** resolve to `null` in the client (an ordered comparison
-  against null is `false`, so it tends to *disable* the button) and are refused by
-  the server and at install (platform 1.28.12 and later). Keep settings out of `canExecute` and read them in `execute:` instead.
+- **`$[setting]` references** are supported on current platforms: the server evaluates
+  them for the folder the call runs in (nearest folder, then the module default) and the
+  client reads the same loaded value, so `[amount] > $[limit_high]` hides the button and
+  the server refuses with `ACTION_NOT_AVAILABLE`. A setting that is unset (or an object/list)
+  reads as NULL, so the comparison is false and the action is refused. Older platforms
+  refuse the install; there read the setting in `execute:` with `getSetting()` and `error()`.
 - **`TODAY()`** names the requester's calendar day on the server too (their time
   zone: the request's, else the user profile's, else the workspace's, else UTC; a profile zone of
   `UTC` counts as unset). The button is evaluated in the browser and is meant to name the same
   day; `execute:` stays the authority.
-- **Install refuses** a `canExecute` that uses `$[setting]`, `SUM` / `COUNT` / `AVG`
+- **Install refuses** a `canExecute` that uses `SUM` / `COUNT` / `AVG`
   or an unknown function name (a typo included), since the server could never run
-  the action. Read settings and count children in `execute:` instead.
+  the action. Count children in `execute:` instead (and read settings there too on a
+  platform without `$[setting]` in `canExecute`).
 
 | construct | client | server |
 |---|---|---|
@@ -537,13 +541,13 @@ execute:
         error('Adjustment would result in negative stock (' + newQty + ')')
     }
 
-    var movementType = IF(params[adjustment_qty] >= 0, 'Adjustment', 'Write-off')
+    var movementType = params[adjustment_qty] >= 0 ? 'Adjustment' : 'Write-off'
 
     insert('stock_movement', {
         movement_type: movementType,
         warehouse_id: [warehouse_id],
         product_id: [product_id],
-        quantity: IF(params[adjustment_qty] >= 0, params[adjustment_qty], params[adjustment_qty] * -1),
+        quantity: params[adjustment_qty] >= 0 ? params[adjustment_qty] : params[adjustment_qty] * -1,
         movement_date: now(),
         reference_no: params[reason]
     })

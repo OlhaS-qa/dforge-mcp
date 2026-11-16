@@ -82,10 +82,7 @@ function withMarkupAction(): void {
 	writeFileSync(join(dir, "logic", "actions", "markup.dsl"), "execute:\n\t[price] = [price] * 2\n");
 }
 
-const checkMarkup = () =>
-	JSON.parse(
-		actionCheck({ moduleDir: dir, actionCode: "markup" }).files["_action_check.json"],
-	);
+const checkMarkup = () => JSON.parse(actionCheck({ moduleDir: dir, actionCode: "markup" }).files["_action_check.json"]);
 
 describe("a module's own traits.json is overlaid on the platform traits", () => {
 	it("module_validate accepts the trait code and its columns", () => {
@@ -174,8 +171,7 @@ describe("seed_add checks trait-contributed columns, not just authored ones", ()
 		);
 	});
 
-	const seed = (record: Record<string, unknown>) =>
-		seedAdd({ moduleDir: dir, entity: "product", records: [record] });
+	const seed = (record: Record<string, unknown>) => seedAdd({ moduleDir: dir, entity: "product", records: [record] });
 
 	it("rejects a value set on a trait's Reference column", () => {
 		// The installer strips it — the record silently loses its owner.
@@ -247,9 +243,9 @@ describe("a traits.json that does not parse", () => {
 	});
 
 	it("seed_add and translation_sync fail fast, naming the file", () => {
-		expect(() =>
-			seedAdd({ moduleDir: dir, entity: "product", records: [{ product_id: 1, name: "x" }] }),
-		).toThrow(/traits\.json — invalid JSON/);
+		expect(() => seedAdd({ moduleDir: dir, entity: "product", records: [{ product_id: 1, name: "x" }] })).toThrow(
+			/traits\.json — invalid JSON/,
+		);
 		expect(() => translationSync({ moduleDir: dir, locales: ["de-DE"], prune: false })).toThrow(
 			/traits\.json — invalid JSON/,
 		);
@@ -284,7 +280,7 @@ describe("a traits.json that does not parse", () => {
 // A traits file of the WRONG SHAPE parses, so syntax checking alone waves it
 // through — and it is the likelier mistake: every other file in the module is
 // keyed by a wrapper, so wrapping this one is the natural thing to do.
-describe("a traits.json wrapped in a top-level \"traits\" key", () => {
+describe('a traits.json wrapped in a top-level "traits" key', () => {
 	beforeEach(() => {
 		rmSync(dir, { recursive: true, force: true });
 		dir = mkdtempSync(join(tmpdir(), "dforge-mcp-traits-"));
@@ -301,12 +297,12 @@ describe("a traits.json wrapped in a top-level \"traits\" key", () => {
 	// listing the valid codes ended "...plus this module's own traits.json:
 	// traits" — advertising the mistake as the answer.
 	it("never advertises the wrapper key as a valid trait code", () => {
-		expect(() =>
-			seedAdd({ moduleDir: dir, entity: "product", records: [{ product_id: 1, name: "x" }] }),
-		).toThrow(/traits\.json — not a traits file/);
-		expect(() =>
-			seedAdd({ moduleDir: dir, entity: "product", records: [{ product_id: 1, name: "x" }] }),
-		).not.toThrow(/own traits\.json: traits/);
+		expect(() => seedAdd({ moduleDir: dir, entity: "product", records: [{ product_id: 1, name: "x" }] })).toThrow(
+			/traits\.json — not a traits file/,
+		);
+		expect(() => seedAdd({ moduleDir: dir, entity: "product", records: [{ product_id: 1, name: "x" }] })).not.toThrow(
+			/own traits\.json: traits/,
+		);
 	});
 
 	it("action_check and action_add report it too", () => {

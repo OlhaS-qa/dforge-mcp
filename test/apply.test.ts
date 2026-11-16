@@ -3,15 +3,7 @@
 // disk write, so it must not write outside the module or persist the report
 // payloads that reuse the file-map shape for transport.
 
-import {
-	mkdtempSync,
-	mkdirSync,
-	writeFileSync,
-	readFileSync,
-	existsSync,
-	rmSync,
-	symlinkSync,
-} from "node:fs";
+import { mkdtempSync, mkdirSync, writeFileSync, readFileSync, existsSync, rmSync, symlinkSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
@@ -58,9 +50,7 @@ describe("applyToDisk", () => {
 		// would be the worst possible response to a tool bug.
 		mkdirSync(join(dir, "entities"), { recursive: true });
 		writeFileSync(join(dir, "entities", "keep.json"), "{}");
-		expect(() =>
-			applyToDisk(dir, { summary: "x", files: {}, deletes: ["entities"] }),
-		).toThrow(/file-only contract/);
+		expect(() => applyToDisk(dir, { summary: "x", files: {}, deletes: ["entities"] })).toThrow(/file-only contract/);
 		expect(existsSync(join(dir, "entities", "keep.json"))).toBe(true);
 	});
 
@@ -88,9 +78,9 @@ describe("applyToDisk", () => {
 	});
 
 	it("refuses to write outside the module directory", () => {
-		expect(() =>
-			applyToDisk(dir, { summary: "x", files: { "../escape.json": "{}\n" } }),
-		).toThrow(/resolves outside the module directory/);
+		expect(() => applyToDisk(dir, { summary: "x", files: { "../escape.json": "{}\n" } })).toThrow(
+			/resolves outside the module directory/,
+		);
 		expect(existsSync(join(dir, "..", "escape.json"))).toBe(false);
 	});
 
@@ -98,9 +88,9 @@ describe("applyToDisk", () => {
 		const outside = join(dir, "..", `victim-${process.pid}.json`);
 		writeFileSync(outside, "{}");
 		try {
-			expect(() =>
-				applyToDisk(dir, { summary: "x", files: {}, deletes: [`../victim-${process.pid}.json`] }),
-			).toThrow(/resolves outside the module directory/);
+			expect(() => applyToDisk(dir, { summary: "x", files: {}, deletes: [`../victim-${process.pid}.json`] })).toThrow(
+				/resolves outside the module directory/,
+			);
 			expect(existsSync(outside)).toBe(true);
 		} finally {
 			rmSync(outside, { force: true });
@@ -108,9 +98,9 @@ describe("applyToDisk", () => {
 	});
 
 	it("rejects a module-relative path that escapes via a symlink-free '..' segment", () => {
-		expect(() =>
-			applyToDisk(dir, { summary: "x", files: { "entities/../../oops.json": "{}\n" } }),
-		).toThrow(/resolves outside the module directory/);
+		expect(() => applyToDisk(dir, { summary: "x", files: { "entities/../../oops.json": "{}\n" } })).toThrow(
+			/resolves outside the module directory/,
+		);
 	});
 
 	it("carries the tool's warning through", () => {

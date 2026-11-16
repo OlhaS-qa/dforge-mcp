@@ -2,7 +2,7 @@
 
 A scheduled job is **a cron schedule + an action** declared in `logic/jobs.json`. The `dForge.Scheduler` worker process fires the action on schedule. No new DSL surface — jobs reuse existing actions.
 
-Lives in: `logic/jobs.json` at the module root. Schema: [`docs/schemas/jobs.schema.json`](../../../docs/schemas/jobs.schema.json). Full guide: [`docs/business-logic/jobs.md`](../../../docs/business-logic/jobs.md).
+Lives in: `logic/jobs.json` at the module root. Schema: the vendored `jobs.schema.json`. (The dForge-core guide `docs/business-logic/jobs.md` is not in this repo.)
 
 ## Structure
 
@@ -151,12 +151,11 @@ Full source: [`modules/chore/`](../../../modules/chore/).
 - **`timeout > 300` without `class: "long_running"`.** Install fails. Heavy jobs are an explicit opt-in.
 - **Sub-minute cron.** The scheduler ticks every 60 s. Anything finer is dishonest — declare a minute cron.
 - **Renaming `code` between versions.** Treats it as a new job and leaves the old `scheduled_job` row orphaned until uninstall (actually reaped on upgrade — but you lose `job_run` history). Keep `code` stable.
-- **"Schedule this 5 minutes from now" pattern.** There is no per-call `schedule()`. Use a cron-scan job that watches a queue table — see [memory: cron-scan pattern](../../../docs/business-logic/jobs.md#when-to-use-a-job-vs-a-trigger).
+- **"Schedule this 5 minutes from now" pattern.** There is no per-call `schedule()`. Use a cron-scan job that watches a queue table — see the cron-scan pattern in this page.
 - **Confusing `enabled` and `paused`.** `enabled: false` → "Run now" no-ops. `paused: true` → cron skips but "Run now" works. Use `paused` for incident response; use `enabled: false` when you mean "turn this off entirely". Only `enabled` is rewritten on upgrade — `paused` is operator state, so shipping `paused: true` in a new version does nothing to tenants that already have the job.
 
 ## Reference
 
-- Full developer guide: [`docs/business-logic/jobs.md`](../../../docs/business-logic/jobs.md)
 - JSON Schema: [`docs/schemas/jobs.schema.json`](../../../docs/schemas/jobs.schema.json)
 - Reference module: [`modules/chore/`](../../../modules/chore/)
 - Source (registrar): `server/src/dForge.Admin/Services/ModuleInstall/JobRegistrar.cs`

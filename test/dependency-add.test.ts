@@ -14,10 +14,7 @@ let dir: string;
 
 beforeEach(() => {
 	dir = mkdtempSync(join(tmpdir(), "dforge-deps-"));
-	writeFileSync(
-		join(dir, "manifest.json"),
-		JSON.stringify({ code: "shop", displayName: "Shop", entities: {} }),
-	);
+	writeFileSync(join(dir, "manifest.json"), JSON.stringify({ code: "shop", displayName: "Shop", entities: {} }));
 });
 afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
@@ -100,9 +97,9 @@ describe("dependencyAdd", () => {
 	});
 
 	it("still requires an entity against a non-system module", () => {
-		expect(() =>
-			dependencyAdd({ moduleDir: dir, moduleCode: "fin", version: ">=0.1.0", entities: [] }),
-		).toThrow(/at least one 'fin' entity/);
+		expect(() => dependencyAdd({ moduleDir: dir, moduleCode: "fin", version: ">=0.1.0", entities: [] })).toThrow(
+			/at least one 'fin' entity/,
+		);
 	});
 
 	it("refuses to overwrite a stale contract", () => {
@@ -114,17 +111,14 @@ describe("dependencyAdd", () => {
 	});
 
 	it("still rejects self-dependency and duplicates", () => {
-		expect(() =>
-			dependencyAdd({ moduleDir: dir, moduleCode: "shop", version: ">=0.1.0", entities: ["x"] }),
-		).toThrow(/depend on itself/);
-
-		applyToDisk(
-			dir,
-			dependencyAdd({ moduleDir: dir, moduleCode: "fin", version: ">=0.1.0", entities: ["invoice"] }),
+		expect(() => dependencyAdd({ moduleDir: dir, moduleCode: "shop", version: ">=0.1.0", entities: ["x"] })).toThrow(
+			/depend on itself/,
 		);
+
+		applyToDisk(dir, dependencyAdd({ moduleDir: dir, moduleCode: "fin", version: ">=0.1.0", entities: ["invoice"] }));
 		expect(existsSync(join(dir, "deps", "fin.json"))).toBe(true);
-		expect(() =>
-			dependencyAdd({ moduleDir: dir, moduleCode: "fin", version: ">=0.2.0", entities: ["invoice"] }),
-		).toThrow(/already exists/);
+		// A second add is idempotent/repairing now, not an error — see the repair tests.
+		const again = dependencyAdd({ moduleDir: dir, moduleCode: "fin", version: ">=0.2.0", entities: ["invoice"] });
+		expect(again.summary).toContain("already declared");
 	});
 });

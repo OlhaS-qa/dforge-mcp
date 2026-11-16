@@ -79,7 +79,7 @@ Example:
 
 | Letter | Permission |
 |---|---|
-| `E` | Execute (run the action/report/stored procedure, access the folder) |
+| `E` | Execute (run the action/report/stored procedure) |
 
 **`E` on an action is not limited by the user's entity rights.** The gate is on running the action, not on the statements inside it: `insert()` / `update()` / `delete()` / `query()` in its script work on an entity where the user has only `S`. Entity rights apply to the grid, the card and the API, not to action scripts (core #1580).
 
@@ -92,7 +92,7 @@ Example:
 | `"SIU"` | Read/write, no delete |
 | `"SIUD"` | Full CRUD (most common for primary roles) |
 | `"SIUDC"` | Full CRUD + clone |
-| `"E"` | Execute (actions/reports/folders) |
+| `"E"` | Execute (actions/reports/stored procedures) |
 
 ## Object references
 
@@ -103,15 +103,21 @@ Role rights map object codes (entities, actions, reports) to rights strings. Obj
 - `action:send_welcome` — an action named "send_welcome" (**colon**)
 - `report:sales_pipeline` — a report named "sales_pipeline" (**colon**)
 - `sp:rpt_sales_totals` — a stored procedure from `logic/stored_procedures.json` (**colon**)
-- `folder:customers` — the folder with code "customers" (**colon**)
+
+> **`folder:<code>` is NOT a valid rights key.** The `dforge-cli` rejects that prefix, and
+> `dforge_role_add` / `dforge_role_right_set` refuse it (`dforge_module_validate` flags existing ones).
+> How a role is bound to a folder is an **open platform question**: the vendored
+> `folders.schema.json` has no `roles` key, so do not write `roles` into `folders.json` either.
+> Say so to the user instead of inventing a binding; folder access is configured by the tenant
+> administrator until the platform owners confirm a supported way.
 
 `report:` and `sp:` also take a qualified form — `report:fin.ar_aging`, `sp:fin.rpt_ar_aging` — to
-grant on a **dependency's** report or stored procedure. `action:` and `folder:` do not: the
+grant on a **dependency's** report or stored procedure. `action:` does not: the
 installer resolves those within this module only, so a dotted one silently grants nothing.
 
 > **Separator matters — colon for non-entity objects, dot only for cross-module entities.**
-> Actions, reports and folders are prefixed with a **colon**: `action:<code>`, `report:<code>`,
-> `folder:<code>`. A **dot** is reserved for a cross-module *entity* (`module.entity`, e.g.
+> Actions, reports and stored procedures are prefixed with a **colon**: `action:<code>`, `report:<code>`,
+> `sp:<code>`. A **dot** is reserved for a cross-module *entity* (`module.entity`, e.g.
 > `parties.party`). Writing `action.send_welcome` (dot) is **wrong** — the installer treats it as
 > entity `send_welcome` in a module named `action`, finds nothing, and rejects the grant as an
 > unknown object. Same-module entities are bare (`contact`). This matches every dForge-core
@@ -146,7 +152,7 @@ installer resolves those within this module only, so a dotted one silently grant
     }
 }
 ```
-8. **Folder access** is granted separately — roles can reference folder codes, but folder definitions themselves live in `ui/folders.json`.
+8. **Folder access is NOT granted through role rights** (`folder:<code>` is rejected by the CLI and by the tools). Folder definitions live in `ui/folders.json`; how a role is bound to a folder is an open platform question (no `roles` key in the vendored `folders.schema.json`). Tell the user it is configured by the tenant administrator rather than inventing a binding.
 9. **Don't grant a right on a reference's target just to make the name show up.** A reference column
    resolves its display value for anyone who can read the record carrying it — a read-only driver role
    with `S` on `trip` sees each trip's Vehicle name without any grant on `vehicle`. Grant `S` on the
@@ -242,7 +248,7 @@ Lives in: `ui/folders.json`
 | `color` | string | Hex accent color |
 | `entities` | object | Entity membership (see below) |
 | `children` | object | Subfolder definitions (same shape recursively) |
-| `inheritSecurity` | boolean | Child inherits parent folder's role assignments |
+| `inheritSecurity` | boolean | Child inherits parent folder's role assignments (the assignment mechanism itself is the open question above) |
 
 ### Entity membership properties
 
@@ -349,7 +355,7 @@ For simple modules, a flat root folder (no `children`) is fine — just `label`,
 ## Common mistakes
 
 - Using `"entityRights"` instead of `"rights"` — **wrong**.
-- Using a **dot** for an action/report/folder (`action.send_welcome`) — **wrong**. Use a **colon**: `action:send_welcome`, `report:...`, `folder:...`. A dot is only for cross-module *entities* (`fin.invoice`).
+- Using a **dot** for an action/report/folder (`action.send_welcome`) — **wrong**. Use a **colon**: `action:send_welcome`, `report:...`. A dot is only for cross-module *entities* (`fin.invoice`).
 - Granting a bare action code (`send_welcome` with no prefix) — **wrong**, it's read as an entity and rejected as unknown. Prefix it: `action:send_welcome`.
 - Mapping an object to an empty rights string (`"action:x": ""`) — **wrong**. To deny, **omit** the key entirely; to grant, use `"E"`.
 - Using long names like `"read,write"` instead of `"SIU"` — **wrong**.

@@ -2,7 +2,7 @@
 
 A **register** is a declared store of movements or values that documents write to by posting, and that the platform reads back with fixed primitives. Declare it once in `registers.json`; documents bind to it from an `A` or `L` column.
 
-Lives in: `registers.json` at the module root (a keyed dictionary, like `logic/jobs.json`). Schema: [`docs/schemas/registers.schema.json`](../../../docs/schemas/registers.schema.json); binding params: `registryColumnParams` in [`docs/schemas/entity.schema.json`](../../../docs/schemas/entity.schema.json). Full guide: [`docs/business-logic/registers.md`](../../../docs/business-logic/registers.md). Check with `dforge_module_validate`, then `dforge_module_pack` and `dforge_module_install`.
+Lives in: `registers.json` at the module root (a keyed dictionary, like `logic/jobs.json`). Schema: the vendored `registers.schema.json`; binding params: `registryColumnParams` in `entity.schema.json`. (The dForge-core guide `docs/business-logic/registers.md` is NOT part of this repo; this page is the guide available here.) Check with `dforge_module_validate`, then `dforge_module_pack` and `dforge_module_install`.
 
 ## Register or plain table?
 
@@ -264,7 +264,7 @@ execute:
 - DSL reads are gated by the action's Execute right, not Select on the register tables.
 - **Account read options:** `groupBy` (a name or array; a row per combination, zero balances left out), `exclude` (one `{ entity, key }` or an array of them, of any entities, left out together; an empty array leaves nothing out; a refusal names the entry, `exclude[1]`), and on a balance `before` (up to that moment, exclusive and to the precision of the journal's date column, in place of `asOf`'s end of day; giving both is refused).
 - **Balance at a document's moment.** The platform keeps no order between movements stamped in the same second, so "the balance just before this document" is the caller's decision: read `before` the end of that second and `exclude` the document itself plus every document of that second the caller orders after it (1C's МоментВремени orders by date, then reference). `exclude` matches the postings each document wrote by its `source` stamp; postings loaded from another system carry no stamp and are kept unless the register declares `importedKeyField` (below).
-- **Reports:** a dataset with `"datasetType": "R"` reads an accounting register over an interval. It returns one row per chart account with `opening_*`, `turnover_*` and `closing_*` debit and credit for one resource. See [`reports.md`](reports.md) and [`docs/business-logic/gl-ledger-to-declared-register.md`](../../../docs/business-logic/gl-ledger-to-declared-register.md).
+- **Reports:** a dataset with `"datasetType": "R"` reads an accounting register over an interval. It returns one row per chart account with `opening_*`, `turnover_*` and `closing_*` debit and credit for one resource. See [`reports.md`](reports.md). (The dForge-core note `gl-ledger-to-declared-register.md` is not in this repo.)
 
 ### Showing a balance on a record: a `Q` column
 
@@ -300,6 +300,6 @@ For a history loaded from another system, an `accounting` register may declare `
 - **Two resources from one document column**, or two resources storing into one register column. Refused.
 - **Binding to an independent `info` register.** Refused. Write it with `data.set`, or give it a `recorder`.
 - **Direct writes to register tables.** They are ordinary entities. Withhold `I`/`U`/`D` on state, journal and cache in the module's roles.
-- **`A`/`L` column in an `extends` entity.** An `A` column is allowed (a bridge posts another module's document; the state lives in the bridge's `_ext` table). An `L` column is allowed but not yet tested. See [`register-posting-from-extensions.md`](../../../docs/business-logic/register-posting-from-extensions.md).
+- **`A`/`L` column in an `extends` entity.** An `A` column is allowed (a bridge posts another module's document; the state lives in the bridge's `_ext` table). An `L` column is allowed but not yet tested. (The dForge-core note `register-posting-from-extensions.md` is not in this repo.)
 - **`mark-imported` is not `post`.** A document posted in another system is marked with `dforge-cli register mark-imported --entity <e> --state-column <col> --where "<sql>"`. Its state column stays false, and the engine refuses to post or unpost it. Do not set the flag by hand.
 - **Posting a mark-imported document, or unposting a receipt a later shipment consumed** (with `allowNegative: false`), is refused with `REGISTER_NEGATIVE_BALANCE` or an imported-document error.

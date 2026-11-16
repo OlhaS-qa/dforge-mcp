@@ -45,7 +45,12 @@
 		},
 		"description": {
 			"type": "string",
-			"description": "Module description"
+			"description": "Module description. The marketplace module page shows it whole when the package has no README; the catalog card shows shortDescription, else the start of this cut at a sentence."
+		},
+		"shortDescription": {
+			"type": "string",
+			"maxLength": 1000,
+			"description": "Marketplace card text (at most 1000 characters). Optional; refreshed on every publish."
 		},
 		"schemaName": {
 			"type": "string",

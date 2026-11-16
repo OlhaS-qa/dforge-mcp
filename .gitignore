@@ -17,3 +17,5 @@ node_modules/
 # Python bytecode (the 1C toolkit under skills/dforge-1c-import/scripts)
 __pycache__/
 *.pyc
+
+mcp-module-test/

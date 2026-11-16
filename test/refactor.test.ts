@@ -14,7 +14,12 @@ const EXAMPLE = join(process.cwd(), "skills", "dforge-mcp-author", "examples", "
 const parse = (files: Record<string, string>, rel: string) => JSON.parse(files[rel]);
 
 describe("entity_field_rename — example: rename a plain field", () => {
-	const { files } = entityFieldRename({ moduleDir: EXAMPLE, entityName: "todo_list", fieldName: "name", newName: "title" });
+	const { files } = entityFieldRename({
+		moduleDir: EXAMPLE,
+		entityName: "todo_list",
+		fieldName: "name",
+		newName: "title",
+	});
 
 	it("renames the field key on the entity", () => {
 		const e = parse(files, "entities/todo_list.json");
@@ -36,7 +41,12 @@ describe("entity_field_rename — example: rename a plain field", () => {
 });
 
 describe("entity_field_rename — example: rename the hidden FK column", () => {
-	const { files } = entityFieldRename({ moduleDir: EXAMPLE, entityName: "todo_item", fieldName: "list_id", newName: "list_ref" });
+	const { files } = entityFieldRename({
+		moduleDir: EXAMPLE,
+		entityName: "todo_item",
+		fieldName: "list_id",
+		newName: "list_ref",
+	});
 	const e = parse(files, "entities/todo_item.json");
 
 	it("renames the FK field and repoints the paired Reference's thisKey", () => {
@@ -77,7 +87,12 @@ describe("entity_field_rename — synthetic: formula + cross-entity FK", () => {
 			traits: ["identity"],
 			fields: {
 				product_sku: { fieldTypeCd: "text", dbDatatype: "varchar", flags: "EM" },
-				product: { columnType: "R", fieldTypeCd: "lookup", flags: "VEM", link: { entity: "product", thisKey: "product_sku", otherKey: "sku" } },
+				product: {
+					columnType: "R",
+					fieldTypeCd: "lookup",
+					flags: "VEM",
+					link: { entity: "product", thisKey: "product_sku", otherKey: "sku" },
+				},
 			},
 			references: { FK_Line_Product: { from: { field: "product_sku" }, to: { entity: "product", field: "sku" } } },
 		}),
@@ -105,7 +120,9 @@ describe("entity_field_remove — cascade", () => {
 		const e = parse(files, "entities/todo_list.json");
 		expect(e.fields.color).toBeUndefined();
 		const v = parse(files, "ui/data_views.json");
-		expect(v.todo_list_grid.dataSources[0].columns.map((c: { column_cd: string }) => c.column_cd)).not.toContain("color");
+		expect(v.todo_list_grid.dataSources[0].columns.map((c: { column_cd: string }) => c.column_cd)).not.toContain(
+			"color",
+		);
 		const seed = parse(files, "seed-data/01-lists.json");
 		expect(seed.records[0].color).toBeUndefined();
 		expect(seed.records[0].name).toBe("Personal"); // other keys preserved
@@ -120,7 +137,9 @@ describe("entity_field_remove — cascade", () => {
 	});
 
 	it("rejects an unknown field", () => {
-		expect(() => entityFieldRemove({ moduleDir: EXAMPLE, entityName: "todo_list", fieldName: "nope" })).toThrow(/not found/);
+		expect(() => entityFieldRemove({ moduleDir: EXAMPLE, entityName: "todo_list", fieldName: "nope" })).toThrow(
+			/not found/,
+		);
 	});
 });
 
@@ -216,13 +235,19 @@ describe("entity_field_rename — updates ALL formulas that reference the field"
 
 describe("entity_field_rename — guards", () => {
 	it("rejects a name collision", () => {
-		expect(() => entityFieldRename({ moduleDir: EXAMPLE, entityName: "todo_list", fieldName: "name", newName: "color" })).toThrow(/already exists/);
+		expect(() =>
+			entityFieldRename({ moduleDir: EXAMPLE, entityName: "todo_list", fieldName: "name", newName: "color" }),
+		).toThrow(/already exists/);
 	});
 	it("rejects an unknown field", () => {
-		expect(() => entityFieldRename({ moduleDir: EXAMPLE, entityName: "todo_list", fieldName: "nope", newName: "x" })).toThrow(/not found/);
+		expect(() =>
+			entityFieldRename({ moduleDir: EXAMPLE, entityName: "todo_list", fieldName: "nope", newName: "x" }),
+		).toThrow(/not found/);
 	});
 	it("rejects a no-op rename", () => {
-		expect(() => entityFieldRename({ moduleDir: EXAMPLE, entityName: "todo_list", fieldName: "name", newName: "name" })).toThrow(/differ/);
+		expect(() =>
+			entityFieldRename({ moduleDir: EXAMPLE, entityName: "todo_list", fieldName: "name", newName: "name" }),
+		).toThrow(/differ/);
 	});
 });
 
@@ -235,7 +260,10 @@ describe("entity_field_rename — guards", () => {
 function moduleWithView(): string {
 	const dir = mkdtempSync(join(tmpdir(), "dforge-mcp-views-"));
 	mkdirSync(join(dir, "entities"), { recursive: true });
-	writeFileSync(join(dir, "manifest.json"), JSON.stringify({ code: "t", entities: { invoice: "./entities/invoice.json" } }));
+	writeFileSync(
+		join(dir, "manifest.json"),
+		JSON.stringify({ code: "t", entities: { invoice: "./entities/invoice.json" } }),
+	);
 	writeFileSync(
 		join(dir, "entities", "invoice.json"),
 		JSON.stringify({
@@ -321,7 +349,10 @@ function moduleWithDiagrams(): string {
 		JSON.stringify({ code: "t", entities: { invoice: "./entities/invoice.json", line: "./entities/line.json" } }),
 	);
 	for (const e of ["invoice", "line"]) {
-		writeFileSync(join(dir, "entities", `${e}.json`), JSON.stringify({ description: e, traits: ["identity"], fields: {} }));
+		writeFileSync(
+			join(dir, "entities", `${e}.json`),
+			JSON.stringify({ description: e, traits: ["identity"], fields: {} }),
+		);
 	}
 	writeFileSync(
 		join(dir, "docs", "diagrams", "billing.json"),
@@ -382,7 +413,10 @@ describe("entity_rename — diagram key collision", () => {
 	it("refuses when a diagram already draws a planned entity with the new code", () => {
 		writeFileSync(
 			join(dir, "docs", "diagrams", "plan.json"),
-			JSON.stringify({ entities: { invoice: { x: 0, y: 0 }, bill: { x: 200, y: 0 } }, relations: [{ from: "invoice", to: "bill" }] }),
+			JSON.stringify({
+				entities: { invoice: { x: 0, y: 0 }, bill: { x: 200, y: 0 } },
+				relations: [{ from: "invoice", to: "bill" }],
+			}),
 		);
 		expect(() => entityRename({ moduleDir: dir, entityName: "invoice", newName: "bill" })).toThrow(
 			/docs\/diagrams\/plan\.json already draws a 'bill' alongside 'invoice'/,
@@ -394,7 +428,9 @@ describe("entity_rename — diagram key collision", () => {
 			join(dir, "docs", "diagrams", "plan.json"),
 			JSON.stringify({ entities: { invoice: {} }, relations: [{ from: "bill", to: "invoice" }] }),
 		);
-		expect(() => entityRename({ moduleDir: dir, entityName: "invoice", newName: "bill" })).toThrow(/merge the two nodes/);
+		expect(() => entityRename({ moduleDir: dir, entityName: "invoice", newName: "bill" })).toThrow(
+			/merge the two nodes/,
+		);
 	});
 
 	it("allows it when the planned entity sits in a diagram without the old code", () => {

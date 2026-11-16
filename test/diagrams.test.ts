@@ -10,6 +10,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { diagramAdd, diagramAddSchema } from "../src/tools/adds";
 import { applyToDisk } from "../src/tools/apply";
+import { guardSchemas } from "../src/tools/schema-guard";
 import { z } from "zod";
 
 let dir: string;
@@ -64,7 +65,7 @@ describe("diagram_add — create", () => {
 	it("writes docs/diagrams/<code>.json with the entities unplaced", () => {
 		const r = add({ code: "billing", entities: ["invoice", "parties.party"], description: "Invoicing" });
 		expect(Object.keys(r.files)).toContain("docs/diagrams/billing.json");
-		applyToDisk(dir, r);
+		applyToDisk(dir, guardSchemas(dir, r));
 		expect(readDiagram("billing")).toEqual({
 			label: "billing",
 			description: "Invoicing",
@@ -90,7 +91,7 @@ describe("diagram_add — merge into an existing diagram", () => {
 	it("appends missing keys and keeps placed ones untouched", () => {
 		const r = add({ code: "maint", entities: ["asset", "part"] });
 		expect(r.summary).toContain("added 1 entity, 1 already drawn");
-		applyToDisk(dir, r);
+		applyToDisk(dir, guardSchemas(dir, r));
 		const d = readDiagram("maint");
 		expect(d.entities).toEqual({ site: { x: 120, y: 40 }, asset: {}, part: {} });
 		expect(Object.keys(d.entities)).toEqual(["site", "asset", "part"]);

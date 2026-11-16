@@ -18,7 +18,10 @@ export function checkReferences(ctx: ValidateContext): void {
 			}
 			const thisKey = link.thisKey as string | undefined;
 			if (thisKey && !columnsOf[name].has(thisKey)) {
-				err(where, `link.thisKey '${thisKey}' is not a column on '${name}' — the hidden FK column is missing (FK+Reference is two columns)`);
+				err(
+					where,
+					`link.thisKey '${thisKey}' is not a column on '${name}' — the hidden FK column is missing (FK+Reference is two columns)`,
+				);
 			}
 			const pk = target ? pkOf(target) : undefined;
 			if (pk && link.otherKey && link.otherKey !== pk) {
@@ -96,9 +99,7 @@ export function checkEntityViews(ctx: ValidateContext): void {
 
 			// Same column under two spellings: both name one column, and the later
 			// one would silently win.
-			const dupes = declared.filter(
-				(c, i) => declared.findIndex((o) => o.toLowerCase() === c.toLowerCase()) !== i,
-			);
+			const dupes = declared.filter((c, i) => declared.findIndex((o) => o.toLowerCase() === c.toLowerCase()) !== i);
 			for (const d of dupes) {
 				err(where, `lists column '${d}' more than once (differing only by case)`);
 			}
@@ -123,7 +124,7 @@ export function checkEntityViews(ctx: ValidateContext): void {
 					err(
 						`${where}.columns.${cd}`,
 						`sets a formula on a column of type '${(colType as string) ?? "D"}'. A view formula is ` +
-							"only evaluated on a Formula (\"F\") column — on any other column that field holds " +
+							'only evaluated on a Formula ("F") column — on any other column that field holds ' +
 							"the SQL default, and the override would do nothing.",
 					);
 				}
@@ -159,16 +160,15 @@ export function checkToString(ctx: ValidateContext): void {
 	const { err, warn, entities, columnsOf } = ctx;
 	for (const [name, e] of Object.entries(entities)) {
 		const isExtension = typeof e.extends === "string" && e.extends.length > 0;
-		const ts: unknown = Object.prototype.hasOwnProperty.call(e, "toString")
-			? e.toString
-			: undefined;
+		const ts: unknown = Object.prototype.hasOwnProperty.call(e, "toString") ? e.toString : undefined;
 		if (ts === undefined || ts === null || (typeof ts === "string" && ts.trim() === "")) {
 			// A missing template degrades display (lookups show raw PKs) but does
 			// not block install — warn rather than error.
 			if (!isExtension) {
 				warn(
 					`entities/${name}.json`,
-					"has no 'toString' template — every entity should have one, e.g. \"toString\": \"{name}\" (extension entities use null to inherit the base).",
+					'has no \'toString\' template — every entity should have one, e.g. "toString": "{name}" (extension ' +
+						"entities use null to inherit the base).",
 				);
 			}
 			continue;
@@ -186,10 +186,7 @@ export function checkToString(ctx: ValidateContext): void {
 		}
 		for (const b of braces) {
 			if (!columnsOf[name].has(b)) {
-				err(
-					`entities/${name}.json`,
-					`'toString' references {${b}}, which is not a column on '${name}'.`,
-				);
+				err(`entities/${name}.json`, `'toString' references {${b}}, which is not a column on '${name}'.`);
 			}
 		}
 	}
@@ -228,15 +225,10 @@ export function checkSetAggregates(ctx: ValidateContext): void {
 				continue;
 			}
 			if (setCol.columnType !== "S") {
-				warn(
-					where,
-					`aggregates over '[${agg.setField}]', which is not a set column (columnType 'S') on '${name}'.`,
-				);
+				warn(where, `aggregates over '[${agg.setField}]', which is not a set column (columnType 'S') on '${name}'.`);
 				continue;
 			}
-			const childEntity = (setCol.link as Record<string, unknown> | undefined)?.entity as
-				| string
-				| undefined;
+			const childEntity = (setCol.link as Record<string, unknown> | undefined)?.entity as string | undefined;
 			if (!childEntity) continue;
 			const childDefs = fieldDefsOf[childEntity];
 			if (!childDefs) continue; // cross-module / system child — can't inspect offline

@@ -4,11 +4,7 @@
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { describe, expect, it } from "vitest";
-import {
-	checkRegisterBinding,
-	checkRegisters,
-	type RegisterBindingTarget,
-} from "@dforge-core/metadata";
+import { checkRegisterBinding, checkRegisters, type RegisterBindingTarget } from "@dforge-core/metadata";
 import { checkDsl } from "../src/tools/dsl-check";
 
 const REFERENCES = path.resolve(__dirname, "../skills/dforge-mcp-author/references");
@@ -41,8 +37,7 @@ function blocksOf(file: string): Block[] {
 	return out;
 }
 
-const strip = (s: string): string =>
-	s.replace(/^\s*\/\/.*$/gm, "").replace(/,(\s*[}\]])/g, "$1");
+const strip = (s: string): string => s.replace(/^\s*\/\/.*$/gm, "").replace(/,(\s*[}\]])/g, "$1");
 
 /** A block is a whole object, or a `"key": {...}` excerpt of one. */
 function parseJson(body: string): Record<string, unknown> | null {
@@ -92,27 +87,24 @@ describe("registers.md examples", () => {
 		for (const block of blocks.filter((b) => b.lang === "json")) {
 			const parsed = parseJson(block.body);
 			if (!parsed || isRegisters(parsed)) continue;
-			const field = (
-				"params" in parsed ? parsed : Object.values(parsed)[0]
-			) as { columnType?: string; params?: Record<string, unknown> };
+			const field = ("params" in parsed ? parsed : Object.values(parsed)[0]) as {
+				columnType?: string;
+				params?: Record<string, unknown>;
+			};
 			const params = field?.params;
 			const qualified = typeof params?.register === "string" ? params.register : null;
 			if (!params || !qualified) continue;
 
 			// An excerpt without a columnType takes it from the heading above it.
-			const columnType =
-				field.columnType ?? (/`L`/.test(block.heading) ? "L" : /`A`/.test(block.heading) ? "A" : "");
+			const columnType = field.columnType ?? (/`L`/.test(block.heading) ? "L" : /`A`/.test(block.heading) ? "A" : "");
 			expect(["A", "L"], `column type of ${qualified}`).toContain(columnType);
 
 			const target = registers[qualified.slice(qualified.indexOf(".") + 1)];
 			expect(target, `${qualified} is declared in this document`).toBeDefined();
 			bindings++;
-			const errors = checkRegisterBinding(
-				columnType as "A" | "L",
-				params,
-				target as unknown as RegisterBindingTarget,
-				{ moduleCode: qualified.slice(0, qualified.indexOf(".")) },
-			).filter((i) => i.severity === "error");
+			const errors = checkRegisterBinding(columnType as "A" | "L", params, target as unknown as RegisterBindingTarget, {
+				moduleCode: qualified.slice(0, qualified.indexOf(".")),
+			}).filter((i) => i.severity === "error");
 			expect(errors, qualified).toEqual([]);
 		}
 		expect(bindings).toBeGreaterThanOrEqual(2);

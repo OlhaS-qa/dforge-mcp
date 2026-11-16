@@ -2,15 +2,13 @@
 	"column_security.storekeeper": {
 		"description": "Storekeeper",
 		"rights": {
-			"product": "SIU",
-			"folder:warehouse": "E"
+			"product": "SIU"
 		}
 	},
 	"column_security.accountant": {
 		"description": "Accountant",
 		"rights": {
-			"product": "SIU",
-			"folder:finance": "E"
+			"product": "SIU"
 		}
 	}
 }

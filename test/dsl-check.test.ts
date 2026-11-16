@@ -7,11 +7,15 @@ import { checkDsl } from "../src/tools/dsl-check";
 
 const rules = (src: string, opts = {}) => checkDsl(src, opts).map((i) => i.rule);
 const errors = (src: string, opts = {}) =>
-	checkDsl(src, opts).filter((i) => i.level === "error").map((i) => i.rule);
+	checkDsl(src, opts)
+		.filter((i) => i.level === "error")
+		.map((i) => i.rule);
 
 describe("dsl-check — structure", () => {
 	it("accepts the canonical example body", () => {
-		expect(checkDsl("canExecute:\n\t[done] = false\n\nexecute:\n\t[done] = true\n\tinfo('Marked as done')\n")).toEqual([]);
+		expect(checkDsl("canExecute:\n\t[done] = false\n\nexecute:\n\t[done] = true\n\tinfo('Marked as done')\n")).toEqual(
+			[],
+		);
 	});
 
 	it("requires an execute block", () => {
@@ -25,12 +29,12 @@ describe("dsl-check — structure", () => {
 	it("enforces block order and rejects duplicates", () => {
 		expect(errors("execute:\n\tinfo('x')\n\ncanExecute:\n\t[done] = false\n")).toContain("dsl/block-after-execute");
 		expect(errors("execute:\n\tinfo('a')\n\nexecute:\n\tinfo('b')\n")).toContain("dsl/block-after-execute");
-		expect(
-			errors("canExecute:\n\ttrue\n\ncanExecute:\n\tfalse\n\nexecute:\n\tinfo('x')\n"),
-		).toContain("dsl/duplicate-block");
-		expect(
-			errors("canExecute:\n\ttrue\n\nparams:\n\tqty: number\n\nexecute:\n\tinfo('x')\n"),
-		).toContain("dsl/block-order");
+		expect(errors("canExecute:\n\ttrue\n\ncanExecute:\n\tfalse\n\nexecute:\n\tinfo('x')\n")).toContain(
+			"dsl/duplicate-block",
+		);
+		expect(errors("canExecute:\n\ttrue\n\nparams:\n\tqty: number\n\nexecute:\n\tinfo('x')\n")).toContain(
+			"dsl/block-order",
+		);
 	});
 });
 
@@ -167,11 +171,11 @@ describe("dsl-check — misc", () => {
 });
 
 describe("dsl-check — current user", () => {
-	const rulesOf = (body: string) => checkDsl(`execute:\n\t${body}\n`).map(i => `${i.level}/${i.rule}`);
+	const rulesOf = (body: string) => checkDsl(`execute:\n\t${body}\n`).map((i) => `${i.level}/${i.rule}`);
 
 	it("rejects userId() with the platform's own wording", () => {
 		const issues = checkDsl("execute:\n\t[a] = userId()\n");
-		expect(issues.map(i => i.rule)).toEqual(["dsl/user-id-call"]);
+		expect(issues.map((i) => i.rule)).toEqual(["dsl/user-id-call"]);
 		expect(issues[0].level).toBe("error");
 		// Same sentence the compiler and the runtime emit, so the three agree.
 		expect(issues[0].message).toContain("'userId' is a value, not a function");
@@ -185,7 +189,7 @@ describe("dsl-check — current user", () => {
 
 	it("rejects CURRENT_USER_ID() in execute: as formula-only", () => {
 		const issues = checkDsl("execute:\n\t[a] = CURRENT_USER_ID()\n");
-		expect(issues.map(i => i.rule)).toEqual(["dsl/formula-only-function"]);
+		expect(issues.map((i) => i.rule)).toEqual(["dsl/formula-only-function"]);
 		// Points at the execute: spelling, not at now() — the message is
 		// per-function now, not date-specific.
 		expect(issues[0].message).toContain("currentUserId()");

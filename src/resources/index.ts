@@ -54,6 +54,16 @@ function reference(name: string, description: string): ResourceDef {
 	};
 }
 
+function pattern(name: string, description: string): ResourceDef {
+	return {
+		uri: `dforge://pattern/${name}`,
+		name: `Pattern: ${name}`,
+		description,
+		mimeType: "text/markdown",
+		read: () => readSkill(`patterns/${name}.md`),
+	};
+}
+
 // A file from the canonical simple-todo example module. These are the
 // mandatory structure validators — copy their shapes, don't invent.
 function example(relPath: string, description: string): ResourceDef {
@@ -96,12 +106,15 @@ export const resources: ResourceDef[] = [
 	schema(
 		"manifest",
 		"Module manifest JSON schema",
-		"JSON Schema for manifest.json. Consult before emitting manifest content — covers required fields, semver patterns, and the entities map.",
+		"JSON Schema for manifest.json. Consult before emitting manifest content — covers required fields, " +
+			"semver patterns, and the entities map.",
 	),
 	schema(
 		"deps",
 		"Dependency contract JSON schema",
-		"JSON Schema for deps/<module_code>.json — the import list of what this module consumes from one dependency. Every manifest 'dependencies' entry needs one or the package will not validate, pack or install.",
+		"JSON Schema for deps/<module_code>.json — the import list of what this module consumes from one " +
+			"dependency. Every manifest 'dependencies' entry needs one or the package will not validate, pack or " +
+			"install.",
 	),
 	schema(
 		"entity",
@@ -111,7 +124,8 @@ export const resources: ResourceDef[] = [
 	schema(
 		"domains",
 		"Column domains JSON schema",
-		"JSON Schema for domains.json — reusable column domains (base datatype + control + sizing + shared option list) referenced from a field via \"domain\": \"module_cd.domain_cd\".",
+		"JSON Schema for domains.json — reusable column domains (base datatype + control + sizing + shared " +
+			'option list) referenced from a field via "domain": "module_cd.domain_cd".',
 	),
 	schema(
 		"data-views",
@@ -126,7 +140,8 @@ export const resources: ResourceDef[] = [
 	schema(
 		"diagram",
 		"Diagram JSON schema",
-		"JSON Schema for docs/diagrams/<code>.json — one entity diagram per file, the file name is its code (a subset of entities + optional x/y placement each). Design-time only: install ignores it.",
+		"JSON Schema for docs/diagrams/<code>.json — one entity diagram per file, the file name is its code " +
+			"(a subset of entities + optional x/y placement each). Design-time only: install ignores it.",
 	),
 	schema(
 		"menus",
@@ -151,62 +166,85 @@ export const resources: ResourceDef[] = [
 	schema(
 		"traits",
 		"Entity traits JSON schema",
-		"JSON Schema describing the inheritable trait set (identity, audit, audit-full, soft-delete, sorting, postable, accumulation, ledger, period).",
+		"JSON Schema describing the inheritable trait set (identity, audit, audit-full, soft-delete, " +
+			"sorting, postable, accumulation, ledger, period).",
 	),
 	schema(
 		"webhooks",
 		"Webhooks JSON schema",
-		"JSON Schema for logic/webhooks.json — outbound webhook subscriptions: entity + event filter → POST to endpointUrl with selected fields.",
+		"JSON Schema for logic/webhooks.json — outbound webhook subscriptions: entity + event filter → POST " +
+			"to endpointUrl with selected fields.",
 	),
 	schema(
 		"triggers",
 		"Triggers JSON schema",
-		"JSON Schema for logic/triggers.json — intra-tenant DB-event → action invocation: entity + event + optional condition formula → fires an action (sync or async).",
+		"JSON Schema for logic/triggers.json — intra-tenant DB-event → action invocation: entity + event + " +
+			"optional condition formula → fires an action (sync or async).",
 	),
 	schema(
 		"print-templates",
 		"Print templates JSON schema",
-		"JSON Schema for ui/print_templates.json — Liquid HTML print templates and reusable snippets, bound to entities for the print menu.",
+		"JSON Schema for ui/print_templates.json — Liquid HTML print templates and reusable snippets, bound " +
+			"to entities for the print menu.",
+	),
+	schema(
+		"export-templates",
+		"Export templates JSON schema",
+		"JSON Schema for ui/export_templates.json — Excel (.xlsx) export templates bound to an entity; the " +
+			"entity's rows are poured into the workbook by data.export or the exportXlsx() DSL function.",
 	),
 	schema(
 		"translations",
 		"Translations JSON schema",
-		"JSON Schema for translations/<locale>.json — per-section labels (entities, fields, options, constraints, folders, views, menus, settings, roles, reports, actions) and the `messages` block that translates DSL info/warn/error/exit texts, keyed by the exact English text.",
+		"JSON Schema for translations/<locale>.json — per-section labels (entities, fields, options, " +
+			"constraints, folders, views, menus, settings, roles, reports, actions) and the `messages` block " +
+			"that translates DSL info/warn/error/exit texts, keyed by the exact English text.",
 	),
 	schema(
 		"settings",
 		"Module settings JSON schema",
-		"JSON Schema for settings.json — flat map of setting code → { fieldTypeCd, baseDatatypeCd?, label/description, defaultValue, params, formula?, required? }.",
+		"JSON Schema for settings.json — flat map of setting code → { fieldTypeCd, baseDatatypeCd?, " +
+			"label/description, defaultValue, params, formula?, required? }.",
 	),
 	schema(
 		"reports",
 		"Reports JSON schema",
-		"JSON Schema for ui/reports.json — map of report code → { label, description, layout.panels[], datasets, parameters? }. Datasets and panel queries reuse the filter shape from data_views.",
+		"JSON Schema for ui/reports.json — map of report code → { label, description, layout.panels[], " +
+			"datasets, parameters? }. Datasets and panel queries reuse the filter shape from data_views.",
 	),
 	schema(
 		"stored-procedures",
 		"Stored procedures JSON schema",
-		"JSON Schema for logic/stored_procedures.json — map of stored-procedure code → { functionName, schemaName?, params?, columns? }. Required for any report dataset with datasetType 'S': the .sql file under logic/reports/ creates the function, this file registers it as the spCd a dataset binds and the sec_object an sp: right is granted on. functionName names the FUNCTION, never the script.",
+		"JSON Schema for logic/stored_procedures.json — map of stored-procedure code → { functionName, " +
+			"schemaName?, params?, columns? }. Required for any report dataset with datasetType 'S': the .sql " +
+			"file under logic/reports/ creates the function, this file registers it as the spCd a dataset binds " +
+			"and the sec_object an sp: right is granted on. functionName names the FUNCTION, never the script.",
 	),
 	schema(
 		"registers",
 		"Registers JSON schema",
-		"JSON Schema for registers.json at the module root — map of register code → { kind (balance | turnover | info | accounting), dimensions, resources, journal/entity, totals, ... }. Documents bind to a register from their A / L columns instead of restating it.",
+		"JSON Schema for registers.json at the module root — map of register code → { kind (balance | " +
+			"turnover | info | accounting), dimensions, resources, journal/entity, totals, ... }. Documents bind " +
+			"to a register from their A / L columns instead of restating it.",
 	),
 	schema(
 		"card-layouts",
 		"Card layouts JSON schema",
-		"JSON Schema for ui/card_layouts.json — layout name → sections (columnGroup, set, tabGroup). Master/detail is a card layout with a tabGroup of set tabs, not a view type.",
+		"JSON Schema for ui/card_layouts.json — layout name → sections (columnGroup, set, tabGroup). " +
+			"Master/detail is a card layout with a tabGroup of set tabs, not a view type.",
 	),
 	schema(
 		"demo-vars",
 		"Demo data variables JSON schema",
-		"JSON Schema for demo-data/vars.json — a flat map of variable name → literal or { \"$f\": formula }. Demo-data formulas read them as @name.",
+		'JSON Schema for demo-data/vars.json — a flat map of variable name → literal or { "$f": formula }. ' +
+			"Demo-data formulas read them as @name.",
 	),
 	schema(
 		"test-scenario",
 		"Module test scenarios JSON schema",
-		"JSON Schema for tests/*.test.json (not tests/upgrade.test.json) — scenarios run by `dforge-cli module test`: given / do / expect, steps insert, update, delete and action, expectations record, count, error and refused. v0 runs as the signed-in user only.",
+		"JSON Schema for tests/*.test.json (not tests/upgrade.test.json) — scenarios run by `dforge-cli " +
+			"module test`: given / do / expect, steps insert, update, delete and action, expectations record, " +
+			"count, error and refused. v0 runs as the signed-in user only.",
 	),
 	{
 		uri: "dforge://docs/conventions",
@@ -221,72 +259,203 @@ export const resources: ResourceDef[] = [
 		uri: "dforge://docs/dsl",
 		name: "dForge action DSL reference",
 		description:
-			"Full reference for the dForge action DSL (logic/actions/*.dsl files): block structure (params/canExecute/onBeforeStart/execute), execution modes (single/each/batch), field-access syntax ([field], params[name], [ref].[field], records.*), all 42 built-in host functions, incl. register reads, plus function libraries (logic/functions/*.dsl) (query/insert/error/exit/now/sendEmail/...), supported JS subset (ES5 via Esprima/Jint), common patterns, and pitfalls. **Load this before authoring any DSL action (Phase 2 of the wizard).**",
+			"Full reference for the dForge action DSL (logic/actions/*.dsl files): block structure " +
+			"(params/canExecute/onBeforeStart/execute), execution modes (single/each/batch), field-access syntax " +
+			"([field], params[name], [ref].[field], records.*), all 42 built-in host functions, incl. register " +
+			"reads, plus function libraries (logic/functions/*.dsl) (query/insert/error/exit/now/sendEmail/...), " +
+			"supported JS subset (ES5 via Esprima/Jint), common patterns, and pitfalls. **Load this before " +
+			"authoring any DSL action (Phase 2 of the wizard).**",
 		mimeType: "text/markdown",
 		read: () => readVendored("docs/dsl-reference.md"),
 	},
 
 	// ── Per-element authoring references (skills/.../references/*.md) ──────
-	reference("field-types", "Field types — fieldTypeCd (UI control) vs dbDatatype (SQL type), and the correct value for each. Load before adding any field."),
-	reference("flags", "Column flags — only V/I/E/M (there is no H); valid combos (VEM/VE/V/EM/I), how M folds into isNullable, and how the same letters override per entity view. Load before setting any flags."),
-	reference("column-types", "The FK + Reference two-column pattern (the #1 source of broken modules) and Set columns. Load before any relation."),
-	reference("column-domains", "Column domains: a reusable field type (datatype + control + shared option list) referenced via a single `domain` key. Use when the same enum/type repeats across columns. Load before authoring domains.json or a domain-backed column."),
-	reference("formulas", "Formula columns (columnType 'F'): baseDatatypeCd, no dbDatatype, flags 'V', and the formula expression grammar."),
-	reference("traits", "Entity traits (identity, audit, audit-full, ...). identity → PK is '{entity}_id'; don't redefine trait columns."),
-	reference("data-views", "Data views: dataSources array, columns, the order string-array ('order': ['-col','col']), and specialized view configs."),
-	reference("menus", "Menus: leaf items use dataViewCode; section nodes omit itemType; icons are Bootstrap names WITHOUT the bi- prefix."),
-	reference("action-dsl", "Action DSL grammar + 'Registering the action' (ui/actions.json: entityCode/executionMode/script/isAsync/bi- icon)."),
+	reference(
+		"field-types",
+		"Field types — fieldTypeCd (UI control) vs dbDatatype (SQL type), and the correct value for each. " +
+			"Load before adding any field.",
+	),
+	reference(
+		"flags",
+		"Column flags — only V/I/E/M (there is no H); valid combos (VEM/VE/V/EM/I), how M folds into " +
+			"isNullable, and how the same letters override per entity view. Load before setting any flags.",
+	),
+	reference(
+		"column-types",
+		"The FK + Reference two-column pattern (the #1 source of broken modules) and Set columns. Load before any relation.",
+	),
+	reference(
+		"column-domains",
+		"Column domains: a reusable field type (datatype + control + shared option list) referenced via a " +
+			"single `domain` key. Use when the same enum/type repeats across columns. Load before authoring " +
+			"domains.json or a domain-backed column.",
+	),
+	reference(
+		"formulas",
+		"Formula columns (columnType 'F'): baseDatatypeCd, no dbDatatype, flags 'V', and the formula expression grammar.",
+	),
+	reference(
+		"traits",
+		"Entity traits (identity, audit, audit-full, ...). identity → PK is '{entity}_id'; don't redefine trait columns.",
+	),
+	reference(
+		"data-views",
+		"Data views: dataSources array, columns, the order string-array ('order': ['-col','col']), and " +
+			"specialized view configs.",
+	),
+	reference(
+		"menus",
+		"Menus: leaf items use dataViewCode; section nodes omit itemType; icons are Bootstrap names WITHOUT the bi- prefix.",
+	),
+	reference(
+		"action-dsl",
+		"Action DSL grammar + 'Registering the action' (ui/actions.json: entityCode/executionMode/script/isAsync/bi- icon).",
+	),
 	reference("filters", "Canonical filter shape for views, folders, and reports."),
-	reference("security", "Security roles + rights matrix: 'rights' key, SIUDC for entities, E for actions/reports/folders."),
+	reference(
+		"security",
+		"Security roles + rights matrix: 'rights' key, SIUDC for entities, E for actions/reports/folders.",
+	),
 	reference("reports", "Reports: label + description, layout panels + datasets (Query or Stored Procedure)."),
 	reference("settings", "Module settings shape."),
 	reference("jobs", "Scheduled jobs: cron, timeout, jobClass, and the no-record-context constraint."),
 	reference("number-sequences", "Number sequences for reference numbers / codes."),
-	reference("document-extraction", "OCR / document extraction: ocrExtract() (v2 schema-driven + profile forms), logic/extraction_profiles.json, and the detectDocument() doc-type auto-detect built-in. Load before wiring any OCR/intake action."),
+	reference(
+		"document-extraction",
+		"OCR / document extraction: ocrExtract() (v2 schema-driven + profile forms), " +
+			"logic/extraction_profiles.json, and the detectDocument() doc-type auto-detect built-in. Load before " +
+			"wiring any OCR/intake action.",
+	),
 	reference("print-templates", "Liquid HTML print templates."),
+	pattern(
+		"posted-document-print",
+		"Pattern: a document that is posted by an action and printed (orders, acts, invoices).",
+	),
+	pattern("approval-by-amount", "Pattern: approval limits from module settings, one action per approver."),
+	pattern("multi-step-approval", "Pattern: a chain of approver roles with a reject path back to the author."),
+	pattern("escalation-by-time", "Pattern: scheduled job that escalates or reminds about documents waiting too long."),
+	pattern(
+		"own-card-role",
+		"Pattern: a role that sees only its own records (isCurrentUser row filter, admin assigns the role).",
+	),
+	pattern(
+		"status-machine-document",
+		"Pattern: approval status machine — read-only status, actions change it, sync trigger refuses bad transitions.",
+	),
+	pattern("excel-export", "Pattern: Excel register or export, data.export vs Excel template, what reaches the file."),
 	reference("translations", "Translation files: locale-keyed, every trait-provided field needs an entry."),
 	reference("queries", "Pre-built saved queries."),
 	reference("schema-import", "Importing entities from DBML/SQL (use dforge_dbml_import for the parse)."),
-	reference("excel-import", "Importing a data model from a spreadsheet (.xlsx/.csv): decode the binary xlsx with the bundled stdlib Python extractor (dforge://script/xlsx-to-model), build a table-spec, call dforge_module_import. Load before handling any spreadsheet upload."),
+	reference(
+		"excel-import",
+		"Importing a data model from a spreadsheet (.xlsx/.csv): decode the binary xlsx with the bundled " +
+			"stdlib Python extractor (dforge://script/xlsx-to-model), build a table-spec, call " +
+			"dforge_module_import. Load before handling any spreadsheet upload.",
+	),
 	{
 		uri: "dforge://script/xlsx-to-model",
 		name: "xlsx → model extractor (Python, stdlib)",
 		description:
-			"Pure standard-library Python 3 script (no pip needed) that extracts each sheet's headers + sample rows from an .xlsx into JSON. Write it to a temp file and run `python3 <tmp>.py <file.xlsx>`. See dforge://reference/excel-import for the full flow.",
+			"Pure standard-library Python 3 script (no pip needed) that extracts each sheet's headers + sample " +
+			"rows from an .xlsx into JSON. Write it to a temp file and run `python3 <tmp>.py <file.xlsx>`. See " +
+			"dforge://reference/excel-import for the full flow.",
 		mimeType: "text/x-python",
 		read: () => readSkill("scripts/xlsx_to_model.py"),
 	},
-	reference("registers", "Registers: accumulation (balance / turnover / info) and accounting (classic / compound) registers, registers.json, binding a document from its A / L columns (map, per-side debit/credit objects), and the reads. Load before authoring registers.json or an A / L column."),
-	reference("reactions", "Field-change reactions: `reactions` on an entity (formula rules and server `call` rules) that suggest a stored, editable value when the user edits another field; a bridge module's reactions on its host's entity (`reaction:<code>` in deps); dependent references. Load before authoring any reaction."),
+	reference(
+		"registers",
+		"Registers: accumulation (balance / turnover / info) and accounting (classic / compound) registers, " +
+			"registers.json, binding a document from its A / L columns (map, per-side debit/credit objects), and " +
+			"the reads. Load before authoring registers.json or an A / L column.",
+	),
+	reference(
+		"reactions",
+		"Field-change reactions: `reactions` on an entity (formula rules and server `call` rules) that " +
+			"suggest a stored, editable value when the user edits another field; a bridge module's reactions on " +
+			"its host's entity (`reaction:<code>` in deps); dependent references. Load before authoring any " +
+			"reaction.",
+	),
 	reference("data-migration", "Migrating data from a legacy database."),
-	reference("manifest", "manifest.json shape: moduleId UUID, semver, entities map, supportedLocales (non-English only), security block."),
+	reference(
+		"manifest",
+		"manifest.json shape: moduleId UUID, semver, entities map, supportedLocales (non-English only), security block.",
+	),
 	reference("conventions", "Cross-cutting module rules: naming, structure, translations, upgrade migrations."),
 	reference("validation-checklist", "Final pre-pack self-review checklist covering every file type."),
 
 	// ── Canonical example module (skills/.../examples/simple-todo) ────────
 	example("manifest.json", "Canonical manifest.json."),
-	example("entities/todo_item.json", "Canonical entity: traits, flags (VEM/VE), dropdown options as {value,label}, FK+Reference pattern (otherKey = '{entity}_id'), references block, toString uses a business field."),
+	example(
+		"entities/todo_item.json",
+		"Canonical entity: traits, flags (VEM/VE), dropdown options as {value,label}, FK+Reference pattern " +
+			"(otherKey = '{entity}_id'), references block, toString uses a business field.",
+	),
 	example("entities/todo_list.json", "Canonical parent/lookup entity."),
-	example("ui/actions.json", "Canonical ui/actions.json: label/description/icon('bi-...')/entityCode/executionMode/script(bare)/isAsync."),
+	example(
+		"ui/actions.json",
+		"Canonical ui/actions.json: label/description/icon('bi-...')/entityCode/executionMode/script(bare)/isAsync.",
+	),
 	example("ui/data_views.json", "Canonical data views: dataSources array + order string-array."),
 	example("ui/menus.json", "Canonical menus: dataViewCode leaves, bi-less icons."),
 	example("security/roles.json", "Canonical roles: rights with SIUDC / E."),
-	example("seed-data/01-lists.json", "Canonical seed data: PK key is '{entity}_id' (not 'id'), parent-before-child via numeric prefix."),
+	example(
+		"seed-data/01-lists.json",
+		"Canonical seed data: PK key is '{entity}_id' (not 'id'), parent-before-child via numeric prefix.",
+	),
 	example("logic/actions/mark_done.dsl", "Canonical action DSL body (params/canExecute/execute)."),
 
 	// ── Matrix view example module (skills/.../examples/matrix-budget) ────
-	matrixExample("ui/data_views.json", "Canonical MATRIX data view: viewType 'matrix' + viewConfig with a dataset rowAxis (categories), a dropdown colAxis ('budget_line.quarter'), and an editable cell mapping rowKey/colKey/fields onto the budget_line entity."),
-	matrixExample("entities/budget_line.json", "Matrix CELL entity: one record per (category, quarter) — FK+Reference to the row-axis entity plus the dropdown column that is the col axis, with the editable 'amount' value column."),
+	matrixExample(
+		"ui/data_views.json",
+		"Canonical MATRIX data view: viewType 'matrix' + viewConfig with a dataset rowAxis (categories), a " +
+			"dropdown colAxis ('budget_line.quarter'), and an editable cell mapping rowKey/colKey/fields onto " +
+			"the budget_line entity.",
+	),
+	matrixExample(
+		"entities/budget_line.json",
+		"Matrix CELL entity: one record per (category, quarter) — FK+Reference to the row-axis entity plus " +
+			"the dropdown column that is the col axis, with the editable 'amount' value column.",
+	),
 	matrixExample("entities/budget_category.json", "Matrix row-axis (dataset) entity."),
-	matrixExample("manifest.json", "Matrix example manifest: declares only 'entities' — the data view, roles and seed files are found by convention (ui/, security/, seed-data/), and the manifest schema is additionalProperties:false."),
+	matrixExample(
+		"manifest.json",
+		"Matrix example manifest: declares only 'entities' — the data view, roles and seed files are found " +
+			"by convention (ui/, security/, seed-data/), and the manifest schema is additionalProperties:false.",
+	),
 	matrixExample("security/roles.json", "Matrix example roles: S on the axis entity, SIUD on the editable cell entity."),
 	matrixExample("seed-data/01-categories.json", "Matrix example seed: row-axis category records."),
-	columnSecurityExample("entities/product.json", "Canonical ENTITY VIEWS (column-level security): one entity, two views — 'storekeeper' (a plain column subset, prices absent entirely) and 'accountant' (with a per-column flags override making a column read-only in that view only, and a per-view formula override on an \"F\" column). Both list the primary key, which a view must."),
-	columnSecurityExample("ui/folders.json", "The BINDING half: two folders over one entity, each with a different entities.product.viewName. Without this the views exist and nothing uses them; with a name no view declares, the install fails rather than falling back to the full column set."),
-	columnSecurityExample("security/roles.json", "Roles for the two folders. Note rights are per ENTITY, not per column — the column dimension is the entity view, not the role."),
-	columnSecurityExample("ui/data_views.json", "The data view lists EVERY column including prices — correct: presentation is one axis, the folder's entity view decides what a user may see of it. You do not maintain one data view per role."),
-	columnSecurityExample("manifest.json", "Column-security example manifest. Note it declares no dataViews/menus/security pointers — those files are found by convention, and the manifest schema is additionalProperties:false."),
-	columnSecurityExample("README.md", "Why entity views exist, what each of the two views demonstrates, and the five ways a view fails the install."),
+	columnSecurityExample(
+		"entities/product.json",
+		"Canonical ENTITY VIEWS (column-level security): one entity, two views — 'storekeeper' (a plain " +
+			"column subset, prices absent entirely) and 'accountant' (with a per-column flags override making a " +
+			'column read-only in that view only, and a per-view formula override on an "F" column). Both list ' +
+			"the primary key, which a view must.",
+	),
+	columnSecurityExample(
+		"ui/folders.json",
+		"The BINDING half: two folders over one entity, each with a different entities.product.viewName. " +
+			"Without this the views exist and nothing uses them; with a name no view declares, the install fails " +
+			"rather than falling back to the full column set.",
+	),
+	columnSecurityExample(
+		"security/roles.json",
+		"Roles for the two folders. Note rights are per ENTITY, not per column — the column dimension is the " +
+			"entity view, not the role.",
+	),
+	columnSecurityExample(
+		"ui/data_views.json",
+		"The data view lists EVERY column including prices — correct: presentation is one axis, the folder's " +
+			"entity view decides what a user may see of it. You do not maintain one data view per role.",
+	),
+	columnSecurityExample(
+		"manifest.json",
+		"Column-security example manifest. Note it declares no dataViews/menus/security pointers — those " +
+			"files are found by convention, and the manifest schema is additionalProperties:false.",
+	),
+	columnSecurityExample(
+		"README.md",
+		"Why entity views exist, what each of the two views demonstrates, and the five ways a view fails the install.",
+	),
 ];
 
 function readVendored(rel: string): string {

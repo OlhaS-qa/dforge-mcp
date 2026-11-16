@@ -4,31 +4,20 @@ import * as path from "node:path";
 import { z } from "zod";
 import {
 	buildManifest,
-	buildEntity,
-	buildDataViews,
 	buildFolders,
 	buildMenus,
 	buildRoles,
 	buildActions,
 	buildSettings,
-	buildSeedData,
 	buildGitignore,
 	buildVscodeSettings,
 	buildZedSettings,
 } from "@dforge-core/dforge-cli/templates";
 import * as cliTemplates from "@dforge-core/dforge-cli/templates";
-import type {
-	EntitySpec,
-	Preset,
-	ScaffoldOpts,
-} from "@dforge-core/dforge-cli/templates";
-import {
-	traitsInput,
-	withTraits,
-	withIdentityToString,
-	isReadyToScaffold,
-	PHASE_STATE_FILE,
-} from "./_helpers";
+import type { EntitySpec, Preset, ScaffoldOpts } from "@dforge-core/dforge-cli/templates";
+import { traitsInput, isReadyToScaffold, PHASE_STATE_FILE } from "./_helpers";
+import { buildEntityStub, viewColumnsFor, nameFieldInput, toStringInput } from "./add-entity";
+import { SYSTEM_MODULES, buildDependencyContract } from "./adds";
 
 // Tool input schema. zod gives us both validation and a JSON schema MCP
 // can advertise to clients (so the LLM sees argument types).
@@ -36,7 +25,9 @@ export const createModuleSchema = {
 	moduleDir: z
 		.string()
 		.describe(
-			"Absolute path to the directory where the module will be written. Phase 0 must be validated first — dforge_module_plan validate writes a docs/phase.json marker that this gate reads (readyToScaffold: true).",
+			"Absolute path to the directory where the module will be written. Phase 0 must be validated first — " +
+				"dforge_module_plan validate writes a docs/phase.json marker that this gate reads (readyToScaffold: " +
+				"true).",
 		),
 	code: z
 		.string()
@@ -55,13 +46,46 @@ export const createModuleSchema = {
 		.regex(/^\d+\.\d+\.\d+(-[\w.]+)?$/)
 		.default("0.0.1"),
 	dependencies: z
-		.array(z.string())
+		.array(
+			z.union([
+				z.string().regex(/^[a-z][a-z0-9_-]*$/),
+				z.object({
+					module: z.string().regex(/^[a-z][a-z0-9_-]*$/),
+					version: z.string().optional().describe("Semver range; default '>=0.0.1'."),
+					entities: z
+						.array(z.string())
+						.describe("The provider entities this module consumes, e.g. ['party']. Required for a non-system module."),
+				}),
+			]),
+		)
 		.default([])
-		.describe("Other modules this one requires, by code (e.g. ['parties']). Leave empty unless it genuinely depends on another module. Do NOT list 'admin' or 'metadata' — they're system modules present in every tenant, so depending on them is redundant (the check always passes and never affects install order)."),
+		.describe(
+			"Other modules this one requires. Every dependency needs a deps/<module>.json contract naming the " +
+				"consumed entities, so pass { module: 'parties', entities: ['party'] } — the manifest entry AND the " +
+				"contract are then written. A bare code is accepted only for a system module (admin, metadata, " +
+				"workspace, sys-billing: a platform-version gate, contract with no entities); for any other module a " +
+				"bare code is refused, because a manifest entry without a contract fails the first validate — add it " +
+				"later with dforge_dependency_add. Leave empty unless the module genuinely depends on another one; " +
+				"do NOT depend on 'admin'/'metadata' without a feature that needs a minimum version.",
+		),
+	supportedLocales: z
+		.array(z.string().regex(/^[a-z]{2,3}(-[A-Z]{2})?$/))
+		.optional()
+		.describe(
+			"Non-English locales this module will ship translations for, e.g. ['ru-RU', 'uk-UA'] -> " +
+				"manifest.supportedLocales. English ('en', 'en-US') is the default and is never listed. Generate the " +
+				"files with dforge_translation_sync.",
+		),
 	preset: z
 		.enum(["minimal", "minimal-plus", "full"])
 		.default("minimal")
-		.describe("'minimal' = manifest+entity+UI+role only. 'full' = also settings/seed-data/logic stubs. No translation file: English lives in the definitions, other locales come from dforge_translation_sync. 'minimal-plus' behaves like 'minimal' here since MCP can't loop; pass all entities up-front."),
+		.describe(
+			"'minimal' = manifest+entity+UI+role only. 'full' = also settings.json and a logic/actions folder " +
+				"(no seed-data stubs: an empty seed file is invalid — add real data with dforge_seed_add). No " +
+				"translation file: English lives in the definitions, other locales come from " +
+				"dforge_translation_sync. 'minimal-plus' behaves like 'minimal' here since MCP can't loop; pass all " +
+				"entities up-front.",
+		),
 	entities: z
 		.array(
 			z.object({
@@ -71,10 +95,14 @@ export const createModuleSchema = {
 					.describe("Entity code, e.g. 'customer'. Lowercase, digits, underscore; first char a letter."),
 				label: z.string().min(1),
 				traits: traitsInput,
+				nameField: nameFieldInput,
+				toStringTemplate: toStringInput,
 			}),
 		)
 		.min(1)
-		.describe("At least one entity. Each entity gets a stub JSON, a default grid view, a menu item, and rights in the admin role."),
+		.describe(
+			"At least one entity. Each entity gets a stub JSON, a default grid view, a menu item, and rights in the admin role.",
+		),
 };
 
 function assertPhase0Complete(moduleDir: string): void {
@@ -108,9 +136,7 @@ function assertPhase0Complete(moduleDir: string): void {
  * This is the pure, return-not-write version. The CLI's `init module`
  * command does the equivalent + writes to disk.
  */
-export function createModuleFiles(
-	args: z.infer<z.ZodObject<typeof createModuleSchema>>,
-): Record<string, string> {
+export function createModuleFiles(args: z.infer<z.ZodObject<typeof createModuleSchema>>): Record<string, string> {
 	assertPhase0Complete(args.moduleDir);
 	const moduleId = randomUUID();
 
@@ -119,13 +145,15 @@ export function createModuleFiles(
 	// the codes array — so pass a placeholder preset to the builders and apply
 	// the real (metadata-validated) codes to each entity JSON below.
 	const traitsByName: Record<string, string[]> = {};
+	const stubOptsByName: Record<string, { nameField?: boolean; toStringTemplate?: string }> = {};
 	const specEntities: EntitySpec[] = args.entities.map((e) => {
 		traitsByName[e.name] = e.traits;
+		stubOptsByName[e.name] = { nameField: e.nameField, toStringTemplate: e.toStringTemplate };
 		return { name: e.name, label: e.label, traits: "identity" };
 	});
 
 	const opts: ScaffoldOpts = {
-		path: "",  // unused: builders don't write paths into output
+		path: "", // unused: builders don't write paths into output
 		code: args.code,
 		displayName: args.displayName,
 		description: args.description ?? "",
@@ -133,10 +161,33 @@ export function createModuleFiles(
 		license: args.license,
 		version: args.version,
 		dbSchemaVersion: args.dbSchemaVersion,
-		dependencies: args.dependencies,
+		dependencies: [],
 		preset: args.preset as Preset,
 		entities: specEntities,
 	};
+
+	// Dependencies: manifest entry + deps/<module>.json contract, always together.
+	const depEntries: Record<string, string | { version: string; entities: string[] }> = {};
+	const depContracts: Record<string, unknown> = {};
+	for (const d of args.dependencies) {
+		const dep = typeof d === "string" ? { module: d, version: undefined, entities: [] as string[] } : d;
+		if (dep.module === args.code) throw new Error("A module can't depend on itself.");
+		const version = dep.version ?? ">=0.0.1";
+		if (dep.entities.length === 0) {
+			if (!SYSTEM_MODULES.has(dep.module)) {
+				throw new Error(
+					`Dependency '${dep.module}' names no entity. A manifest entry without a deps/${dep.module}.json contract fails the first validate, ` +
+						`and the contract must name at least one consumed entity. Pass { module: '${dep.module}', entities: ['<entity>'] } here, ` +
+						`or leave it out and call dforge_dependency_add once you know the entities.`,
+				);
+			}
+			depEntries[dep.module] = version;
+			depContracts[dep.module] = buildDependencyContract(dep.module, version, [], []);
+		} else {
+			depEntries[dep.module] = { version, entities: dep.entities };
+			depContracts[dep.module] = buildDependencyContract(dep.module, version, dep.entities, [`ref:${args.code}`]);
+		}
+	}
 
 	const files: Record<string, string> = {};
 	const write = (rel: string, obj: unknown) => {
@@ -147,15 +198,40 @@ export function createModuleFiles(
 	};
 
 	// Minimal set — every preset writes these.
-	write("manifest.json", buildManifest(opts, moduleId));
+	const manifest: Record<string, unknown> = { ...buildManifest(opts, moduleId) };
+	if (Object.keys(depEntries).length) manifest.dependencies = depEntries;
+	if (args.supportedLocales?.length) {
+		const bad = args.supportedLocales.filter((l) => /^en(-|$)/i.test(l));
+		if (bad.length) {
+			throw new Error(
+				`supportedLocales must not list English (${bad.join(", ")}) — English lives in the definitions and is the default.`,
+			);
+		}
+		manifest.supportedLocales = [...new Set(args.supportedLocales)];
+	}
+	write("manifest.json", manifest);
+	for (const [mod, contract] of Object.entries(depContracts)) write(`deps/${mod}.json`, contract);
+	const builtEntities: Record<string, Record<string, any>> = {};
 	for (const e of opts.entities) {
 		const traits = traitsByName[e.name];
-		write(
-			`entities/${e.name}.json`,
-			withIdentityToString(withTraits(buildEntity(e), traits), e.name, traits),
-		);
+		const entity = buildEntityStub(e, traits, stubOptsByName[e.name]);
+		builtEntities[e.name] = entity;
+		write(`entities/${e.name}.json`, entity);
 	}
-	write("ui/data_views.json", buildDataViews(opts.entities));
+	// Default grids carry real columns (fields the entity has), never `columns: []`.
+	write(
+		"ui/data_views.json",
+		Object.fromEntries(
+			opts.entities.map((e) => [
+				e.name,
+				{
+					viewType: "grid",
+					label: e.label,
+					dataSources: [{ entityCode: e.name, columns: viewColumnsFor(builtEntities[e.name], e.name) }],
+				},
+			]),
+		),
+	);
 	write("ui/folders.json", buildFolders(opts));
 	write("ui/menus.json", buildMenus(opts));
 	write("ui/actions.json", buildActions());
@@ -170,17 +246,12 @@ export function createModuleFiles(
 	// instead. Read off the templates module rather than imported directly:
 	// the helper landed after dforge-cli 0.2.16, and scaffolding must not
 	// break for anyone still on an older CLI.
-	const buildZedTasks = (
-		cliTemplates as { buildZedTasks?: () => unknown[] }
-	).buildZedTasks;
+	const buildZedTasks = (cliTemplates as { buildZedTasks?: () => unknown[] }).buildZedTasks;
 	if (buildZedTasks) write(".zed/tasks.json", buildZedTasks());
 
 	// Full preset adds the optional-but-typical extras.
 	if (opts.preset === "full") {
 		write("settings.json", buildSettings());
-		for (const e of opts.entities) {
-			write(`seed-data/01-${e.name}.json`, buildSeedData());
-		}
 		// .gitkeep — empty file, signals presence of an empty dir.
 		writeText("logic/actions/.gitkeep", "");
 	}

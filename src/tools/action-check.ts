@@ -14,9 +14,10 @@ import {
 	readLocalTraits,
 	entityRecordContext,
 	type ToolResult,
+	DOTTED_CODE_RE,
 } from "./_helpers";
 import { readMessageTranslations } from "./validate/translations";
-import { checkDsl, type DslIssue } from "./dsl-check";
+import { checkDsl, readLibraryFunctions, type DslIssue } from "./dsl-check";
 
 export const actionCheckSchema = {
 	moduleDir: z
@@ -30,7 +31,8 @@ export const actionCheckSchema = {
 		.regex(/^[a-z][a-z0-9_]*$/)
 		.optional()
 		.describe(
-			"Check an action already registered in ui/actions.json — its DSL file, executionMode, and any job binding are read from disk. Omit to check a raw dslBody instead.",
+			"Check an action already registered in ui/actions.json — its DSL file, executionMode, and any job " +
+				"binding are read from disk. Omit to check a raw dslBody instead.",
 		),
 	dslBody: z
 		.string()
@@ -40,20 +42,24 @@ export const actionCheckSchema = {
 		.enum(["single", "each", "batch"])
 		.optional()
 		.describe(
-			"Execution mode the body will run under. Gates the record-context rules ('[field]' is invalid in batch mode). Read from ui/actions.json when actionCode is used.",
+			"Execution mode the body will run under. Gates the record-context rules ('[field]' is invalid in " +
+				"batch mode). Read from ui/actions.json when actionCode is used.",
 		),
 	viaJob: z
 		.boolean()
 		.optional()
 		.describe(
-			"True when a scheduled job will fire this action — jobs have NO current record, so '[field]' becomes a hard error. Detected automatically from logic/jobs.json when actionCode is used.",
+			"True when a scheduled job will fire this action — jobs have NO current record, so '[field]' becomes " +
+				"a hard error. Detected automatically from logic/jobs.json when actionCode is used.",
 		),
 	entityCode: z
 		.string()
-		.regex(/^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)?$/)
+		.regex(DOTTED_CODE_RE)
 		.optional()
 		.describe(
-			"Entity the draft body acts on. With moduleDir, this turns on the column rules ('[field]' must be a real column, traits expanded) for a dslBody that isn't registered yet. Read from ui/actions.json when actionCode is used.",
+			"Entity the draft body acts on. With moduleDir, this turns on the column rules ('[field]' must be a " +
+				"real column, traits expanded) for a dslBody that isn't registered yet. Read from ui/actions.json " +
+				"when actionCode is used.",
 		),
 };
 
@@ -73,6 +79,7 @@ export function actionCheck(args: Args): ToolResult {
 	let moduleCode: string | undefined;
 	let entity: { qualified: string; columns: Set<string> } | undefined;
 	let messageTranslations: Record<string, Record<string, string>> | undefined;
+	let libraryFunctions: string[] | undefined;
 	// Defects found while resolving the module, reported alongside the DSL ones
 	// so a single result answers "is this body ready to commit?".
 	const preIssues: DslIssue[] = [];
@@ -84,6 +91,7 @@ export function actionCheck(args: Args): ToolResult {
 	if (args.moduleDir) {
 		const { paths, manifest } = loadManifest(args.moduleDir);
 		moduleCode = manifest.code;
+		libraryFunctions = readLibraryFunctions(paths.logicDir);
 		messageTranslations = readMessageTranslations(paths.translationsDir, manifest.supportedLocales);
 
 		if (args.actionCode) {
@@ -104,7 +112,7 @@ export function actionCheck(args: Args): ToolResult {
 				);
 			}
 			body = fs.readFileSync(dslPath, "utf8");
-			mode = mode ?? ((entry.executionMode as string) ?? (entry.mode as string));
+			mode = mode ?? (entry.executionMode as string) ?? (entry.mode as string);
 			entityCode = entityCode ?? (entry.entityCode as string | undefined);
 			label = `logic/actions/${script}.dsl`;
 
@@ -150,6 +158,7 @@ export function actionCheck(args: Args): ToolResult {
 			actionCode: args.actionCode,
 			entity,
 			messageTranslations,
+			libraryFunctions,
 		}),
 	];
 	const errors = issues.filter((i) => i.level === "error");
@@ -165,11 +174,9 @@ export function actionCheck(args: Args): ToolResult {
 	return {
 		summary,
 		files: {
-			"_action_check.json": JSON.stringify(
-				{ ok: errors.length === 0, executionMode: mode ?? null, viaJob, errors, warnings },
-				null,
-				"\t",
-			) + "\n",
+			"_action_check.json":
+				JSON.stringify({ ok: errors.length === 0, executionMode: mode ?? null, viaJob, errors, warnings }, null, "\t") +
+				"\n",
 		},
 		warning: errors.length
 			? `${errors.length} DSL error(s) — each is a documented install failure. Fix before dforge_action_add / dforge_module_pack.`

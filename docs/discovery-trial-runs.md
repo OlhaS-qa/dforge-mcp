@@ -47,8 +47,8 @@ shortened and cleaned for the example).
 | 10 | Offered options were bullets; the user had to retype them to answer | Numbered proposals so the user can answer by numbers (rule 3) |
 | 11 | A promise "exactly the fields of your paper" | Do not promise; ask for the sample or its fields and check each field (rule 8, `interview.md`) |
 | 12 | A sample form must be compared with what was already agreed | Say in one line what is already covered; ask only about the missing fields (`interview.md`) |
-| 13 | There was almost no business analysis before the design questions | Added Step 3: how it works now, what hurts, scale, goals, connections, launch date and what is out of scope |
-| 14 | Three different things (deadline, other programs, out of scope) were asked in one block; "other programs" read as third-party integrations | One short question each; connections offered as "usually everything is in one system" (Step 3) |
+| 13 | There was almost no business analysis before the design questions | Added Step 3: how it works now, what hurts, scale, goals, launch date and what is out of scope |
+| 14 | Three different things (deadline, other programs, out of scope) were asked in one block; "other programs" read as third-party integrations | One short question each; the separate question about other programs was dropped: an export is asked with the documents, data from elsewhere with the initial data (Step 3) |
 | 15 | Reports and scenarios were proposed together | Separate proposals (rule 7, Step 5) |
 
 ### Overlap with Phase 0b
@@ -68,6 +68,9 @@ proposed reports and scenarios, and one written specification.
   what exists and builds a first draft, shows only what the system usually consists
   of, and then runs a shorter business analysis that proposes typical reasons and
   goals instead of asking them open (Steps 2–3).
+- The separate question about connections to other programs was removed: it
+  confused the person and overlaps with the questions about documents (exports) and
+  initial data.
 - A completeness check was added before the specification is written (Step 6,
   `references/completeness-checks.md`).
 

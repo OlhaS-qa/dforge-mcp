@@ -16,7 +16,7 @@ Task, organisation, how it works now, what hurts, scale, goals, constraints.
 The typical solution used ("none" if the draft was written from scratch).
 
 ## 3. Platform decisions
-People, directories, other modules, connections to other programs, with origin.
+People, directories, other modules, with origin. Exports and imports appear in sections 9 and 12.
 
 ## 4. Users
 - U-1 <descriptor of the person> <verb phrase>. Sees: … Changes: …

@@ -11,7 +11,7 @@ user's business; keep the shape (restate, propose numbered, ask for corrections)
 | "Usually it works like this, correct me: 1 … 2 … 3 …" | Offer a menu of choices as if the user had to pick a role or a template |
 | "The system can tell people when something happens: in the system (they see it when they log in) or by e-mail." | Mention triggers, jobs, mail providers, modules, templates, search |
 | "By your words the main thing is that requests do not get lost and it is clear who is responsible. What else should get better after launch?" | Ask again what they have already said; add conditions ("a system this size should be simple") |
-| One short question about one thing | Three questions in one block (deadline, other programs, what is out of scope) |
+| One short question about one thing | Three questions in one block (for example deadline, scale, what is out of scope) |
 | "Do you already have a form? Send a sample or list its fields: we will check every field against the system." | Promise "exactly the fields of your paper" |
 
 ## Step 3 — business analysis
@@ -19,8 +19,7 @@ user's business; keep the shape (restate, propose numbered, ask for corrections)
 1. _How are these things handled now, and what bothers you most?_ (open)
 2. _Roughly how many … do you have, how many … a month, how many people work on it?_ (offer ranges: up to 50 / 50–200 / more)
 3. _By your words the main thing is …. What else should get better a month after launch?_ Offer one or two typical goals of the domain.
-4. _Usually everything is kept in one system. Is that so, or must something be passed to or received from another program (for example exported to an accounting program)?_
-5. _By when must it work?_ and, separately, _Is there anything that is definitely not needed in the first version?_
+4. _By when must it work?_ and, separately, _Is there anything that is definitely not needed in the first version?_
 
 ## Step 4 — details
 
@@ -44,7 +43,7 @@ _Usually a record goes New → In progress → Done → Closed, and can be Cance
 | Expiring document or licence | the person who manages it, N days ahead |
 | Low stock | whoever orders |
 
-**Documents and files.** _Besides the screens, the system can produce documents for printing, spreadsheets and exports. Usually people need: 1) … 2) … 3) …. Which do you need and is there anything else? If you already have a form, send a sample or list its fields._ After the sample arrives, compare it with the fields already agreed, say in one line that the rest is already there, and ask only about the missing fields as a numbered list. Ask who signs and whether signatures are on paper or in the system.
+**Documents and files.** _Besides the screens, the system can produce documents for printing, spreadsheets and exports. Usually people need: 1) … 2) … 3) …, and sometimes a file to pass to another program. Which do you need and is there anything else? If you already have a form, send a sample or list its fields._ After the sample arrives, compare it with the fields already agreed, say in one line that the rest is already there, and ask only about the missing fields as a numbered list. Ask who signs and whether signatures are on paper or in the system.
 
 **Initial data.** _What must be in the system at the start: 1) … 2) …. For each: is there a table, will you enter it by hand, or start empty — and roughly how many records?_
 

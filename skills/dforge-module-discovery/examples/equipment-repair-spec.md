@@ -17,7 +17,6 @@ Typical equipment-maintenance solution: equipment, maintenance request, preventi
 - People are platform users (`assumption`).
 - Spare part supplier is a text field (`assumption`).
 - Spare part stock is kept in this system; there is no other warehouse (`user`).
-- Connections to other programs: `open`.
 
 ## 4. Users
 - U-1 Workers of a shop raise repair requests and see and edit only their own until a mechanic takes them into work; they see the equipment list (`user`, `practice`).
@@ -68,4 +67,4 @@ Language of printed forms: `open`.
 Areas and equipment from the customer's tables; parts and people entered by hand.
 
 ## 15. Open questions and assumptions
-Connections to other programs; language of printed forms; launch date; what is out of scope; hourly rate; the position of the person raising a request is taken from the user profile (`assumption`).
+Language of printed forms; launch date; what is out of scope; hourly rate; the position of the person raising a request is taken from the user profile (`assumption`).

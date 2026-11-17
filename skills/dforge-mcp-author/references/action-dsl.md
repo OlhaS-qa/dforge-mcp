@@ -347,7 +347,8 @@ An analytic filter is the key alone (`{ cost_center: 42 }`) or `{ entity, value 
 | `warn('message', values?, opts?)` | Show a warning but continue execution. |
 | `info('message', values?, opts?)` | Show an informational message. A **receipt for work the action did** — not a way to publish a computed value; see *When an action is the wrong tool*. |
 | `exit('message'?, 'level'?, values?)` | **Stop the script early without error** — changes made so far are kept. Level `'info'` (default), `'warning'`, `'danger'` or `'success'` styles the message. This is the DSL's early-return: a bare `return` is not valid at the top level of `execute:`. |
-| `notify(userId, 'message')` | Send an in-app notification to a specific user. First arg is a user ID (typically `[owner_id]` or similar). |
+| `notify(userId, 'message')` | Send an in-app notification to a specific user. First arg is a user ID (typically `[owner_id]` or similar). The entry links to the record the action ran on. |
+| `notify(userId, 'message', { entity: 'module.entity', recordId, caption? })` | Same, but the entry links to the named record — use it when the recipient works with a different entity than the one the action runs on (a link to the action's own record would open an access error for them). `recordId` is the whole key: a scalar, or an object for a composite key. The link opens in a folder where the recipient can read that entity, resolved per recipient. Options that do not name a record (unknown entity, missing or incomplete key) send the notification **without** a link. A scheduled job's link renders as plain text (a job has no folder). |
 
 The message of `error` / `warn` / `info` / `exit` is translatable: it is looked up by its exact English text in the module's `messages` translations (see `dforge://reference/translations`). Put values in `{name}` placeholders filled from `values` — never join them into the string, which leaves no fixed text to translate. `opts` carries record links (`{ links: [...] }`), so `links` is not a placeholder name:
 
@@ -502,6 +503,7 @@ execute:
 
 - The namespace is the provider's code with `-` replaced by `_`, so `foo-bar` and `foo_bar` share one. Only the listed functions are in it; a call to another fails at install. Only a module in `dependencies` can be called.
 - The function runs as its provider: unqualified tables resolve in the provider's schema, `getSetting()` reads the provider's settings, its messages use the provider's translations. User, folder, transaction and run limits are the caller's.
+- Its settings, secrets (`getSecret()`), number prefixes (`nextNumber()`, and the number an `insert()` fills) and setting defaults are read in the **provider's** folder: the calling folder if it belongs to the provider, otherwise the provider's **root folder**, as for a scheduled job. A value set on the provider's Settings page applies; a value set on one of the provider's sub-folders is not seen from another module.
 - A provider's top-level variables are its own, fresh per run.
 - Libraries may call imported functions too, and imports chain (a provider's functions call what the provider imports). Import only what you call yourself.
 - Install checks each imported name is a top-level function of the installed provider's libraries. A contract that imports only functions may declare `"entities": {}`.

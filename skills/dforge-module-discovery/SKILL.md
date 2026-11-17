@@ -244,7 +244,9 @@ Write `docs/SPEC.md` using `references/spec-template.md` and bring
 its line) so that Phase 0 can cite them. Put what is still open in the last
 section. Then give a short orientation — section names, counts of entities,
 scenarios and open questions, in business words: do not mention statement ids, the
-design-notes file or any other technical file to the user — and ask the user to read the **file** and answer
+design-notes file or any other technical file to the user. Name what you took by
+default in plain words ("We assumed this, please confirm or correct: …"), without the
+tags `assumption`, `open` or `typical` — and ask the user to read the **file** and answer
 "yes" or say what to change. Edit the file with targeted edits, say what changed in one
 line, ask again. Nothing moves on before "yes".
 

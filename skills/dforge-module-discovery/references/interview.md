@@ -47,8 +47,6 @@ _Usually a record goes New → In progress → Done → Closed, and can be Cance
 
 **Initial data.** _What must be in the system at the start: 1) … 2) …. For each: is there a table, will you enter it by hand, or start empty — and roughly how many records?_
 
-**Language.** _In which language should the screens and the printed forms be?_
-
 ## Step 5 — reports and scenarios
 
 Reports, each as: _For whom — what decision it helps to make — default period._ Example: "For the section head: which equipment loses the most time and why — last month."

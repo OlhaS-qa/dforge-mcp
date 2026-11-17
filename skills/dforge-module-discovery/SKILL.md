@@ -131,9 +131,10 @@ Use the phrasing in `references/interview.md` and the proposals from the draft o
    expiring document, low stock. Ask which are needed, which only in the system,
    which also by e-mail.
 5. **Documents and files** — which printed forms, spreadsheets or exports; ask for a
-   sample or the field list; note who signs (paper or in the system).
+   sample or the field list; note who signs (paper or in the system). The language
+   of a printed form is the language of its sample; the language of the screens is
+   asked in Phase 0a, do not ask it here.
 6. **Initial data** — where it comes from (table, by hand, from scratch) and how much.
-7. **Language** of the screens and printed forms.
 
 After each topic, restate the agreed result in a few lines.
 

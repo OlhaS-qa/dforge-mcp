@@ -52,7 +52,6 @@ Request: New → In work ⇄ Waiting for parts → Done → Closed; Cancelled. U
 - O-1 Printed repair request, by the form the customer supplied; signatures on paper (`user`).
 - O-2 Act of work done: work, parts used, hours, signatures of the mechanic and the section head (`user`).
 - O-3 List of requests in Excel by month or equipment (`user`).
-Language of printed forms: `open`.
 
 ## 10. Notifications (in the system unless stated)
 - N-1 New request → mechanics.
@@ -67,4 +66,4 @@ Language of printed forms: `open`.
 Areas and equipment from the customer's tables; parts and people entered by hand.
 
 ## 15. Open questions and assumptions
-Language of printed forms; launch date; what is out of scope; hourly rate; the position of the person raising a request is taken from the user profile (`assumption`).
+Launch date; what is out of scope; hourly rate; the position of the person raising a request is taken from the user profile (`assumption`).

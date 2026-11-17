@@ -25,7 +25,7 @@ initial data.
 
 **Not covered:** reports and scenarios (step 5), the completeness check (step 6), writing and
 approving `docs/SPEC.md` (step 7) on this run as a conversation, the handoff to `dforge-module-design`,
-the language and out-of-scope questions, a second domain, repeatability.
+the out-of-scope question, a second domain, repeatability.
 
 **Result:** a draft specification of the module (see
 `skills/dforge-module-discovery/examples/equipment-repair-spec.md`, which is
@@ -68,6 +68,8 @@ proposed reports and scenarios, and one written specification.
   what exists and builds a first draft, shows only what the system usually consists
   of, and then runs a shorter business analysis that proposes typical reasons and
   goals instead of asking them open (Steps 2–3).
+- The question about the language was removed: Phase 0a already asks for locales,
+  and the language of a printed form follows from its sample.
 - The separate question about connections to other programs was removed: it
   confused the person and overlaps with the questions about documents (exports) and
   initial data.

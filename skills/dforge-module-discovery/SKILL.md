@@ -137,7 +137,7 @@ yourself and do not tell the user how:
 If you have no ready solution, say so in one sentence (rule 1). Record the base in
 section 2 of the spec and the platform decisions, as assumptions, in section 3.
 
-## Step 3 — business analysis (three questions, short)
+## Step 3 — business analysis (two questions, short)
 
 The draft already holds the typical answers, so most of this becomes a numbered
 proposal instead of an open question. One at a time, each only if not answered:
@@ -146,7 +146,10 @@ proposal instead of an open question. One at a time, each only if not answered:
    most? Ask **open**: only the user knows.
 2. Goals: restate what follows from their pains, then propose the typical goals from
    the draft as a numbered list ("usually teams also want: 1 … 2 … 3 …; which apply?").
-3. Scale: roughly how many items, records per month, people. Offer ranges.
+Do not ask about the scale as a separate step: the size of the organisation is already
+known from Step 1, and the design of a small system does not change with volume. Ask
+about volumes only when the user names a very large number or says that volume
+matters (thousands of records a day, many sites).
 
 Do not ask about connections to other programs as a separate question: an export or
 a file for another program is asked with the documents (Step 4), data coming from

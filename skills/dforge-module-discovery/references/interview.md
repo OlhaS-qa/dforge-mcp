@@ -17,8 +17,7 @@ user's business; keep the shape (restate, propose numbered, ask for corrections)
 ## Step 3 — business analysis
 
 1. _How are these things handled now, and what bothers you most?_ (open)
-2. _Roughly how many … do you have, how many … a month, how many people work on it?_ (offer ranges: up to 50 / 50–200 / more)
-3. _By your words the main thing is …. What else should get better a month after launch?_ Offer one or two typical goals of the domain.
+2. _By your words the main thing is …. What else should get better a month after launch?_ Offer one or two typical goals of the domain.
 
 ## Step 4 — details
 

@@ -30,8 +30,8 @@ These matter more than the step list.
 2. **One question per turn.** After each answer restate it in one line ("Understood:
    requests are in a paper log and get lost"), then ask the next question. Skip a
    question whose answer is already known.
-3. **Propose first when a typical answer exists, ask open only for what only the
-   user knows.** Write the typical answer as a **numbered** list and ask "Is this how
+3. **Build the typical solution yourself and propose it; ask open only for what only
+   the user knows.** Write the typical answer as a **numbered** list and ask "Is this how
    it works for you, or what should change?" so the user can reply by numbers
    ("1 and 2 as is, 3 by e-mail too, 4 not needed"). Names, people, their own
    forms and numbers are always open questions. Mark where each fact in the
@@ -80,10 +80,12 @@ yourself and do not tell the user how:
    solutions if you have one, and your knowledge of the domain. No internet. Choose
    silently: people = platform users, a separate directory only when the user manages
    it, own tables otherwise.
-2. Assemble the draft in your notes: the entities, the typical lifecycle, typical
-   kinds of people, notifications, documents and reports, and the typical reasons
-   a team introduces such a system and the typical goals. Show only the first
-   part now: what such systems usually consist of, one line per entity ("Equipment:
+2. Assemble the **whole** draft in your notes, for every topic of Step 4 and Step 5:
+   the entities, the typical lifecycle and forbidden actions, kinds of people,
+   calculated values, notifications, documents, reports, scenarios, and the typical
+   reasons a team introduces such a system and the typical goals. Run the
+   completeness checks of Step 6 on your own draft once, so that the obvious gaps
+   are closed before the user sees anything. Show only the first part now: what such systems usually consist of, one line per entity ("Equipment:
    name, number, area, condition; Request: who raised it, which equipment, what
    broke, urgency, status, who works on it"), and ask whether it fits, what to remove
    and what to add. The rest is shown in the step where it is discussed.
@@ -119,7 +121,12 @@ Record the answers in section 1 of the spec.
 
 ## Step 4 — details, one topic per turn
 
-Use the phrasing in `references/interview.md` and the proposals from the draft of Step 2. Order:
+The typical answers are already in your draft, so each topic is shown **as a
+complete numbered proposal from the draft**, not as questions for the user to fill
+in; the user corrects by numbers. Ask open only what only the user knows: how it
+works now, people (in free prose), their own forms and samples, volumes, initial
+data. One topic per turn, in this order, and keep the whole interview to roughly ten
+to twelve turns. Phrasing and proposals: `references/interview.md`. Order:
 
 1. **People and visibility** — free prose first (what each kind of person does,
    whose records they see and change). Then restate as verb sentences. Prefer

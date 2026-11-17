@@ -68,6 +68,10 @@ proposed reports and scenarios, and one written specification.
   what exists and builds a first draft, shows only what the system usually consists
   of, and then runs a shorter business analysis that proposes typical reasons and
   goals instead of asking them open (Steps 2–3).
+- The interview was shifted toward "the agent builds the whole typical solution, the
+  user corrects": the full draft is built up front and checked once for gaps, and
+  each topic is then shown as a complete numbered proposal, one topic per turn,
+  aiming at ten to twelve turns instead of the twenty-five of this run.
 - The questions about the launch date and about what is out of scope were removed:
   the date does not change the design, and what the user removes or declines during
   the interview is recorded as out of scope without asking.

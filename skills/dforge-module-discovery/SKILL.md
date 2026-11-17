@@ -197,18 +197,20 @@ to twelve turns. Phrasing and proposals: `references/interview.md`. Order:
 
 After each topic, restate the agreed result in a few lines.
 
-## Step 5 — reports and scenarios (two separate proposals)
+## Step 5 — reports, and scenarios without a question
 
-- **Reports:** propose 2–3. For each say who uses it and **what decision it helps to
-  make**, plus a default period. The user removes, changes or adds. Record each
-  agreed report also as an output (`O-n`, kind report) in `## Outputs`, so that Phase
-  0b, which asks about reports among the outputs, does not ask again.
-- **Scenarios:** propose 3–5 main paths from start to finish and the negative
-  cases (what is refused at each status, what happens on cancel and delete, what
-  happens when a required thing is missing). The user corrects. Build every scenario only from what
-  the user has already agreed and name the statements it checks (`R-1`, `N-3`…); do
-  not put a new requirement into an expected result. A scenario that checks nothing
-  agreed is dropped.
+- **Reports:** propose at most three. For each say who uses it and **what decision it
+  helps to make**, plus a default period (rule 10). The user removes, changes or adds.
+  Record each agreed report also as an output (`O-n`, kind report) in `## Outputs`, so
+  that Phase 0b, which asks about reports among the outputs, does not ask again.
+- **Scenarios are not a question.** They only restate what is already agreed, so do not
+  spend a turn on them. Write them into the specification yourself (Step 7): 3–5 main
+  paths from start to finish, and the negative cases (what is refused at each status,
+  what happens on cancel and delete, what happens when a required thing is missing).
+  Build every scenario only from what the user has agreed and name the statements it
+  checks (`R-1`, `N-3`…); do not put a new requirement into an expected result. A
+  scenario that checks nothing agreed is dropped. The user reads them with the rest of
+  the file.
 
 ## Step 6 — check completeness
 

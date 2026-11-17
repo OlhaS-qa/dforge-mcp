@@ -49,7 +49,7 @@ _Usually a record goes New → In progress → Done → Closed, and can be Cance
 
 Reports, each as: _For whom — what decision it helps to make — default period._ Example: "For the section head: which equipment loses the most time and why — last month."
 
-Scenarios, as: a title, steps from the user's point of view, the expected result. Cover: the main path from raising to closing, a second main path (for example a request sent back), and refusals: acting on a record in the wrong status, a missing required value, a duplicate, cancelling without a reason.
+Scenarios (written into the specification without asking the user), as: a title, steps from the user's point of view, the expected result. Cover: the main path from raising to closing, a second main path (for example a request sent back), and refusals: acting on a record in the wrong status, a missing required value, a duplicate, cancelling without a reason.
 
 ## When the user does not know
 

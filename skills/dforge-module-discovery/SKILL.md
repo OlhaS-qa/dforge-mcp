@@ -68,11 +68,12 @@ These matter more than the step list.
    spec.
 9. **Keep the user's own wording of an output.** An Excel list stays an Excel
    list; if you turn it into something else (a report), say so and ask.
-10. **Propose less, with a reason.** Offer only what follows from the user's words,
-    from a failed check or from the typical solution of the domain, and for each
-    proposal say what happens if the user declines it. For notifications start from
-    the events where someone must act or would not otherwise notice, not from every
-    status change.
+10. **Propose less, tied to the user's words.** At most five numbered proposals per
+    message. Each must serve a pain or a goal the user named, or close a failed
+    check, and say what is lost without it. Do not offer the rest of the typical list:
+    keep it in your notes and end the topic with one open question ("what else would
+    you want to be told about / to see?"). Never offer something that only serves a
+    kind of person the user did not say needs it.
 
 ## Step 0 — which path
 
@@ -182,9 +183,11 @@ to twelve turns. Phrasing and proposals: `references/interview.md`. Order:
 4. **Notifications** — for **every date that has a deadline** and **every status
    change**, propose _event → who is told → in the system or by e-mail_. Typical
    triggers: new record, taken into work, waiting, finished, sent back, overdue,
-   expiring document, low stock. Offer only the events where someone must act or
-   would not otherwise notice (rule 10), each with what is lost without it. Ask
-   which are needed, which only in the system, which also by e-mail.
+   expiring document, low stock. Start from the pains the user named (for
+   example "requests get lost" → the first person who must act) and offer at most five
+   events (rule 10), each with what is lost without it; do not offer an event for a kind
+   of person who gets work done without it. End with one open question about who else
+   must be told. Ask which are needed, which only in the system, which also by e-mail.
 5. **Documents and files** — which printed forms, spreadsheets or exports; ask for a
    sample or the field list; note who signs (paper or in the system). The language
    of a printed form is the language of its sample; the language of the screens is

@@ -28,7 +28,7 @@ _Usually a record goes New → In progress → Done → Closed, and can be Cance
 
 **Calculated values.** _The system can calculate these without anyone typing them: 1) a running number such as RM-2026-0001; 2) duration or downtime; 3) overdue flag (after how many hours/days?); 4) cost; 5) stock after use. Which do you need?_ Ask only for the values that follow from the entities.
 
-**Notifications.** For each date with a deadline and each status change, propose the event and the person told (see the table). Then: _Which are needed? Which only in the system, which also by e-mail?_
+**Notifications.** The table below is your source, not a list to offer in full: take at most five events that serve a named pain, then ask who else must be told. For each date with a deadline and each status change, propose the event and the person told (see the table). Then: _Which are needed? Which only in the system, which also by e-mail?_
 
 | Trigger | Typical recipient |
 |---|---|

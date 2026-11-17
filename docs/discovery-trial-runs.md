@@ -98,3 +98,51 @@ proposed reports and scenarios, and one written specification.
    note what Phase 0 asks again or misses.
 2. Run the written skill on a second domain and compare the turns with this run.
 3. Repeat one case several times and compare the specifications.
+
+## Run 2 — Phase 0 of dforge-mcp 0.2.58 with and without the specification
+
+Same task as Run 1 (equipment repair requests for a small factory), invented customer
+answered by a person. Phase 0 (identity, requirements, design, validation) was run to
+`readyToScaffold: true` three ways; nothing was scaffolded or installed.
+
+1. **Without the specification**, led by the same agent that wrote the specification
+   (so it knew it), with deliberately short customer answers.
+2. **With the specification** from Run 1: identity, requirements and design were derived
+   from `docs/SPEC.md`.
+3. **Clean run** in a separate session that had not seen the specification, with a
+   different, richer customer story (a chain of managers, a director, photos, audit).
+
+| | 1. Without the specification | 2. With the specification | 3. Clean run |
+|---|---|---|---|
+| Customer turns in Phase 0 | about 20 | 5 (the specification itself took about 25–30) | about 43 (7 + 30 + 6) |
+| Design | 5 entities, 6 actions, 1 notification, 1 output | 7 entities, 9 actions, 7 notifications, 6 outputs, 3 reports | 4 entities, 7 statuses, 7 actions, 4 triggers, 5 roles |
+| Gaps found in design | 9 (business and technical) | 7 (technical) | 7, mostly platform limits |
+| Result | ready to scaffold | ready to scaffold | ready to scaffold |
+
+What the design without the specification lacked: a "waiting for parts" status, five of
+the seven notifications, calculated values (downtime, overdue, cost, stock), three
+reports, the act of work done, the Excel list, scenarios, and initial data from the
+customer's tables. What the specification does not give and the design adds: folders
+with row filters, binding a head to a section, enforcement mechanisms for rules, the
+permissions matrix.
+
+Findings:
+- The usual flow is question-heavy (about 43 customer turns in the clean run).
+- Platform limits surfaced only in the design phase and broke requirements that had
+  already been confirmed (an employee record with no link to a platform user, no
+  "everyone below me" visibility, row visibility held by folders, a report for a role
+  with no rights on the data). The discovery skill therefore checks the platform
+  quietly in Step 2 and writes the limits to `docs/SPEC-design-notes.md`.
+- A defect in the specification template was found: a user id was defined twice (in
+  Users and again in Access Needs), which the design check reports as a duplicate.
+  Fixed in the template and the example.
+- A "pass" in Phase 0d means the documents agree with each other, not that the
+  platform was checked.
+
+Limits of this comparison: one case and an invented customer; run 1 was led by an agent
+that knew the specification, so it probably overstates what the design phase finds on
+its own; run 3 had a different customer story, so its content cannot be compared with
+the others, only its process; the design skill was not found in the clean session, which
+followed the router only. A cleaner comparison needs a separate session without the
+specification and a customer who answers naturally on the same story.
+

@@ -214,6 +214,13 @@ After each topic, restate the agreed result in a few lines.
 
 ## Step 6 — check completeness
 
+A gap is a missing decision that the agreed items depend on, or a contradiction
+between them. It is **not a new feature**: do not use this step to propose new
+notifications, reports, reminders or lists, and do not re-ask what the user has
+already agreed. Ask at most five gap questions; if you have more, ask the five that
+block the design most and record the rest as assumptions in section 17. A gap whose
+answer would not change the design is not asked.
+
 Before writing the file, go through `references/completeness-checks.md` yourself,
 quietly. The checks look for what users usually discover only while testing: a status
 nobody can leave, a deadline with no notification decided, a person who sees

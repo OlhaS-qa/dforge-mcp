@@ -119,14 +119,21 @@ answered by a person. Phase 0 (identity, requirements, design, validation) was r
 | Gaps found in design | 9 (business and technical) | 7 (technical) | 7, mostly platform limits |
 | Result | ready to scaffold | ready to scaffold | ready to scaffold |
 
-What the design without the specification lacked: a "waiting for parts" status, five of
-the seven notifications, calculated values (downtime, overdue, cost, stock), three
-reports, the act of work done, the Excel list, scenarios, and initial data from the
-customer's tables. What the specification does not give and the design adds: folders
+How the designs differ: the design without the specification has no "waiting for parts"
+status, five of the seven notifications, calculated values (downtime, overdue, cost,
+stock), three reports, the act of work done, the Excel list, scenarios, or initial data
+from the customer's tables. This does **not** show that the customer needs them: in
+run 1 the customer did not ask for them, in run 2 the skill proposed them and the
+customer accepted most. What the specification does not give and the design adds: folders
 with row filters, binding a head to a section, enforcement mechanisms for rules, the
 permissions matrix.
 
 Findings:
+- What the skill adds is mostly proposals by category (notifications, calculated
+  values, documents, reports) that the customer accepts; whether the customer needs
+  all of them, and whether they inflate the scope, is not measured. A fair test
+  compares each approach with a list of needs fixed in advance (a ground truth) and
+  counts needs found, extras proposed and turns used.
 - The usual flow is question-heavy (about 43 customer turns in the clean run).
 - Platform limits surfaced only in the design phase and broke requirements that had
   already been confirmed (an employee record with no link to a platform user, no

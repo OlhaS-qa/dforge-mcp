@@ -45,6 +45,7 @@ Per entity: statuses, who moves it, forbidden at each status, cancel, send back,
 
 ## 11. Reports
 For whom — the decision it helps to make — default period.
+Each agreed report is also listed in `## Outputs` as an `O-n` of kind report, so Phase 0b does not ask about it again.
 
 ## 12. Initial data
 ## 13. Out of scope

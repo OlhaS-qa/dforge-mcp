@@ -144,7 +144,9 @@ After each topic, restate the agreed result in a few lines.
 ## Step 5 — reports and scenarios (two separate proposals)
 
 - **Reports:** propose 2–3. For each say who uses it and **what decision it helps to
-  make**, plus a default period. The user removes, changes or adds.
+  make**, plus a default period. The user removes, changes or adds. Record each
+  agreed report also as an output (`O-n`, kind report) in `## Outputs`, so that Phase
+  0b, which asks about reports among the outputs, does not ask again.
 - **Scenarios:** propose 3–5 main paths from start to finish and the negative
   cases (what is refused at each status, what happens on cancel and delete, what
   happens when a required thing is missing). The user corrects.

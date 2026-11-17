@@ -4,6 +4,10 @@ All notable changes to `@dforge-core/dforge-mcp`. This project uses semver-ish
 `0.1.0-rc.N` pre-release tags; the published version is set at publish time via
 the release workflow, so committed `package.json` versions are placeholders.
 
+## Unreleased
+
+**New skill `dforge-module-discovery` (draft).** A stage before Phase 0 for a new module described as a business problem: it interviews the user about the task (how it works now, what hurts, scale, goals), proposes a typical solution (entities, statuses, calculations, notifications, reports, scenarios) for the user to correct, and writes one approved `docs/SPEC.md` that `dforge-module-design` uses. It asks only what Phase 0b does not (business analysis, lifecycle, calculations, notifications, documents with a sample, initial data) and produces the `## Access Needs` and `## Outputs` sections in the Phase 0b shape. Not yet routed from `dforge-mcp-author`.
+
 ## 0.2.58 - 2026-11-14
 
 **Workflow checks in `dforge_module_validate`.** A dropdown column that actions set with literals (`[status] = 'approved'`) is read as a status machine. Errors: `wf:status-unknown-value` (an action sets a value that is not an option). Warnings: `wf:status-unknown-from` (canExecute tests a value that is not an option), `wf:status-no-default` (no literal default, so a creator can send any status), `wf:status-editable` (E flag: users can skip the transitions). For a column users cannot edit and that actions drive to two or more values: `wf:status-unreachable` (no action leads into an option), `wf:status-no-exit` (no canExecute tests an option; the last option is taken as final), `wf:transition-open` (an action that sets the status without testing it). Only literals are read; a value computed at run time is never reported.

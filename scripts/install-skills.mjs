@@ -32,6 +32,7 @@ const SKILLS = [
 		"dforge-mcp-author",
 		"router — start here; also holds the shared\n                        references/ and examples/ the MCP server serves",
 	],
+	["dforge-module-discovery", "before Phase 0 — business interview, typical solution, docs/SPEC.md"],
 	["dforge-module-design", "Phase 0  — identity, intake, design, validation"],
 	["dforge-module-build", "Phases 1-5 — entities, behavior, views, security"],
 	["dforge-module-ship", "Phase 6  — validate, pack, install-fix loop"],

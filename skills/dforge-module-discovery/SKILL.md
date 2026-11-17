@@ -70,44 +70,50 @@ from the task?"_
 One question: _what needs to be solved and for what kind of organisation?_ Restate
 in one line and wait for "yes".
 
-## Step 2 — business analysis (at most five questions)
+## Step 2 — research quietly, then show a first draft
 
-One at a time, each only if not answered already:
+Right after the "yes" on the task, **before asking more**, build a first draft
+yourself and do not tell the user how:
+
+1. Find what exists: the modules installed or available as dependencies (for example
+   with `dforge_module_inspect` on a dependency directory), a library of ready
+   solutions if you have one, and your knowledge of the domain. No internet. Choose
+   silently: people = platform users, a separate directory only when the user manages
+   it, own tables otherwise.
+2. Assemble the draft in your notes: the entities, the typical lifecycle, typical
+   kinds of people, notifications, documents and reports, and the typical reasons
+   a team introduces such a system and the typical goals. Show only the first
+   part now: what such systems usually consist of, one line per entity ("Equipment:
+   name, number, area, condition; Request: who raised it, which equipment, what
+   broke, urgency, status, who works on it"), and ask whether it fits, what to remove
+   and what to add. The rest is shown in the step where it is discussed.
+3. Ask one business question about the platform only when the answer changes the
+   design and only the user knows it ("Do you already keep spare parts stock in
+   another dForge module?").
+
+If you have no ready solution, say so in one sentence (rule 1). Record the base in
+section 2 of the spec and the platform decisions, as assumptions, in section 3.
+
+## Step 3 — business analysis (at most five questions, now short)
+
+The draft already holds the typical answers, so most of this becomes a numbered
+proposal instead of an open question. One at a time, each only if not answered:
 
 1. How does it work now (paper, spreadsheet, messenger…) and what bothers them
-   most? Ask **open**.
-2. Scale: roughly how many items, records per month, people. Offer ranges.
-3. Goals: restate what follows from their pains; ask what else should be better a
-   month after launch, with one or two typical examples ("seeing downtime",
-   "history per machine").
+   most? Ask **open**: only the user knows.
+2. Goals: restate what follows from their pains, then propose the typical goals from
+   the draft as a numbered list ("usually teams also want: 1 … 2 … 3 …; which apply?").
+3. Scale: roughly how many items, records per month, people. Offer ranges.
 4. Connections: _"Usually everything is kept in one system. Is that so, or must
    something be passed to or received from another program?"_
-5. Launch date and what is definitely **not** needed in the first version — two
+5. Launch date and what is definitely **not** needed in the first version: two
    separate short questions.
 
 Record the answers in section 1 of the spec.
 
-## Step 3 — a starting point
+## Step 4 — details, one topic per turn
 
-Propose what such systems usually consist of: the entities, in one line each
-("Equipment: name, number, area, condition; Request: who raised it, which
-equipment, what broke, urgency, status, who is working on it"). If a library of
-ready solutions is available to you, take the proposal from it and say only "usually
-such systems consist of…"; if not, propose it yourself. Ask whether it fits, what to
-remove and what to add. Record the base in section 2.
-
-## Step 4 — what the platform already has
-
-Look yourself at which modules are installed or can be depended on (for example with
-`dforge_module_inspect` on a dependency directory) and choose silently, defaults:
-people = platform users, a separate directory only when the user manages it, own
-tables otherwise. Ask **one** business question only when the answer changes the
-design and only the user knows it ("Do you already keep spare parts stock in
-another dForge module?"). Record the decisions as assumptions in section 3.
-
-## Step 5 — details, one topic per turn
-
-Use the phrasing and the proposals in `references/interview.md`. Order:
+Use the phrasing in `references/interview.md` and the proposals from the draft of Step 2. Order:
 
 1. **People and visibility** — free prose first (what each kind of person does,
    whose records they see and change). Then restate as verb sentences. Prefer
@@ -128,7 +134,7 @@ Use the phrasing and the proposals in `references/interview.md`. Order:
 
 After each topic, restate the agreed result in a few lines.
 
-## Step 6 — reports and scenarios (two separate proposals)
+## Step 5 — reports and scenarios (two separate proposals)
 
 - **Reports:** propose 2–3. For each say who uses it and **what decision it helps to
   make**, plus a default period. The user removes, changes or adds.
@@ -136,7 +142,7 @@ After each topic, restate the agreed result in a few lines.
   cases (what is refused at each status, what happens on cancel and delete, what
   happens when a required thing is missing). The user corrects.
 
-## Step 7 — check completeness
+## Step 6 — check completeness
 
 Before writing the file, go through `references/completeness-checks.md` yourself,
 quietly. The checks look for what users usually discover only while testing: a status
@@ -150,7 +156,7 @@ the spec as an open question. These checks test completeness and consistency of 
 spec, not whether it can be built on the platform; that is Phase 0 and
 `dforge_module_validate`.
 
-## Step 8 — write the specification
+## Step 7 — write the specification
 
 Write `docs/SPEC.md` using `references/spec-template.md`. Number every statement
 (`S-`, `N-`, `V-`, `U-`, `R-`, `P-`, `O-`; each id defined once, at the start of
@@ -160,7 +166,7 @@ scenarios and open questions — and ask the user to read the **file** and answe
 "yes" or say what to change. Edit the file with targeted edits, say what changed in one
 line, ask again. Nothing moves on before "yes".
 
-## Step 9 — handoff
+## Step 8 — handoff
 
 Tell the user the specification is agreed. Invoke **`dforge-module-design`**; it
 turns sections 4, 6 and 14 into `REQUIREMENTS.md` (verb sentences, `## Access Needs`,

@@ -1,6 +1,6 @@
 # Discovery — completeness checks
 
-Run these on the agreed answers before writing `docs/SPEC.md` (Step 7 of `SKILL.md`).
+Run these on the agreed answers before writing `docs/SPEC.md` (Step 6 of `SKILL.md`).
 The right column says what the check catches, i.e. what users otherwise find while
 testing a built module. A failed check becomes one question with a proposal; what
 cannot be settled becomes an open question in the last section of the spec.

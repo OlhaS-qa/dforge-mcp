@@ -1,6 +1,6 @@
 # Discovery — how to ask
 
-Phrasing and typical proposals for each topic of `SKILL.md`. Adapt the nouns to the
+Phrasing and typical proposals for each topic of `SKILL.md`. The proposals come from the quiet draft of Step 2. Adapt the nouns to the
 user's business; keep the shape (restate, propose numbered, ask for corrections).
 
 ## Wording rules
@@ -14,7 +14,7 @@ user's business; keep the shape (restate, propose numbered, ask for corrections)
 | One short question about one thing | Three questions in one block (deadline, other programs, what is out of scope) |
 | "Do you already have a form? Send a sample or list its fields: we will check every field against the system." | Promise "exactly the fields of your paper" |
 
-## Step 2 — business analysis
+## Step 3 — business analysis
 
 1. _How are these things handled now, and what bothers you most?_ (open)
 2. _Roughly how many … do you have, how many … a month, how many people work on it?_ (offer ranges: up to 50 / 50–200 / more)
@@ -22,7 +22,7 @@ user's business; keep the shape (restate, propose numbered, ask for corrections)
 4. _Usually everything is kept in one system. Is that so, or must something be passed to or received from another program (for example exported to an accounting program)?_
 5. _By when must it work?_ and, separately, _Is there anything that is definitely not needed in the first version?_
 
-## Step 5 — details
+## Step 4 — details
 
 **People and visibility (free prose first).** _Who will work with the system and what does each kind of person do?_ Then, as verbs: _What should each of them see when they open the system: which records, and which can they change?_ Restate as sentences like "Workers raise requests and see only their own until they are taken into work." No role names offered.
 
@@ -50,7 +50,7 @@ _Usually a record goes New → In progress → Done → Closed, and can be Cance
 
 **Language.** _In which language should the screens and the printed forms be?_
 
-## Step 6 — reports and scenarios
+## Step 5 — reports and scenarios
 
 Reports, each as: _For whom — what decision it helps to make — default period._ Example: "For the section head: which equipment loses the most time and why — last month."
 

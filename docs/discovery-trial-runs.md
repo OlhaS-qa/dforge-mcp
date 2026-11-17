@@ -186,3 +186,45 @@ as proposals; the user's own wording of an output is kept; proposals carry a rea
 notifications start from events that need action; two new completeness checks. These
 changes have not been re-tested yet.
 
+## Run 4 — the skill again, and plain Phase 0, on the same customer-knowledge sheet
+
+Same sheet as Run 3 (business trips; 37 known needs, ten "traps"). The customer answered
+only from the sheet and volunteered nothing that was not asked. Two sessions in separate
+folders: the skill (updated after Run 3) and plain Phase 0 of dforge-mcp 0.2.58 with the
+four standard skills installed (router, design, build, ship) and no discovery skill.
+
+| | Skill, run 1 | Skill, run 2 | Plain Phase 0 |
+|---|---|---|---|
+| Needs captured fully (of 37) | 36 | 35 | 26 |
+| Partly / not at all | 1 / 0 | 1 / 1 | 2 / 9 |
+| Traps raised (of 10) | 10 | 9–10 | about 8 |
+| Customer turns to an approved spec / to the design | about 16 | about 15 | about 16 (5 in identity, 9 in requirements, 2 in design) |
+| Platform check done | no | yes, before the requirements (7 references and 3 patterns read) | yes, during the design |
+| Questions the customer could not answer | few | few | 3 technical (dependencies, scaffold depth, a spreadsheet's columns) |
+
+What plain Phase 0 did not ask, so the needs are missing from its requirements and design:
+the goals and how it works now, the size of the organisation, the daily rates (two
+figures), the spending limit for a hotel night, the list of who is on a trip now, and
+whether to connect an accounting program. It first left cancellation out and added it
+only when the customer objected. What it does better: the technical design (statuses
+with guard triggers, 13 actions, folders for visibility, a permissions matrix, numbers,
+seed data) and its gap scan (audit depth, implied entities, a link between a person and
+a platform user); that is the next layer, and the skill's specification was not passed
+through the design phase in these runs.
+
+What the second skill run lost: the hotel limit, because no step asked for rules, norms
+or limits that the customer already works by (in run 1 it appeared only because a goal
+about limits happened to be offered). A new open topic now asks for them.
+
+Changes made after the second skill run: a topic for rules and limits the customer
+already has; proposals capped at five per message and tied to the customer's words, a
+topic ends with a yes/no check instead of an invitation to wish for more; gap questions
+limited to missing decisions and contradictions, not new features; scenarios written into
+the specification without a question; the skill does not announce its checks or its
+draft; defaults named in plain words; origins written in the customer's language;
+the scale question dropped. These changes are not re-tested.
+
+Limits: the sheet was written by the author of the skill and its categories overlap with
+the topics of the skill, so the result may favour the skill; one run per approach and one
+task; the model's variation is not averaged; neither flow was taken beyond Phase 0.
+

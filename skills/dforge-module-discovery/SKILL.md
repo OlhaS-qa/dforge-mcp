@@ -42,10 +42,13 @@ These matter more than the step list.
    it works for you, or what should change?" so the user can reply by numbers
    ("1 and 2 as is, 3 by e-mail too, 4 not needed"). Names, people, their own
    forms and numbers are always open questions. Mark where each fact in the
-   spec came from, strictly: `user` only for what the user said in their own words
-   or numbers; `typical` or `practice` for your proposal that the user accepted (even
-   when they accepted it unchanged), never `user`; `assumption` for what you took by
-   default.
+   spec came from, strictly, **in the language of the user** (short words, not English
+   tags): "со слов заказчика" only for what the user said in their own words or
+   numbers; "типовое, принято" for your proposal that the user accepted, even when
+   they accepted it unchanged, never "со слов заказчика"; "по умолчанию" for what you
+   took by default; "открыто" for what is still to be answered. (Examples are in
+   Russian; use the user's language.) Section headings of the spec are also in the
+   user's language.
 4. **Build questions from the user's own words.** Do not decide for the user ("a
    system this size should be simple"), do not repeat what they have already said,
    do not promise absolutes ("no request is ever lost" → "requests do not get
@@ -180,8 +183,12 @@ to twelve turns. Phrasing and proposals: `references/interview.md`. Order:
 2. **Lifecycle** of each record that goes through stages: statuses, who moves it,
    what is forbidden at each status, how it is cancelled, whether it can be sent
    back, what happens on delete (default: never deleted, only cancelled).
-3. **Calculated values** — numbers, totals, durations, overdue flags, stock.
-4. **Notifications** — for **every date that has a deadline** and **every status
+3. **Rules and limits the user already works by** — ask **open**, once, before you
+   propose any: _"Are there amounts, norms, limits or deadlines you already work by
+   (a spending limit, a daily rate, an approval threshold, a deadline)?"_ These are
+   figures only the user has; a limit that nobody asked for is lost.
+4. **Calculated values** — numbers, totals, durations, overdue flags, stock.
+5. **Notifications** — for **every date that has a deadline** and **every status
    change**, propose _event → who is told → in the system or by e-mail_. Typical
    triggers: new record, taken into work, waiting, finished, sent back, overdue,
    expiring document, low stock. Start from the pains the user named (for
@@ -189,11 +196,11 @@ to twelve turns. Phrasing and proposals: `references/interview.md`. Order:
    events (rule 10), each with what is lost without it; do not offer an event for a kind
    of person who gets work done without it. End with the yes/no check about whether
    anyone who must be told is missing. Ask which are needed, which only in the system, which also by e-mail.
-5. **Documents and files** — which printed forms, spreadsheets or exports; ask for a
+6. **Documents and files** — which printed forms, spreadsheets or exports; ask for a
    sample or the field list; note who signs (paper or in the system). The language
    of a printed form is the language of its sample; the language of the screens is
    asked in Phase 0a, do not ask it here.
-6. **Initial data** — where it comes from (table, by hand, from scratch) and how much.
+7. **Initial data** — where it comes from (table, by hand, from scratch) and how much.
 
 After each topic, restate the agreed result in a few lines.
 

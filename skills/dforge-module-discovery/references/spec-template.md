@@ -9,7 +9,9 @@ One file, plain Markdown. Number statements with the ids Phase 0 understands:
 `S-` system behaviour, `N-` notification, `V-` visibility, `U-` kind of user,
 `R-` rule, `P-` permission, `O-` output. Define each id once, at the start of a
 line or a list item; refer to it elsewhere inside a sentence. Mark the origin of
-each fact: `user`, `typical`, `practice`, `assumption`, `open`.
+each fact in the user's language, in short words (not English tags): said by the user,
+proposal accepted, taken by default, open. Write the section headings in the user's
+language too; the English headings below are the template.
 
 ```markdown
 # <Module> — specification

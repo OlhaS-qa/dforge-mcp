@@ -161,7 +161,9 @@ quietly. The checks look for what users usually discover only while testing: a s
 nobody can leave, a deadline with no notification decided, a person who sees
 nothing or everything, a printed field that exists nowhere, a report with no
 decision behind it, a forbidden action with no scenario. For every check that fails,
-ask the user **one** question with a proposal (rule 3), then repeat the check. Do not
+ask the user a question with a proposal (rule 3): one question per failed check,
+but when several checks fail put them together as one numbered list of proposals,
+so the user answers by numbers in one turn. Then repeat the checks that failed. Do not
 list the checks to the user; say at most "I checked the specification for gaps and
 found N" with the questions. Whatever cannot be settled goes to the last section of
 the spec as an open question. These checks test completeness and consistency of the

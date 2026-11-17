@@ -51,7 +51,7 @@ Each agreed report is also listed in `## Outputs` as an `O-n` of kind report, so
 ## 13. Out of scope
 What the user removed or declined during the interview (nothing is asked separately).
 ## 14. Scenarios
-Main and negative cases (title, steps, expected result).
+Main and negative cases (title, steps, expected result, and the statements it checks, e.g. `R-1`, `N-3`). The expected result contains only what is already agreed.
 
 ## 15. Open questions and assumptions
 ```

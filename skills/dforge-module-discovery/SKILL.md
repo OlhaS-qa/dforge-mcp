@@ -149,7 +149,10 @@ After each topic, restate the agreed result in a few lines.
   0b, which asks about reports among the outputs, does not ask again.
 - **Scenarios:** propose 3–5 main paths from start to finish and the negative
   cases (what is refused at each status, what happens on cancel and delete, what
-  happens when a required thing is missing). The user corrects.
+  happens when a required thing is missing). The user corrects. Build every scenario only from what
+  the user has already agreed and name the statements it checks (`R-1`, `N-3`…); do
+  not put a new requirement into an expected result. A scenario that checks nothing
+  agreed is dropped.
 
 ## Step 6 — check completeness
 

@@ -136,7 +136,21 @@ After each topic, restate the agreed result in a few lines.
   cases (what is refused at each status, what happens on cancel and delete, what
   happens when a required thing is missing). The user corrects.
 
-## Step 7 — write the specification
+## Step 7 — check completeness
+
+Before writing the file, go through `references/completeness-checks.md` yourself,
+quietly. The checks look for what users usually discover only while testing: a status
+nobody can leave, a deadline with no notification decided, a person who sees
+nothing or everything, a printed field that exists nowhere, a report with no
+decision behind it, a forbidden action with no scenario. For every check that fails,
+ask the user **one** question with a proposal (rule 3), then repeat the check. Do not
+list the checks to the user; say at most "I checked the specification for gaps and
+found N" with the questions. Whatever cannot be settled goes to the last section of
+the spec as an open question. These checks test completeness and consistency of the
+spec, not whether it can be built on the platform; that is Phase 0 and
+`dforge_module_validate`.
+
+## Step 8 — write the specification
 
 Write `docs/SPEC.md` using `references/spec-template.md`. Number every statement
 (`S-`, `N-`, `V-`, `U-`, `R-`, `P-`, `O-`; each id defined once, at the start of
@@ -146,7 +160,7 @@ scenarios and open questions — and ask the user to read the **file** and answe
 "yes" or say what to change. Edit the file with targeted edits, say what changed in one
 line, ask again. Nothing moves on before "yes".
 
-## Step 8 — handoff
+## Step 9 — handoff
 
 Tell the user the specification is agreed. Invoke **`dforge-module-design`**; it
 turns sections 4, 6 and 14 into `REQUIREMENTS.md` (verb sentences, `## Access Needs`,

@@ -222,8 +222,9 @@ decision behind it, a forbidden action with no scenario. For every check that fa
 ask the user a question with a proposal (rule 3): one question per failed check,
 but when several checks fail put them together as one numbered list of proposals,
 so the user answers by numbers in one turn. Then repeat the checks that failed. Do not
-list the checks to the user; say at most "I checked the specification for gaps and
-found N" with the questions. Whatever cannot be settled goes to the last section of
+list the checks to the user and do not say that you checked or why such gaps matter;
+introduce the list with one neutral line ("A few points to settle:") and the
+questions. Whatever cannot be settled goes to the last section of
 the spec as an open question. These checks test completeness and consistency of the
 spec, not whether it can be built on the platform; that is Phase 0 and
 `dforge_module_validate`.

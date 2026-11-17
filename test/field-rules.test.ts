@@ -11,9 +11,11 @@ import { describe, expect, it } from "vitest";
 import { checkFieldSpec, parseSetAggregate, isHiddenFk } from "../src/tools/field-rules";
 import { moduleValidate } from "../src/tools/module-validate";
 
-const messages = (field: unknown) => checkFieldSpec("e.f", field).map((i) => i.message).join(" | ");
-const errorCount = (field: unknown) =>
-	checkFieldSpec("e.f", field).filter((i) => i.level === "error").length;
+const messages = (field: unknown) =>
+	checkFieldSpec("e.f", field)
+		.map((i) => i.message)
+		.join(" | ");
+const errorCount = (field: unknown) => checkFieldSpec("e.f", field).filter((i) => i.level === "error").length;
 
 describe("checkFieldSpec", () => {
 	it("accepts a plain data column", () => {
@@ -108,9 +110,7 @@ describe("checkFieldSpec", () => {
 	});
 
 	it("enforces the reference-column shape", () => {
-		expect(messages({ columnType: "R", fieldTypeCd: "lookup", flags: "VEM" })).toMatch(
-			/requires a 'link' object/,
-		);
+		expect(messages({ columnType: "R", fieldTypeCd: "lookup", flags: "VEM" })).toMatch(/requires a 'link' object/);
 		expect(
 			messages({
 				columnType: "R",
@@ -192,7 +192,7 @@ describe("the validator re-runs the rules across the whole module", () => {
 			name: { fieldTypeCd: "text", dbDatatype: "varchar", flags: "VEM" },
 			total: {
 				columnType: "F",
-				baseDatatypeCd: "decimal",
+				baseDatatypeCd: "number",
 				flags: "V",
 				formula: "SUM([lines].[amount])",
 			},
@@ -214,6 +214,8 @@ describe("query column (columnType 'Q')", () => {
 
 	it("requires params and refuses a physical datatype", () => {
 		expect(messages({ columnType: "Q" })).toMatch(/requires 'params'/);
-		expect(messages({ columnType: "Q", params: {}, dbDatatype: "varchar" })).toMatch(/NOT set 'dbDatatype'|must NOT set 'dbDatatype'/);
+		expect(messages({ columnType: "Q", params: {}, dbDatatype: "varchar" })).toMatch(
+			/NOT set 'dbDatatype'|must NOT set 'dbDatatype'/,
+		);
 	});
 });

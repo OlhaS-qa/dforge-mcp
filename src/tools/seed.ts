@@ -40,7 +40,8 @@ export const seedAddSchema = {
 		.array(z.record(z.string(), z.unknown()))
 		.min(1)
 		.describe(
-			"The rows. Each MUST carry an explicit numeric PK under '{entity}_id' (cuid is int8, not a UUID). FK values must match a PK of an already-seeded parent.",
+			"The rows. Each MUST carry an explicit numeric PK under '{entity}_id' (cuid is int8, not a UUID). FK " +
+				"values must match a PK of an already-seeded parent.",
 		),
 	order: z
 		.number()
@@ -49,15 +50,19 @@ export const seedAddSchema = {
 		.max(99)
 		.optional()
 		.describe(
-			"Load order — becomes the filename prefix (seed-data/NN-<entity>.json). Parents need a LOWER number than their children. Default: next free slot.",
+			"Load order — becomes the filename prefix (seed-data/NN-<entity>.json). Parents need a LOWER number " +
+				"than their children. Default: next free slot.",
 		),
-	fileName: z
-		.string()
-		.optional()
-		.describe("Override the generated filename (without directory). Rarely needed."),
+	fileName: z.string().optional().describe("Override the generated filename (without directory). Rarely needed."),
 };
 
 export function seedAdd(args: z.infer<z.ZodObject<typeof seedAddSchema>>): ToolResult {
+	if (typeof args.entity !== "string" || args.entity.trim() === "") {
+		throw new Error(
+			"`entity` must not be empty — a seed file with an empty entityCode installs nothing and fails the install. " +
+				"Name the entity these records belong to.",
+		);
+	}
 	const { paths, manifest } = loadManifest(args.moduleDir);
 
 	const entityPath = path.join(paths.entitiesDir, `${args.entity}.json`);
@@ -77,9 +82,7 @@ export function seedAdd(args: z.infer<z.ZodObject<typeof seedAddSchema>>): ToolR
 	const seenPks = new Set<number>();
 	args.records.forEach((r, i) => {
 		if (!Object.prototype.hasOwnProperty.call(r, pk)) {
-			const wrong = ["id", "ID", `${args.entity}Id`].find((k) =>
-				Object.prototype.hasOwnProperty.call(r, k),
-			);
+			const wrong = ["id", "ID", `${args.entity}Id`].find((k) => Object.prototype.hasOwnProperty.call(r, k));
 			throw new Error(
 				`Record ${i} has no '${pk}'${wrong ? ` (found '${wrong}' instead)` : ""}. ` +
 					`Seed records need an explicit numeric PK under '{entity}_id' — the identity trait names it '${pk}', never 'id'.`,
@@ -146,9 +149,7 @@ export function seedAdd(args: z.infer<z.ZodObject<typeof seedAddSchema>>): ToolR
 		throw new Error(
 			`Seed records set column(s) not defined on '${args.entity}': ${[...unknown].join(", ")}. ` +
 				`Its columns are: ${Object.keys(fields).join(", ") || "(none authored)"}` +
-				(traitCols.length > 0
-					? `, plus these from traits [${traits.join(", ")}]: ${traitCols.join(", ")}.`
-					: "."),
+				(traitCols.length > 0 ? `, plus these from traits [${traits.join(", ")}]: ${traitCols.join(", ")}.` : "."),
 		);
 	}
 
@@ -185,7 +186,10 @@ export function seedAdd(args: z.infer<z.ZodObject<typeof seedAddSchema>>): ToolR
 
 	// ── FK values should point at a parent that is itself seeded ──
 	const seedFiles = fs.existsSync(paths.seedDataDir)
-		? fs.readdirSync(paths.seedDataDir).filter((f) => f.endsWith(".json")).sort()
+		? fs
+				.readdirSync(paths.seedDataDir)
+				.filter((f) => f.endsWith(".json"))
+				.sort()
 		: [];
 	const seededPks: Record<string, Set<number>> = {};
 	for (const f of seedFiles) {

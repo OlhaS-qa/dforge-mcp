@@ -10,6 +10,23 @@ import { afterAll, describe, expect, it } from "vitest";
 import { moduleValidate } from "../src/tools/module-validate";
 import type { CliValidate, CliValidateReport } from "../src/tools/native-shell";
 
+// Contract files for every non-system dependency a fixture declares (the offline
+// "dependency contracts" check requires one per dependency).
+const writeContracts = (dir: string, deps: Record<string, unknown>, consumed: string[] = []): void => {
+	mkdirSync(join(dir, "deps"), { recursive: true });
+	for (const d of Object.keys(deps)) {
+		if (["admin", "metadata", "workspace", "sys-billing"].includes(d)) continue;
+		writeFileSync(
+			join(dir, "deps", `${d}.json`),
+			JSON.stringify({
+				module: d,
+				version: ">=0.0.1",
+				entities: Object.fromEntries(consumed.map((e) => [e, { columns: {} }])),
+			}),
+		);
+	}
+};
+
 const run = (dir: string) => JSON.parse(moduleValidate({ moduleDir: dir }).files["_validate.json"]);
 
 describe("module_validate — canonical example", () => {
@@ -38,7 +55,11 @@ describe("module_validate — cross-module references", () => {
 	const make = (dependencies: Record<string, unknown>) => {
 		const dir = mkdtempSync(join(tmpdir(), "dforge-mcp-xmod-"));
 		mkdirSync(join(dir, "entities"), { recursive: true });
-		writeFileSync(join(dir, "manifest.json"), JSON.stringify({ code: "t", dependencies, entities: { line: "./entities/line.json" } }));
+		writeFileSync(
+			join(dir, "manifest.json"),
+			JSON.stringify({ code: "t", dependencies, entities: { line: "./entities/line.json" } }),
+		);
+		writeContracts(dir, dependencies);
 		writeFileSync(
 			join(dir, "entities", "line.json"),
 			JSON.stringify({
@@ -46,7 +67,12 @@ describe("module_validate — cross-module references", () => {
 				traits: ["identity"],
 				fields: {
 					product_id: { dbDatatype: "cuid", flags: "EM" },
-					product: { columnType: "R", fieldTypeCd: "lookup", flags: "VEM", link: { entity: "crm.product", thisKey: "product_id", otherKey: "product_id" } },
+					product: {
+						columnType: "R",
+						fieldTypeCd: "lookup",
+						flags: "VEM",
+						link: { entity: "crm.product", thisKey: "product_id", otherKey: "product_id" },
+					},
 				},
 			}),
 		);
@@ -76,10 +102,24 @@ describe("module_validate — role rights key resolution", () => {
 		mkdirSync(join(dir, "logic"), { recursive: true });
 		if (objectFiles) {
 			writeFileSync(join(dir, "ui", "reports.json"), JSON.stringify({ summary: {} }));
-			writeFileSync(join(dir, "logic", "stored_procedures.json"), JSON.stringify({ rpt_names: { functionName: "rpt_names", params: [] } }));
+			writeFileSync(
+				join(dir, "logic", "stored_procedures.json"),
+				JSON.stringify({ rpt_names: { functionName: "rpt_names", params: [] } }),
+			);
 		}
-		writeFileSync(join(dir, "manifest.json"), JSON.stringify({ code: "t", dependencies, entities: { thing: "./entities/thing.json" } }));
-		writeFileSync(join(dir, "entities", "thing.json"), JSON.stringify({ description: "Thing", traits: ["identity"], fields: { name: { fieldTypeCd: "text", dbDatatype: "varchar", flags: "VEM" } } }));
+		writeFileSync(
+			join(dir, "manifest.json"),
+			JSON.stringify({ code: "t", dependencies, entities: { thing: "./entities/thing.json" } }),
+		);
+		writeContracts(dir, dependencies);
+		writeFileSync(
+			join(dir, "entities", "thing.json"),
+			JSON.stringify({
+				description: "Thing",
+				traits: ["identity"],
+				fields: { name: { fieldTypeCd: "text", dbDatatype: "varchar", flags: "VEM" } },
+			}),
+		);
 		writeFileSync(join(dir, "security", "roles.json"), JSON.stringify({ admin: { rights } }));
 		try {
 			return JSON.parse(moduleValidate({ moduleDir: dir }).files["_validate.json"]);
@@ -101,7 +141,13 @@ describe("module_validate — role rights key resolution", () => {
 		expect(JSON.stringify(res.errors)).toContain("phantom");
 	});
 	it("allows report: and sp: grants on the package's own objects (#1270)", () => {
-		const res = make({ thing: "SIUDC", "report:summary": "E", "sp:rpt_names": "E", "report:t.summary": "E", "sp:t.rpt_names": "E" });
+		const res = make({
+			thing: "SIUDC",
+			"report:summary": "E",
+			"sp:rpt_names": "E",
+			"report:t.summary": "E",
+			"sp:t.rpt_names": "E",
+		});
 		expect(res.errors).toEqual([]);
 	});
 	it("allows qualified report: and sp: grants on a declared dependency", () => {
@@ -119,13 +165,16 @@ describe("module_validate — role rights key resolution", () => {
 		expect(errs).toContain("logic/stored_procedures.json is missing");
 		expect(errs).not.toContain("no such");
 	});
-	it.each(["sp:", "report:t.", "sp:.proc", "report:a.b.c", "sp:Rpt"])("flags malformed key '%s' as malformed, not as a missing module or object", (key) => {
-		const res = make({ thing: "SIUDC", [key]: "E" });
-		const errs = JSON.stringify(res.errors);
-		expect(errs).toContain(`malformed rights key '${key}'`);
-		expect(errs).not.toContain("not a declared dependency");
-		expect(errs).not.toContain("no such");
-	});
+	it.each(["sp:", "report:t.", "sp:.proc", "report:a.b.c", "sp:Rpt"])(
+		"flags malformed key '%s' as malformed, not as a missing module or object",
+		(key) => {
+			const res = make({ thing: "SIUDC", [key]: "E" });
+			const errs = JSON.stringify(res.errors);
+			expect(errs).toContain(`malformed rights key '${key}'`);
+			expect(errs).not.toContain("not a declared dependency");
+			expect(errs).not.toContain("no such");
+		},
+	);
 	it("flags a qualified grant on an undeclared module", () => {
 		const res = make({ thing: "SIUDC", "sp:fin.rpt_aging": "E" });
 		expect(JSON.stringify(res.errors)).toContain("not a declared dependency");
@@ -151,7 +200,13 @@ describe("module_validate — untranslated constraint messages", () => {
 			description: "Thing",
 			traits: ["identity"],
 			fields: { qty: { fieldTypeCd: "number", dbDatatype: "int4", flags: "VEM" } },
-			constraints: { chk_qty_positive: { type: "check", expression: "qty > 0", ...(opts.message !== undefined ? { message: opts.message } : {}) } },
+			constraints: {
+				chk_qty_positive: {
+					type: "check",
+					expression: "qty > 0",
+					...(opts.message !== undefined ? { message: opts.message } : {}),
+				},
+			},
 		};
 		if (opts.extends) entity.extends = opts.extends;
 		writeFileSync(join(dir, "entities", "thing.json"), JSON.stringify(entity));
@@ -187,13 +242,17 @@ describe("module_validate — untranslated constraint messages", () => {
 		const res = make({
 			supportedLocales: ["de-DE"],
 			message: "Qty must be positive",
-			localeFiles: { "de-de": { entities: { thing: { constraints: { chk_qty_positive: { message: "Menge muss positiv sein" } } } } } },
+			localeFiles: {
+				"de-de": { entities: { thing: { constraints: { chk_qty_positive: { message: "Menge muss positiv sein" } } } } },
+			},
 		});
 		expect(JSON.stringify(res.warnings)).not.toContain("chk_qty_positive");
 	});
 
 	it("does not warn for English locales or constraints without a message", () => {
-		expect(JSON.stringify(make({ supportedLocales: ["en-US"], message: "Qty must be positive" }).warnings)).not.toContain("chk_qty_positive");
+		expect(
+			JSON.stringify(make({ supportedLocales: ["en-US"], message: "Qty must be positive" }).warnings),
+		).not.toContain("chk_qty_positive");
 		expect(JSON.stringify(make({ supportedLocales: ["de-DE"] }).warnings)).not.toContain("chk_qty_positive");
 	});
 
@@ -205,15 +264,14 @@ describe("module_validate — untranslated constraint messages", () => {
 
 describe("module_validate — data-view visible column", () => {
 	// One entity + one view; the entity's fields and the view's viewType vary.
-	const make = (opts: {
-		fields: Record<string, unknown>;
-		viewType?: string;
-		traits?: string[];
-	}) => {
+	const make = (opts: { fields: Record<string, unknown>; viewType?: string; traits?: string[] }) => {
 		const dir = mkdtempSync(join(tmpdir(), "dforge-mcp-viscol-"));
 		mkdirSync(join(dir, "entities"), { recursive: true });
 		mkdirSync(join(dir, "ui"), { recursive: true });
-		writeFileSync(join(dir, "manifest.json"), JSON.stringify({ code: "t", entities: { thing: "./entities/thing.json" } }));
+		writeFileSync(
+			join(dir, "manifest.json"),
+			JSON.stringify({ code: "t", entities: { thing: "./entities/thing.json" } }),
+		);
 		writeFileSync(
 			join(dir, "entities", "thing.json"),
 			JSON.stringify({ description: "Thing", traits: opts.traits ?? ["identity"], fields: opts.fields }),
@@ -260,7 +318,12 @@ describe("module_validate — grid/list grouping", () => {
 			fieldTypeCd: "dropdown",
 			dbDatatype: "varchar",
 			flags: "VEM",
-			params: { options: [{ value: "open", label: "Open" }, { value: "done", label: "Done" }] },
+			params: {
+				options: [
+					{ value: "open", label: "Open" },
+					{ value: "done", label: "Done" },
+				],
+			},
 		},
 		owner_id: { fieldTypeCd: "user", dbDatatype: "int", flags: "VE" },
 	};
@@ -268,7 +331,10 @@ describe("module_validate — grid/list grouping", () => {
 		const dir = mkdtempSync(join(tmpdir(), "dforge-mcp-group-"));
 		mkdirSync(join(dir, "entities"), { recursive: true });
 		mkdirSync(join(dir, "ui"), { recursive: true });
-		writeFileSync(join(dir, "manifest.json"), JSON.stringify({ code: "t", entities: { thing: "./entities/thing.json" } }));
+		writeFileSync(
+			join(dir, "manifest.json"),
+			JSON.stringify({ code: "t", entities: { thing: "./entities/thing.json" } }),
+		);
 		writeFileSync(
 			join(dir, "entities", "thing.json"),
 			JSON.stringify({ description: "Thing", traits: ["identity"], fields, ...extra }),
@@ -392,10 +458,17 @@ describe("module_validate — reports: param declaration site", () => {
 		const dir = mkdtempSync(join(tmpdir(), "dforge-mcp-rptparams-"));
 		mkdirSync(join(dir, "entities"), { recursive: true });
 		mkdirSync(join(dir, "ui"), { recursive: true });
-		writeFileSync(join(dir, "manifest.json"), JSON.stringify({ code: "t", entities: { order: "./entities/order.json" } }));
+		writeFileSync(
+			join(dir, "manifest.json"),
+			JSON.stringify({ code: "t", entities: { order: "./entities/order.json" } }),
+		);
 		writeFileSync(
 			join(dir, "entities", "order.json"),
-			JSON.stringify({ description: "Order", traits: ["identity"], fields: { name: { fieldTypeCd: "text", dbDatatype: "varchar", flags: "VEM" } } }),
+			JSON.stringify({
+				description: "Order",
+				traits: ["identity"],
+				fields: { name: { fieldTypeCd: "text", dbDatatype: "varchar", flags: "VEM" } },
+			}),
 		);
 		writeFileSync(join(dir, "ui", "reports.json"), JSON.stringify({ rpt: report }));
 		try {
@@ -437,7 +510,9 @@ describe("module_validate — reports: param declaration site", () => {
 			datasets: {
 				rows: {
 					datasetType: "Q",
-					params: { customer_id: { label: "C", fieldTypeCd: "lookup", params: { link: { entity: "order" } }, required: true } },
+					params: {
+						customer_id: { label: "C", fieldTypeCd: "lookup", params: { link: { entity: "order" } }, required: true },
+					},
 					query: { entityCd: "order" },
 				},
 			},
@@ -448,7 +523,13 @@ describe("module_validate — reports: param declaration site", () => {
 	it("flags `isRequired`, which the installer does not read", () => {
 		const res = make({
 			...base,
-			datasets: { rows: { datasetType: "Q", params: { p: { fieldTypeCd: "text", isRequired: true } }, query: { entityCd: "order" } } },
+			datasets: {
+				rows: {
+					datasetType: "Q",
+					params: { p: { fieldTypeCd: "text", isRequired: true } },
+					query: { entityCd: "order" },
+				},
+			},
 		});
 		expect(JSON.stringify(res.errors)).toContain("isRequired");
 	});
@@ -456,7 +537,13 @@ describe("module_validate — reports: param declaration site", () => {
 	it("flags a top-level `link` on a param — it belongs under `params.link`", () => {
 		const res = make({
 			...base,
-			datasets: { rows: { datasetType: "Q", params: { p: { fieldTypeCd: "lookup", link: { entity: "order" } } }, query: { entityCd: "order" } } },
+			datasets: {
+				rows: {
+					datasetType: "Q",
+					params: { p: { fieldTypeCd: "lookup", link: { entity: "order" } } },
+					query: { entityCd: "order" },
+				},
+			},
 		});
 		expect(JSON.stringify(res.errors)).toContain("params.link");
 	});
@@ -467,10 +554,17 @@ describe("module_validate — report label", () => {
 		const dir = mkdtempSync(join(tmpdir(), "dforge-mcp-rptlabel-"));
 		mkdirSync(join(dir, "entities"), { recursive: true });
 		mkdirSync(join(dir, "ui"), { recursive: true });
-		writeFileSync(join(dir, "manifest.json"), JSON.stringify({ code: "t", entities: { order: "./entities/order.json" } }));
+		writeFileSync(
+			join(dir, "manifest.json"),
+			JSON.stringify({ code: "t", entities: { order: "./entities/order.json" } }),
+		);
 		writeFileSync(
 			join(dir, "entities", "order.json"),
-			JSON.stringify({ description: "Order", traits: ["identity"], fields: { name: { fieldTypeCd: "text", dbDatatype: "varchar", flags: "VEM" } } }),
+			JSON.stringify({
+				description: "Order",
+				traits: ["identity"],
+				fields: { name: { fieldTypeCd: "text", dbDatatype: "varchar", flags: "VEM" } },
+			}),
 		);
 		writeFileSync(
 			join(dir, "ui", "reports.json"),
@@ -524,8 +618,13 @@ describe("module_validate — record-report attachments", () => {
 		mkdirSync(join(dir, "ui"), { recursive: true });
 		writeFileSync(
 			join(dir, "manifest.json"),
-			JSON.stringify({ code: "t", dependencies: opts.dependencies ?? { metadata: ">=1.5.0" }, entities: { order: "./entities/order.json" } }),
+			JSON.stringify({
+				code: "t",
+				dependencies: opts.dependencies ?? { metadata: ">=1.5.0" },
+				entities: { order: "./entities/order.json" },
+			}),
 		);
+		writeContracts(dir, opts.dependencies ?? {});
 		writeFileSync(
 			join(dir, "entities", "order.json"),
 			JSON.stringify({
@@ -534,7 +633,12 @@ describe("module_validate — record-report attachments", () => {
 				fields: {
 					notes: { fieldTypeCd: "textarea", dbDatatype: "text", flags: "VE" },
 					customer_id: { dbDatatype: "int8", flags: "EM" },
-					customer: { columnType: "R", fieldTypeCd: "lookup", flags: "VEM", link: { entity: "order", thisKey: "customer_id", otherKey: "order_id" } },
+					customer: {
+						columnType: "R",
+						fieldTypeCd: "lookup",
+						flags: "VEM",
+						link: { entity: "order", thisKey: "customer_id", otherKey: "order_id" },
+					},
 				},
 			}),
 		);
@@ -570,11 +674,19 @@ describe("module_validate — record-report attachments", () => {
 		mkdirSync(join(dir, "ui"), { recursive: true });
 		writeFileSync(
 			join(dir, "manifest.json"),
-			JSON.stringify({ code: "t", dependencies: { metadata: ">=1.5.0" }, entities: { order: "./entities/order.json" } }),
+			JSON.stringify({
+				code: "t",
+				dependencies: { metadata: ">=1.5.0" },
+				entities: { order: "./entities/order.json" },
+			}),
 		);
 		writeFileSync(
 			join(dir, "entities", "order.json"),
-			JSON.stringify({ description: "Order", traits: ["identity"], fields: { name: { fieldTypeCd: "text", dbDatatype: "varchar", flags: "VEM" } } }),
+			JSON.stringify({
+				description: "Order",
+				traits: ["identity"],
+				fields: { name: { fieldTypeCd: "text", dbDatatype: "varchar", flags: "VEM" } },
+			}),
 		);
 		writeFileSync(
 			join(dir, "ui", "reports.json"),
@@ -668,7 +780,10 @@ describe("module_validate — entity views", () => {
 		const dir = mkdtempSync(join(tmpdir(), "dforge-mcp-views-"));
 		mkdirSync(join(dir, "entities"), { recursive: true });
 		mkdirSync(join(dir, "ui"), { recursive: true });
-		writeFileSync(join(dir, "manifest.json"), JSON.stringify({ code: "t", entities: { invoice: "./entities/invoice.json" } }));
+		writeFileSync(
+			join(dir, "manifest.json"),
+			JSON.stringify({ code: "t", entities: { invoice: "./entities/invoice.json" } }),
+		);
 		writeFileSync(
 			join(dir, "entities", "invoice.json"),
 			JSON.stringify({
@@ -745,7 +860,10 @@ describe("module_validate — folder viewName bindings", () => {
 		const dir = mkdtempSync(join(tmpdir(), "dforge-mcp-bind-"));
 		mkdirSync(join(dir, "entities"), { recursive: true });
 		mkdirSync(join(dir, "ui"), { recursive: true });
-		writeFileSync(join(dir, "manifest.json"), JSON.stringify({ code: "t", entities: { invoice: "./entities/invoice.json" } }));
+		writeFileSync(
+			join(dir, "manifest.json"),
+			JSON.stringify({ code: "t", entities: { invoice: "./entities/invoice.json" } }),
+		);
 		writeFileSync(
 			join(dir, "entities", "invoice.json"),
 			JSON.stringify({
@@ -757,7 +875,10 @@ describe("module_validate — folder viewName bindings", () => {
 		);
 		writeFileSync(
 			join(dir, "ui", "folders.json"),
-			JSON.stringify({ label: "Root", children: { billing: { label: "Billing", entities: { invoice: { viewName: folderViewName } } } } }),
+			JSON.stringify({
+				label: "Root",
+				children: { billing: { label: "Billing", entities: { invoice: { viewName: folderViewName } } } },
+			}),
 		);
 		try {
 			return run(dir);
@@ -805,6 +926,7 @@ describe("module_validate — docs/diagrams/*.json", () => {
 				entities: { invoice: "./entities/invoice.json" },
 			}),
 		);
+		writeContracts(dir, { acme: 1, "acme.parties": 1 }, ["region", "party"]);
 		writeFileSync(
 			join(dir, "entities", "invoice.json"),
 			JSON.stringify({
@@ -850,7 +972,9 @@ describe("module_validate — docs/diagrams/*.json", () => {
 	it("warns on a root that isn't an object, or a missing 'entities'", () => {
 		const res = make({ list: "[]", empty: { label: "Empty" } });
 		expect(diagramIssues(res.errors)).toEqual([]);
-		const where = diagramIssues(res.warnings).map((w) => w.where).sort();
+		const where = diagramIssues(res.warnings)
+			.map((w) => w.where)
+			.sort();
 		expect(where).toEqual(["docs/diagrams/empty.json", "docs/diagrams/list.json"]);
 	});
 
@@ -877,7 +1001,11 @@ describe("module_validate — docs/diagrams/*.json", () => {
 	});
 
 	it("checks a dependency entity against its deps/ contract when there is one", () => {
-		const contract = { module: "acme.parties", version: ">=0.0.1", entities: { party: { pk: "party_id", use: ["ref:t"] } } };
+		const contract = {
+			module: "acme.parties",
+			version: ">=0.0.1",
+			entities: { party: { pk: "party_id", use: ["ref:t"] } },
+		};
 		const res = make({ billing: { entities: { "acme.parties.party": {}, "acme.parties.contact": {} } } }, contract);
 		const warnings = JSON.stringify(diagramIssues(res.warnings));
 		expect(warnings).not.toContain("'party'");
@@ -914,13 +1042,10 @@ describe("module_validate — a job's action is checked in its own execution mod
 			}),
 		);
 		writeFileSync(join(dir, "ui", "actions.json"), JSON.stringify({ sweep: { script: "sweep", ...action } }));
-		writeFileSync(
-			join(dir, "logic", "jobs.json"),
-			JSON.stringify({ jobs: [{ code: "nightly", action: "sweep" }] }),
-		);
+		writeFileSync(join(dir, "logic", "jobs.json"), JSON.stringify({ jobs: [{ code: "nightly", action: "sweep" }] }));
 		writeFileSync(
 			join(dir, "logic", "actions", "sweep.dsl"),
-			"execute:\n\tvar flags = [TRUE]\n\tvar rows = select(\"SELECT id FROM thing\")\n",
+			'execute:\n\tvar flags = [TRUE]\n\tvar rows = select("SELECT id FROM thing")\n',
 		);
 		try {
 			return JSON.parse(moduleValidate({ moduleDir: dir }).files["_validate.json"]);
@@ -972,19 +1097,34 @@ describe("module_validate — CLI static checks (#1184)", () => {
 		}));
 		expect(res.ok).toBe(false);
 		expect(res.errors).toEqual([
-			{ level: "error", where: "cli: reserved column names", message: "Entity 'widget' has column code(s) starting with '_'" },
+			{
+				level: "error",
+				where: "cli: reserved column names",
+				message: "Entity 'widget' has column code(s) starting with '_'",
+			},
 			{ level: "error", where: "cli: event triggers", message: "trigger 't': action 'a' has executionMode 'batch'" },
 		]);
 	});
 
 	it("reports a package the CLI could not load", () => {
-		const res = runWith(() => ({ report: report({ ok: false, error: "manifest has no 'moduleId' field.", checks: [] }) }));
-		expect(res.errors).toEqual([{ level: "error", where: "cli: package", message: "manifest has no 'moduleId' field." }]);
+		const res = runWith(() => ({
+			report: report({ ok: false, error: "manifest has no 'moduleId' field.", checks: [] }),
+		}));
+		expect(res.errors).toEqual([
+			{ level: "error", where: "cli: package", message: "manifest has no 'moduleId' field." },
+		]);
 	});
 
 	it("passes CLI warnings through", () => {
 		const res = runWith(() => ({
-			report: report({ warnings: [{ where: "entities/todo_item.json", message: "toString placeholder {todo_item_id} renders an id no user can read." }] }),
+			report: report({
+				warnings: [
+					{
+						where: "entities/todo_item.json",
+						message: "toString placeholder {todo_item_id} renders an id no user can read.",
+					},
+				],
+			}),
 		}));
 		expect(res.errors).toEqual([]);
 		expect(JSON.stringify(res.warnings)).toContain("renders an id no user can read");
@@ -993,8 +1133,10 @@ describe("module_validate — CLI static checks (#1184)", () => {
 	it("warns, without failing, when the CLI is unavailable", () => {
 		const res = runWith(() => ({ unavailable: "Failed to exec dforge-cli" }));
 		expect(res.errors).toEqual([]);
-		expect(res.warnings).toContainEqual(
-			{ level: "warning", where: "cli", message: "CLI checks skipped, so pack may still fail: Failed to exec dforge-cli" },
-		);
+		expect(res.warnings).toContainEqual({
+			level: "warning",
+			where: "cli",
+			message: "CLI checks skipped, so pack may still fail: Failed to exec dforge-cli",
+		});
 	});
 });

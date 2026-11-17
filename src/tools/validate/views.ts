@@ -7,7 +7,7 @@ import type { ValidateContext } from "./context";
 // so an empty visible-column set is not an error for them. Mirrors the server's
 // DataViewVisibleColumnValidator.ColumnAgnosticViewTypes and the frontend view
 // registrations that set hasFieldsPanel:false.
-const COLUMN_AGNOSTIC_VIEW_TYPES = new Set(["diagram", "matrix", "library"]);
+export const COLUMN_AGNOSTIC_VIEW_TYPES = new Set(["diagram", "matrix", "library"]);
 
 /**
  * True when a merged field-def map has at least one VISIBLE SCALAR column — a
@@ -121,7 +121,8 @@ export function checkViewGrouping(ctx: ValidateContext): void {
 		const resolve = (key: string, cd: string): Record<string, unknown> | undefined => {
 			const f = defs[cd];
 			if (!f) err(where, `names '${cd}' in '${key}', which entity '${ent}' does not define`);
-			else if (!isGroupable(f)) err(where, `names '${cd}' in '${key}', which is not a dropdown, reference or user column`);
+			else if (!isGroupable(f))
+				err(where, `names '${cd}' in '${key}', which is not a dropdown, reference or user column`);
 			else return f;
 			return undefined;
 		};

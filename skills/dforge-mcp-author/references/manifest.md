@@ -52,6 +52,8 @@ Every dForge module has a `manifest.json` at its root. This file declares the mo
 | `dependencies` | object | Map of `module_code → semver range`. Each entry also requires a `deps/<module_code>.json` contract — see [Dependencies](#dependencies). |
 | `created`, `updated` | ISO date | Timestamps |
 
+> **Schema discrepancy (unresolved).** The vendored `resources/schemas/manifest.schema.json` has `additionalProperties: false` and lists NEITHER `shortDescription` NOR `security`; the same holds for most content declarations below except `entities` (`dataViews`, `menus`, `actions`, `reports`, `settings`, `seedData`, ...). This page and the platform's publishing notes document both, so the schema looks stale or the keys are accepted only by a newer platform. `dforge_module_validate` reports schema findings as warnings, so expect a warning for these keys; keep them only when the target platform supports them, and ask the platform owners which is authoritative. `dforge-cli module validate/pack` do not run schema validation, so they will not catch it either way.
+
 Both texts come from the package and are refreshed on every publish. To change a catalog description, edit the manifest and publish a new version. The developer metadata PATCH refuses `shortDescription` with a 400. A module published before this change keeps its old card text until its next version is published.
 
 ## Content declarations
@@ -70,7 +72,6 @@ The manifest lists every file in the package by logical key. The installer reads
 | `security` | object | `{ "roles": "./security/roles.json", "folders": "./ui/folders.json" }` |
 | `seedData` | array | List of paths to seed files, in install order |
 | `supportedLocales` | string[] | IETF locale tags that the module ships translations for, e.g. `["de-DE", "uk-UA"]`. Files are **auto-discovered** at `./translations/{locale}.json` — there is no per-file manifest entry. English (`en`/`en-*`) is the default and must not be listed. |
-| `printTemplates` | object | `{ "template_code": "./print_templates/template.scriban" }` |
 | `webhooks` | string | path to `./webhooks.json` |
 | `features` | string[] | Opt-in platform behaviours this package was authored for, e.g. `["report-security"]`. Absent/empty = the pre-feature behaviour. See **Feature opt-ins** below. |
 

@@ -568,6 +568,9 @@ if (info.fileSize > 5 * 1024 * 1024) { error('Receipt larger than 5 MB') }
 if (info.mimeType != 'application/pdf') { error('Receipt must be PDF') }
 ```
 
+#### `exportXlsx(entityCd, templateCd, { filter, orderBy, fileName })`
+Fill an Excel export template with one entity's rows (read as `data.export` does, under the current user's rights) and hand the user the workbook as the action's download; returns `{ url, fileName, recordCount }`. Not in a scheduled job or a background action; counts against the per-run download limit; the file cannot be attached to an email yet.
+
 #### `printPdf(entityCd, key, templateCd)`
 Render a print template to a PDF as the current user and return the archived file as `{ fileId, fileName, mimeType, size, checksum }`, plus `warnings` when a value printed empty because the user may not read it; attach it with `sendEmail()`. Pass a qualified entity code. Not in a scheduled job or a background action; max 10 per run.
 

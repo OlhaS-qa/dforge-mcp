@@ -6,12 +6,7 @@
 import { z } from "zod";
 import * as fs from "node:fs";
 import * as path from "node:path";
-import {
-	loadManifest,
-	readJsonOrDefault,
-	diagramFiles,
-	type ToolResult,
-} from "./_helpers";
+import { loadManifest, readJsonOrDefault, diagramFiles, type ToolResult, entityFilePath } from "./_helpers";
 
 export const moduleInspectSchema = {
 	moduleDir: z.string(),
@@ -68,14 +63,12 @@ interface InspectSummary {
 	supportedLocales: string[];
 }
 
-export function moduleInspect(
-	args: z.infer<z.ZodObject<typeof moduleInspectSchema>>,
-): ToolResult {
+export function moduleInspect(args: z.infer<z.ZodObject<typeof moduleInspectSchema>>): ToolResult {
 	const { paths, manifest } = loadManifest(args.moduleDir);
 
 	const entities = (manifest.entities ?? {}) as Record<string, string>;
 	const entitySummaries = Object.entries(entities).map(([name, relPath]) => {
-		const abs = path.join(paths.root, relPath.replace(/^\.\//, ""));
+		const abs = entityFilePath(paths.root, relPath);
 		const e = readJsonOrDefault<Record<string, unknown>>(abs, {});
 		const fields = (e.fields as Record<string, unknown> | undefined) ?? {};
 		return {
@@ -86,9 +79,10 @@ export function moduleInspect(
 			fields: Object.keys(fields),
 			hasNumberSequence: Boolean(e.numberSequence),
 			entityViews: Object.fromEntries(
-				Object.entries((e.views as Record<string, Record<string, unknown>> | undefined) ?? {}).map(
-					([vname, v]) => [vname, Object.keys((v?.columns as Record<string, unknown>) ?? {}).length],
-				),
+				Object.entries((e.views as Record<string, Record<string, unknown>> | undefined) ?? {}).map(([vname, v]) => [
+					vname,
+					Object.keys((v?.columns as Record<string, unknown>) ?? {}).length,
+				]),
 			),
 			// Read as an OWN property — `toString` is inherited from
 			// Object.prototype, so a plain `e.toString` reports the built-in
@@ -154,10 +148,7 @@ export function moduleInspect(
 
 	// triggers.json / webhooks.json are `{ triggers: [...] }` / `{ subscriptions: [...] }`
 	// arrays (not code-keyed maps) — see behavior.ts.
-	const triggerFile = readJsonOrDefault<{ triggers?: Array<Record<string, unknown>> }>(
-		paths.triggers,
-		{},
-	);
+	const triggerFile = readJsonOrDefault<{ triggers?: Array<Record<string, unknown>> }>(paths.triggers, {});
 	const triggerSummaries = (triggerFile.triggers ?? []).map((t) => ({
 		code: (t.code as string) ?? "?",
 		entity: (t.entity as string) ?? "?",
@@ -166,10 +157,7 @@ export function moduleInspect(
 		async: Boolean(t.async),
 	}));
 
-	const webhookFile = readJsonOrDefault<{ subscriptions?: Array<Record<string, unknown>> }>(
-		paths.webhooks,
-		{},
-	);
+	const webhookFile = readJsonOrDefault<{ subscriptions?: Array<Record<string, unknown>> }>(paths.webhooks, {});
 	const webhookSummaries = (webhookFile.subscriptions ?? []).map((w) => ({
 		code: (w.code as string) ?? "?",
 		entity: (w.entity as string) ?? "?",
@@ -186,16 +174,20 @@ export function moduleInspect(
 		schedule: (j.schedule as string) ?? "?",
 	}));
 	const queries = Object.keys(readJsonOrDefault<Record<string, unknown>>(paths.queries, {}));
-	const printTemplates = Object.keys(
-		readJsonOrDefault<Record<string, unknown>>(paths.printTemplates, {}),
-	);
+	const printTemplates = Object.keys(readJsonOrDefault<Record<string, unknown>>(paths.printTemplates, {}));
 	const domains = Object.keys(readJsonOrDefault<Record<string, unknown>>(paths.domains, {}));
 
 	const seedFiles = fs.existsSync(paths.seedDataDir)
-		? fs.readdirSync(paths.seedDataDir).filter((f) => f.endsWith(".json")).sort()
+		? fs
+				.readdirSync(paths.seedDataDir)
+				.filter((f) => f.endsWith(".json"))
+				.sort()
 		: [];
 	const translations = fs.existsSync(paths.translationsDir)
-		? fs.readdirSync(paths.translationsDir).filter((f) => f.endsWith(".json")).sort()
+		? fs
+				.readdirSync(paths.translationsDir)
+				.filter((f) => f.endsWith(".json"))
+				.sort()
 		: [];
 
 	const summary: InspectSummary = {
@@ -246,8 +238,6 @@ export function moduleInspect(
 function computeDepth(folder: Record<string, unknown>, current = 1): number {
 	const children = folder.children as Record<string, unknown> | undefined;
 	if (!children) return current;
-	const childDepths = Object.values(children).map((c) =>
-		computeDepth(c as Record<string, unknown>, current + 1),
-	);
+	const childDepths = Object.values(children).map((c) => computeDepth(c as Record<string, unknown>, current + 1));
 	return childDepths.length === 0 ? current : Math.max(...childDepths);
 }

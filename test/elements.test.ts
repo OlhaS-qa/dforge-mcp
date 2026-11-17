@@ -13,10 +13,11 @@ import { seedAdd } from "../src/tools/seed";
 import { translationSync } from "../src/tools/translations";
 import { moduleValidate } from "../src/tools/module-validate";
 import { applyToDisk } from "../src/tools/apply";
+import { guardSchemas } from "../src/tools/schema-guard";
 import type { ToolResult } from "../src/tools/_helpers";
 
 let dir: string;
-const apply = (r: ToolResult) => applyToDisk(dir, r);
+const apply = (r: ToolResult) => applyToDisk(dir, guardSchemas(dir, r));
 const readJson = (rel: string) => JSON.parse(readFileSync(join(dir, rel), "utf8"));
 const validate = () => JSON.parse(moduleValidate({ moduleDir: dir }).files["_validate.json"]);
 
@@ -84,9 +85,7 @@ describe("menu_add", () => {
 	});
 
 	it("emits a section node with no itemType, and nests under it", () => {
-		apply(
-			menuAdd({ moduleDir: dir, menu: "shop_menu", parentPath: "", code: "catalog", label: "Catalog" }),
-		);
+		apply(menuAdd({ moduleDir: dir, menu: "shop_menu", parentPath: "", code: "catalog", label: "Catalog" }));
 		const section = readJson("ui/menus.json").shop_menu.items.catalog;
 		expect(section.itemType).toBeUndefined();
 		expect(section.children).toEqual({});
@@ -101,9 +100,7 @@ describe("menu_add", () => {
 				dataViewCode: "products",
 			}),
 		);
-		expect(readJson("ui/menus.json").shop_menu.items.catalog.children.products.dataViewCode).toBe(
-			"products",
-		);
+		expect(readJson("ui/menus.json").shop_menu.items.catalog.children.products.dataViewCode).toBe("products");
 	});
 
 	it("refuses a dataViewCode with no matching view", () => {
@@ -162,7 +159,11 @@ describe("report_add", () => {
 	});
 
 	it("still adds a report with no label, and warns that the description names it", () => {
-		const res = reportAdd({ moduleDir: dir, code: "stock", report: { description: "Products and their SKUs", ...body } });
+		const res = reportAdd({
+			moduleDir: dir,
+			code: "stock",
+			report: { description: "Products and their SKUs", ...body },
+		});
 		expect(res.warning).toBe(
 			'Report \'stock\' declares no "label", so its description names it: "Products and their SKUs". Add a short label; the description then shows under it.',
 		);
@@ -187,12 +188,12 @@ describe("seed_add", () => {
 	});
 
 	it("rejects a record with no PK, or an 'id' key instead", () => {
-		expect(() =>
-			seedAdd({ moduleDir: dir, entity: "product", records: [{ name: "x" }] }),
-		).toThrow(/has no 'product_id'/);
-		expect(() =>
-			seedAdd({ moduleDir: dir, entity: "product", records: [{ id: 1, name: "x" }] }),
-		).toThrow(/found 'id' instead/);
+		expect(() => seedAdd({ moduleDir: dir, entity: "product", records: [{ name: "x" }] })).toThrow(
+			/has no 'product_id'/,
+		);
+		expect(() => seedAdd({ moduleDir: dir, entity: "product", records: [{ id: 1, name: "x" }] })).toThrow(
+			/found 'id' instead/,
+		);
 	});
 
 	it("rejects a non-integer PK (cuid is int8, not a UUID)", () => {
@@ -210,12 +211,15 @@ describe("seed_add", () => {
 			seedAdd({
 				moduleDir: dir,
 				entity: "product",
-				records: [{ product_id: 1, name: "a" }, { product_id: 1, name: "b" }],
+				records: [
+					{ product_id: 1, name: "a" },
+					{ product_id: 1, name: "b" },
+				],
 			}),
 		).toThrow(/Duplicate 'product_id'/);
-		expect(() =>
-			seedAdd({ moduleDir: dir, entity: "product", records: [{ product_id: 1, colour: "red" }] }),
-		).toThrow(/not defined on 'product': colour/);
+		expect(() => seedAdd({ moduleDir: dir, entity: "product", records: [{ product_id: 1, colour: "red" }] })).toThrow(
+			/not defined on 'product': colour/,
+		);
 	});
 
 	it("accepts trait-provided columns, using the registry's real names", () => {
@@ -225,9 +229,7 @@ describe("seed_add", () => {
 			seedAdd({
 				moduleDir: dir,
 				entity: "product",
-				records: [
-					{ product_id: 1, name: "x", created_date: "2026-01-01", last_updated: "2026-01-01" },
-				],
+				records: [{ product_id: 1, name: "x", created_date: "2026-01-01", last_updated: "2026-01-01" }],
 			}),
 		).not.toThrow();
 	});
@@ -267,9 +269,9 @@ describe("seed_add", () => {
 		rmSync(dir, { recursive: true, force: true });
 		dir = mkdtempSync(join(tmpdir(), "dforge-mcp-elements-"));
 		makeModule({ traits: ["identity", "audit-full"] });
-		expect(() =>
-			seedAdd({ moduleDir: dir, entity: "product", records: [{ product_id: 1, name: "x" }] }),
-		).toThrow(/audit-full/);
+		expect(() => seedAdd({ moduleDir: dir, entity: "product", records: [{ product_id: 1, name: "x" }] })).toThrow(
+			/audit-full/,
+		);
 		// Setting both to the System user (0) is accepted.
 		expect(() =>
 			seedAdd({
@@ -329,7 +331,9 @@ describe("translation_sync", () => {
 	});
 
 	it("tells an English-only module it needs no translation files", () => {
-		expect(() => translationSync({ moduleDir: dir, prune: false })).toThrow(/English-only module needs no translation files/);
+		expect(() => translationSync({ moduleDir: dir, prune: false })).toThrow(
+			/English-only module needs no translation files/,
+		);
 	});
 
 	it("flags a leftover English file as never read", () => {

@@ -59,6 +59,22 @@ Structure: **root key** → `label` + `items` → **section nodes** (with `child
 
 **Section nodes** (with `children`) **omit `itemType`**. Only leaf items have it.
 
+`dforge_menu_add` writes a view leaf with `dataViewCode`, a report leaf with `reportCode` (validated against `ui/reports.json`, `itemType: "R"`).
+
+## Menu-level `folders`
+
+A root menu may carry a `folders` array of folder codes (validated against `ui/folders.json`):
+
+```json
+"crm_menu": { "label": "Sales CRM", "folders": ["sales"], "items": { ... } }
+```
+
+Without `folders` the menu is linked to **every** folder. Set it with `dforge_menu_add({ folders: [...] })` on the root menu.
+
+### Coverage rule (menus, folders, entities)
+
+`module pack` requires every folder a menu is linked to to contain the entities behind every item of that menu (the entities of a leaf's data view, and of a leaf's report). A gap is one CLI error per (folder, entity, item). Two ways out: restrict the menu with `folders` so it links only to folders that hold its entities, or add the entity to the folder (`entities` in `ui/folders.json`). A pure container folder with no entity bindings is exempt. `dforge_module_validate` reports the gaps grouped per folder.
+
 ## Icons
 
 In `ui/menus.json`, icons use Bootstrap icon names **without the `bi-` prefix**:

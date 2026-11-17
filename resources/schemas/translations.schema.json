@@ -79,7 +79,7 @@
 		},
 		"reports": {
 			"type": "object",
-			"description": "Report code → label, dataset captions and parameter labels.",
+			"description": "Report code → label, dataset captions, parameter labels and panel titles.",
 			"additionalProperties": {
 				"$ref": "#/$defs/report"
 			}
@@ -284,6 +284,14 @@
 				},
 				"params": {
 					"$ref": "#/$defs/params"
+				},
+				"panels": {
+					"type": "object",
+					"description": "Panel title as authored in the report's layout → its translation. Keyed by the title because a panel has no code; a panel whose title a user changed in a saved layout shows as typed.",
+					"additionalProperties": {
+						"type": "string",
+						"minLength": 1
+					}
 				}
 			}
 		},

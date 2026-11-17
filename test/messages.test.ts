@@ -56,7 +56,9 @@ describe("translation_sync — messages", () => {
 describe("module_validate — messages", () => {
 	it("reports untranslated and joined messages per script, and entries nothing uses", () => {
 		write("translations/de-DE.json", { messages: { Gone: "Weg", "Only {n} left": "Nur {m} übrig" } });
-		const text = validateIssues().map((w) => `${w.where} ${w.message}`).join("\n");
+		const text = validateIssues()
+			.map((w) => `${w.where} ${w.message}`)
+			.join("\n");
 		expect(text).toContain("joins text and values");
 		expect(text).toMatch(/No de-DE translation/);
 		expect(text).toContain('messages entry "Gone" matches no');

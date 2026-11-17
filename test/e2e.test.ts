@@ -14,11 +14,7 @@ import { afterEach, beforeEach, describe, expect, it } from "vitest";
 
 import { createModuleFiles } from "../src/tools/create-module";
 import { entityFieldAdd } from "../src/tools/entity-field";
-import {
-	entityReferenceAdd,
-	entityRollupAdd,
-	entityStatusAdd,
-} from "../src/tools/entity-compose";
+import { entityReferenceAdd, entityRollupAdd, entityStatusAdd } from "../src/tools/entity-compose";
 import { actionAdd } from "../src/tools/action-add";
 import { triggerAdd } from "../src/tools/behavior";
 import { viewAdd } from "../src/tools/view";
@@ -30,12 +26,13 @@ import { moduleValidate } from "../src/tools/module-validate";
 import { moduleInspect } from "../src/tools/module-inspect";
 import { planModule } from "../src/tools/plan-module";
 import { applyToDisk } from "../src/tools/apply";
+import { guardSchemas } from "../src/tools/schema-guard";
 import type { ToolResult } from "../src/tools/_helpers";
 
 let dir: string;
 
 /** Write a tool's file map straight to disk, the way `apply: true` does. */
-const apply = (r: ToolResult) => applyToDisk(dir, r);
+const apply = (r: ToolResult) => applyToDisk(dir, guardSchemas(dir, r));
 
 /** Write the four Phase 0 artifacts so the scaffold gate opens. */
 function completePhase0(root: string): void {
@@ -276,11 +273,7 @@ describe("end-to-end module build", () => {
 
 		// ── inspect reports what the other tools actually wrote ──
 		const inspected = JSON.parse(moduleInspect({ moduleDir: dir }).files["_inspect.json"]);
-		expect(inspected.entities.map((e: { name: string }) => e.name).sort()).toEqual([
-			"customer",
-			"order",
-			"order_line",
-		]);
+		expect(inspected.entities.map((e: { name: string }) => e.name).sort()).toEqual(["customer", "order", "order_line"]);
 		expect(inspected.actions).toEqual([
 			{
 				code: "approve",
@@ -296,9 +289,7 @@ describe("end-to-end module build", () => {
 		// dforge-cli >= 0.2.17 scaffolds a real `name` column and points
 		// `toString` at it, so withIdentityToString's `{id}` repair no longer
 		// fires — the template is valid as emitted.
-		expect(inspected.entities.find((e: { name: string }) => e.name === "order").toString).toBe(
-			"{name}",
-		);
+		expect(inspected.entities.find((e: { name: string }) => e.name === "order").toString).toBe("{name}");
 		expect(inspected.translations).toEqual(["de-DE.json"]);
 	});
 
@@ -327,12 +318,10 @@ describe("end-to-end module build", () => {
 	});
 
 	it("refuses to mark a required phase as skipped", () => {
-		expect(() =>
-			planModule({ action: "complete_phase", moduleDir: dir, phase: "1", skipped: true }),
-		).toThrow(/required and can't be marked skipped/);
+		expect(() => planModule({ action: "complete_phase", moduleDir: dir, phase: "1", skipped: true })).toThrow(
+			/required and can't be marked skipped/,
+		);
 		// …but the optional ones are fine.
-		expect(() =>
-			planModule({ action: "complete_phase", moduleDir: dir, phase: "2", skipped: true }),
-		).not.toThrow();
+		expect(() => planModule({ action: "complete_phase", moduleDir: dir, phase: "2", skipped: true })).not.toThrow();
 	});
 });

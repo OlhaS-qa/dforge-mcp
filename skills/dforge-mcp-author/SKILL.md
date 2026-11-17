@@ -51,12 +51,21 @@ itself (entities without fields, entities without a view, entities without a
 Select grant). So:
 
 - **Record each phase as you finish it** —
-  `dforge_module_plan({ action: "complete_phase", moduleDir, phase: "3", note: "..." })`.
-  For an optional phase the user declined, add `skipped: true`.
+  `dforge_module_plan({ action: "complete_phase", moduleDir, phase: "3", note: "...", apply: true })`.
+  For an optional phase the user declined, add `skipped: true`. With `apply: true`
+  the tool writes `docs/phase.json` and `CLAUDE.md` itself; without it you MUST
+  write the returned files before the next call. **Never run `complete_phase`
+  calls in parallel** — each reads the ledger from disk, so parallel calls lose
+  ticks.
 - A resumed session then knows the difference between "Phase 2 skipped
   deliberately" and "Phase 2 not started". Without the record, it can't.
 - `check` reports `gaps` when the ledger and the module disagree. Trust the
-  gaps: they're derived from the files.
+  gaps: they're derived from the files. `check` also reports a ledger that lags
+  behind the module on disk.
+- **A second iteration on a finished module** starts with
+  `dforge_module_plan({ action: "begin_change", moduleDir, note: "...", statements?: [...] })`
+  and ends with `action: "end_change"`; iterations are recorded in `iterations`
+  in `docs/phase.json`. Do not hand-edit the ledger.
 
 ## Tool inventory
 
@@ -66,20 +75,31 @@ Full descriptions are on the tools themselves — this is the map.
 |---|---|
 | Lifecycle | `dforge_module_plan`, `dforge_module_create`, `dforge_module_inspect`, `dforge_module_validate`, `dforge_module_pack`, `dforge_module_install` |
 | Import | `dforge_module_import`, `dforge_dbml_import` |
-| Entities | `dforge_entity_add`, `dforge_entity_rename`, `dforge_entity_delete` |
+| Entities | `dforge_entity_add`, `dforge_entity_rename`, `dforge_entity_delete`, `dforge_entity_configure` (toStringTemplate, numberSequence, constraints, description) |
 | Fields | `dforge_entity_field_add`, `_modify`, `_rename`, `_remove` |
 | **Composite (prefer these)** | `dforge_entity_reference_add` (relation), `dforge_entity_rollup_add` (child total), `dforge_entity_status_add` (status column) |
-| Behavior | `dforge_action_add`, `dforge_action_check`, `dforge_trigger_add`, `dforge_job_add`, `dforge_webhook_add` |
-| UI | `dforge_view_add`, `dforge_view_modify`, `dforge_menu_add`, `dforge_report_add` |
+| Behavior | `dforge_action_add`, `dforge_action_modify`, `dforge_action_check`, `dforge_trigger_add`, `dforge_job_add`, `dforge_webhook_add` |
+| UI | `dforge_view_add`, `dforge_view_modify`, `dforge_menu_add` (`reportCode`, `folders`), `dforge_report_add` |
 | Polish | `dforge_setting_add`, `dforge_translation_sync`, `dforge_seed_add` |
-| Security | `dforge_role_add`, `dforge_role_right_set`, `dforge_folder_add` |
-| Cross-cutting | `dforge_dependency_add`, `dforge_diagram_add` |
+| Security | `dforge_role_add`, `dforge_role_right_set`, `dforge_folder_add`, `dforge_folder_modify` (bind/unbind entities, label, icon on an existing folder) |
+| Cross-cutting | `dforge_dependency_add`, `dforge_manifest_set` (supportedLocales, features, description, ...), `dforge_diagram_add` |
 
 **Composite tools first.** A relation, a roll-up, and a status column each span
 several coordinated keys, and hand-assembling them from `dforge_entity_field_add` is
 the top source of broken modules. The composite tools emit the whole shape and
 can't express the broken variants. Reach for `dforge_entity_field_add` only for a
 plain scalar column.
+
+**A tool exists? Use it, don't hand-edit JSON.** `dforge_entity_configure`,
+`dforge_manifest_set`, `dforge_action_modify`, `dforge_menu_add` (`reportCode`,
+`folders`), `dforge_view_modify` and `dforge_entity_field_modify` cover the keys
+people usually hand-edit; they validate against the vendored schemas. Hand-edit
+only what no tool covers, then run `dforge_module_validate`.
+
+**Additive imports.** `dforge_entity_add`, `dforge_dbml_import` and
+`dforge_module_import` merge into `ui/*.json` and `security/roles.json`; they never
+regenerate existing content. Run action tools one at a time: each reads
+`ui/actions.json` from disk, so parallel previews miss each other.
 
 ## Writing files: preview vs `apply`
 

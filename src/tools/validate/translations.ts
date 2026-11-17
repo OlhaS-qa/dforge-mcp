@@ -25,11 +25,7 @@ function resolveTranslationFile(translationsDir: string, locale: string): string
  * True when the locale JSON carries a non-empty
  * `entities.<entityCd>.constraints.<constraintCd>.message`.
  */
-function hasConstraintOverride(
-	root: Record<string, unknown> | null,
-	entityCd: string,
-	constraintCd: string,
-): boolean {
+function hasConstraintOverride(root: Record<string, unknown> | null, entityCd: string, constraintCd: string): boolean {
 	if (!root || typeof root !== "object") return false;
 	const entities = (root as { entities?: unknown }).entities;
 	if (!entities || typeof entities !== "object") return false;
@@ -226,8 +222,58 @@ export function actionMessageTexts(logicDir: string, actions: Record<string, unk
 	return texts;
 }
 
-const placeholdersOf = (text: string) =>
-	new Set([...text.matchAll(/\{([a-zA-Z_][a-zA-Z0-9_]*)\}/g)].map((m) => m[1]!));
+/**
+ * info/warn/error/exit texts of the function libraries (logic/functions/*.dsl).
+ * A library has no `execute:` block, which is where the DSL parser looks for
+ * messages, so the source is scanned as the body of one. `joined` lists calls
+ * whose text is built from several parts (nothing fixed to translate).
+ */
+export function libraryMessages(logicDir: string): {
+	texts: Map<string, string>;
+	joined: Array<{ script: string; builtin: string }>;
+} {
+	const texts = new Map<string, string>();
+	const joined: Array<{ script: string; builtin: string }> = [];
+	const dir = path.join(logicDir, "functions");
+	let files: string[];
+	try {
+		files = fs
+			.readdirSync(dir)
+			.filter((f) => f.endsWith(".dsl"))
+			.sort();
+	} catch {
+		return { texts, joined };
+	}
+	for (const f of files) {
+		let body: string;
+		try {
+			body = fs.readFileSync(path.join(dir, f), "utf8");
+		} catch {
+			continue;
+		}
+		let found;
+		try {
+			found = extractMessages(parseDsl(`execute:\n${body}`));
+		} catch {
+			continue;
+		}
+		for (const m of found) {
+			if (m.text !== undefined) {
+				if (!texts.has(m.text)) texts.set(m.text, `logic/functions/${f}`);
+			} else joined.push({ script: `logic/functions/${f}`, builtin: m.builtin });
+		}
+	}
+	return { texts, joined };
+}
+
+/** Texts of action scripts plus function libraries: everything a run can show. */
+export function allMessageTexts(logicDir: string, actions: Record<string, unknown>): Map<string, string> {
+	const texts = actionMessageTexts(logicDir, actions);
+	for (const [t, f] of libraryMessages(logicDir).texts) if (!texts.has(t)) texts.set(t, f);
+	return texts;
+}
+
+const placeholdersOf = (text: string) => new Set([...text.matchAll(/\{([a-zA-Z_][a-zA-Z0-9_]*)\}/g)].map((m) => m[1]!));
 
 // `messages` entries that no script uses, and translations that add a placeholder
 // the English text lacks. Mirrors the install-time ActionMessageScanner; the
@@ -236,20 +282,26 @@ export function checkMessageTranslations(ctx: ValidateContext): void {
 	const { paths, warn } = ctx;
 	if (!fs.existsSync(paths.translationsDir)) return;
 	let texts: Map<string, string> | undefined;
-	for (const f of fs.readdirSync(paths.translationsDir).filter((f) => f.toLowerCase().endsWith(".json")).sort()) {
+	for (const f of fs
+		.readdirSync(paths.translationsDir)
+		.filter((f) => f.toLowerCase().endsWith(".json"))
+		.sort()) {
 		const locale = f.slice(0, -".json".length);
 		const block = messagesBlock(readLocaleFile(paths.translationsDir, locale));
 		if (Object.keys(block).length === 0) continue;
 		if (isEnglishLocale(locale)) {
-			warn(`translations/${f}`, "has a `messages` block, which install ignores: English is the text in the .dsl scripts.");
+			warn(
+				`translations/${f}`,
+				"has a `messages` block, which install ignores: English is the text in the .dsl scripts.",
+			);
 			continue;
 		}
-		texts ??= actionMessageTexts(paths.logicDir, ctx.actions);
+		texts ??= allMessageTexts(paths.logicDir, ctx.actions);
 		for (const [text, translation] of Object.entries(block)) {
 			if (!texts.has(text)) {
 				warn(
 					`translations/${f}`,
-					`messages entry "${text}" matches no info/warn/error/exit text in the action scripts — it never shows. ` +
+					`messages entry "${text}" matches no info/warn/error/exit text in the action scripts or function libraries — it never shows. ` +
 						"The key must be the exact English text; an edit to the .dsl wording leaves the old entry behind.",
 				);
 				continue;
@@ -257,7 +309,10 @@ export function checkMessageTranslations(ctx: ValidateContext): void {
 			const known = placeholdersOf(text);
 			for (const ph of placeholdersOf(translation)) {
 				if (!known.has(ph))
-					warn(`translations/${f}`, `messages entry "${text}": the translation uses {${ph}}, which the English text has no value for — it shows as written.`);
+					warn(
+						`translations/${f}`,
+						`messages entry "${text}": the translation uses {${ph}}, which the English text has no value for — it shows as written.`,
+					);
 			}
 		}
 	}

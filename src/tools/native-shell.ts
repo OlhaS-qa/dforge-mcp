@@ -54,11 +54,7 @@ function quoteWinArg(arg: string): string {
 // it builds a fully-quoted command line and runs it through the shell; every
 // other case (bundled `node <cli>`, a native binary, macOS/Linux) spawns
 // directly with shell:false.
-function spawnCli(
-	cli: CliCommand,
-	args: string[],
-	options: { cwd?: string; env?: NodeJS.ProcessEnv } = {},
-) {
+function spawnCli(cli: CliCommand, args: string[], options: { cwd?: string; env?: NodeJS.ProcessEnv } = {}) {
 	const fullArgs = [...cli.argsPrefix, ...args];
 	if (needsWindowsCommandShell(cli.bin)) {
 		const commandLine = [cli.bin, ...fullArgs].map(quoteWinArg).join(" ");
@@ -71,9 +67,7 @@ function resolveDforgeCli(): CliCommand {
 	const override = process.env.DFORGE_CLI_BINARY;
 	if (override) {
 		if (!fs.existsSync(override)) {
-			throw new Error(
-				`DFORGE_CLI_BINARY points at non-existent path: ${override}`,
-			);
+			throw new Error(`DFORGE_CLI_BINARY points at non-existent path: ${override}`);
 		}
 		return { bin: override, argsPrefix: [], display: override };
 	}
@@ -97,6 +91,15 @@ function run(args: string[], cwd?: string): { stdout: string; stderr: string; co
 		throw new Error(
 			`Failed to exec ${cli.display}: ${r.error.message}. ` +
 				`Install with: npm install -g @dforge-core/dforge-cli (or set DFORGE_CLI_BINARY=/path/to/binary).`,
+		);
+	}
+	// The dforge-cli launcher stays installed when its per-platform binary package was skipped
+	// (optional dependency); say so instead of letting callers guess an old CLI.
+	if (/platform package .* not installed/i.test(r.stderr ?? "")) {
+		throw new Error(
+			`${cli.display} is installed without its native binary (${(r.stderr ?? "").trim()}). ` +
+				`Reinstall dependencies with optional packages enabled (no --no-optional / --omit=optional), ` +
+				`or set DFORGE_CLI_BINARY=/path/to/dforge-cli.`,
 		);
 	}
 	return {
@@ -149,9 +152,11 @@ export const packModuleSchema = {
 		.describe("Output file or directory. Defaults to cwd, naming the file <code>-<version>.dforge."),
 };
 
-export function packModule(
-	args: z.infer<z.ZodObject<typeof packModuleSchema>>,
-): { tarballPath: string; sizeBytes: number; output: string } {
+export function packModule(args: z.infer<z.ZodObject<typeof packModuleSchema>>): {
+	tarballPath: string;
+	sizeBytes: number;
+	output: string;
+} {
 	// Phase 5a gate — refuse to pack a module whose entities aren't covered by a
 	// role (the platform won't catch this; the module would install inaccessible).
 	const securityWarning = assertSecurityCoverage(args.moduleDir);
@@ -210,27 +215,21 @@ export function packModule(
 // ─── install ─────────────────────────────────────────────────────────
 
 export const installModuleSchema = {
-	pathOrTarball: z
-		.string()
-		.describe("Module directory OR path to a .dforge tarball."),
-	tenantUrl: z
-		.string()
-		.url()
-		.optional()
-		.describe("Tenant URL. Falls back to DFORGE_URL env var."),
-	token: z
-		.string()
-		.optional()
-		.describe("Auth token. Falls back to DFORGE_TOKEN env var."),
+	pathOrTarball: z.string().describe("Module directory OR path to a .dforge tarball."),
+	tenantUrl: z.string().url().optional().describe("Tenant URL. Falls back to DFORGE_URL env var."),
+	token: z.string().optional().describe("Auth token. Falls back to DFORGE_TOKEN env var."),
 	tenantCode: z
 		.string()
 		.optional()
 		.describe("Optional --code sanity check; server rejects if token's tenant doesn't match."),
 };
 
-export function installModule(
-	args: z.infer<z.ZodObject<typeof installModuleSchema>>,
-): { ok: boolean; exitCode: number; command: string; output: string } {
+export function installModule(args: z.infer<z.ZodObject<typeof installModuleSchema>>): {
+	ok: boolean;
+	exitCode: number;
+	command: string;
+	output: string;
+} {
 	const argList = ["module", "install", "--path", args.pathOrTarball];
 	if (args.tenantCode) {
 		argList.push("--code", args.tenantCode);

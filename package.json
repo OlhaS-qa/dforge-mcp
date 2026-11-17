@@ -1,6 +1,6 @@
 {
 	"name": "@dforge-core/dforge-mcp",
-	"version": "0.2.55",
+	"version": "0.2.58",
 	"description": "MCP server for dForge module authoring. Exposes 35 scaffold/patch/validate/pack/install tools and schema resources so AI agents (Claude Code, Cursor, Zed) can create and ship dForge modules.",
 	"license": "MIT",
 	"homepage": "https://github.com/iash44/dForge-core",
@@ -31,18 +31,21 @@
 		"sync-schemas": "node scripts/vendor-schemas.cjs",
 		"prepublishOnly": "node scripts/vendor-schemas.cjs && tsup",
 		"typecheck": "tsc --noEmit",
+		"format": "oxfmt 'src/**/*.ts' 'test/**/*.ts' '*.ts' 'scripts/*.{js,cjs,mjs}'",
+		"format:check": "oxfmt --check 'src/**/*.ts' 'test/**/*.ts' '*.ts' 'scripts/*.{js,cjs,mjs}'",
 		"test": "vitest run",
 		"test:1c": "python3 -m unittest discover -s test/onec -v",
 		"install-skills": "node scripts/install-skills.mjs"
 	},
 	"dependencies": {
-		"@dforge-core/dforge-cli": "^0.2.43",
-		"@dforge-core/metadata": "^0.0.54",
+		"@dforge-core/dforge-cli": "^0.2.44",
+		"@dforge-core/metadata": "^0.0.57",
 		"@modelcontextprotocol/sdk": "^1.32.2",
 		"zod": "^4.6.7"
 	},
 	"devDependencies": {
 		"@types/node": "^26.2.0",
+		"oxfmt": "0.78.0",
 		"tsup": "^8.5.1",
 		"typescript": "^6.0.3",
 		"vitest": "^4.1.10"

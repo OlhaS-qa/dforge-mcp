@@ -19,7 +19,8 @@ import { z } from "zod";
 import * as fs from "node:fs";
 import * as path from "node:path";
 import { expandTraits } from "@dforge-core/metadata";
-import { actionMessageTexts } from "./validate/translations";
+import { extractMessages, parseDsl } from "@dforge-core/metadata/dsl";
+import { allMessageTexts, libraryMessages } from "./validate/translations";
 import {
 	loadManifest,
 	readJsonOrDefault,
@@ -32,6 +33,7 @@ import {
 	assertKnownTraits,
 	readLocalTraits,
 	type ToolResult,
+	entityFilePath,
 } from "./_helpers";
 
 type Dict = Record<string, unknown>;
@@ -57,13 +59,16 @@ export const translationSyncSchema = {
 		.array(z.string().regex(/^[a-z]{2}(-[A-Z]{2})?$/))
 		.optional()
 		.describe(
-			"Non-English locales to sync. Default: every entry in manifest.supportedLocales — exactly the set install requires. An English locale is refused: install never reads translations/en*.json, English text belongs in the definitions.",
+			"Non-English locales to sync. Default: every entry in manifest.supportedLocales — exactly the set " +
+				"install requires. An English locale is refused: install never reads translations/en*.json, English " +
+				"text belongs in the definitions.",
 		),
 	prune: z
 		.boolean()
 		.default(false)
 		.describe(
-			"Remove keys that no longer correspond to anything in the module (e.g. after an entity delete). Off by default — pruning discards translated text.",
+			"Remove keys that no longer correspond to anything in the module (e.g. after an entity delete). Off " +
+				"by default — pruning discards translated text.",
 		),
 };
 
@@ -76,13 +81,27 @@ interface SkeletonEntry {
 	required: boolean;
 	/** Where older files held this text; a translation there is carried over. */
 	legacyParts?: string[];
+	/** Not created by sync, but not an orphan either: prune keeps it (older nested menu keys). */
+	tolerated?: boolean;
+}
+
+/** Script messages built by joining text and values: they have no fixed text to translate. */
+interface JoinedMessage {
+	script: string;
+	builtin: string;
 }
 
 /** Build the full set of translatable keys from the module's own files. */
-function buildSkeleton(moduleDir: string): { entries: SkeletonEntry[]; counts: Record<string, number> } {
+function buildSkeleton(moduleDir: string): {
+	entries: SkeletonEntry[];
+	counts: Record<string, number>;
+	joined: JoinedMessage[];
+	notes: string[];
+} {
 	const { paths, manifest } = loadManifest(moduleDir);
 	const entries: SkeletonEntry[] = [];
 	const counts: Record<string, number> = {};
+	const notes: string[] = [];
 	// Overlaid on the platform traits as the installer does, so a module-local
 	// trait's columns get labels instead of reading as an unknown trait code.
 	const { traits: localTraits, error: traitsError } = readLocalTraits(paths.root);
@@ -93,15 +112,22 @@ function buildSkeleton(moduleDir: string): { entries: SkeletonEntry[]; counts: R
 				"which fails the install. Fix the file and sync again.",
 		);
 	}
-	const push = (
-		section: string,
-		pathParts: string[],
-		english: string,
-		required = false,
-		legacyParts?: string[],
-	) => {
+	const push = (section: string, pathParts: string[], english: string, required = false, legacyParts?: string[]) => {
 		entries.push({ pathParts, english, required, legacyParts });
 		counts[section] = (counts[section] ?? 0) + 1;
+	};
+	/** Option labels of a dropdown/radio/flags column or param: `{ value, label }` entries. */
+	const pushOptions = (section: string, base: string[], holder: Dict | undefined): void => {
+		const options = (holder?.params as Dict | undefined)?.options;
+		if (!Array.isArray(options)) return;
+		for (const o of options) {
+			if (!o || typeof o !== "object") continue;
+			const value = (o as Dict).value;
+			const label = str(o as Dict, "label");
+			if ((typeof value === "string" || typeof value === "number") && label) {
+				push(section, [...base, "options", String(value)], label);
+			}
+		}
 	};
 
 	// ── entities + fields (including trait-provided columns, which users see) ──
@@ -111,7 +137,7 @@ function buildSkeleton(moduleDir: string): { entries: SkeletonEntry[]; counts: R
 	// with nothing pointing back at the real cause.
 	for (const [name, relPath] of Object.entries((manifest.entities ?? {}) as Record<string, string>)) {
 		if (name.includes(".")) continue; // cross-module extension — foreign module owns it
-		const abs = path.join(paths.root, relPath.replace(/^\.\//, ""));
+		const abs = entityFilePath(paths.root, relPath);
 		if (!fs.existsSync(abs)) {
 			throw new Error(
 				`manifest.entities.${name} points at '${relPath}', which does not exist on disk. ` +
@@ -141,6 +167,15 @@ function buildSkeleton(moduleDir: string): { entries: SkeletonEntry[]; counts: R
 				["entities", name, "fields", fname, "label"],
 				str(f, "description") ?? str(f, "label") ?? titleize(fname),
 			);
+			pushOptions("options", ["entities", name, "fields", fname], f);
+		}
+		// Constraint violation messages (opt-in; validate warns when a locale lacks one).
+		if (!(typeof e.extends === "string" && e.extends)) {
+			const constraints = (e.constraints as Record<string, Dict> | undefined) ?? {};
+			for (const [cname, c] of Object.entries(constraints)) {
+				const msg = c && typeof c === "object" ? str(c, "message") : undefined;
+				if (msg) push("constraints", ["entities", name, "constraints", cname, "message"], msg);
+			}
 		}
 	}
 
@@ -150,39 +185,100 @@ function buildSkeleton(moduleDir: string): { entries: SkeletonEntry[]; counts: R
 		push("views", ["views", code, "label"], str(v, "label") ?? titleize(code));
 	}
 
-	// ── menus (root + nested items, mirroring ui/menus.json) ──
+	// ── menus ──
+	// Install requires the FLAT form: every item (section or leaf, at any depth)
+	// is `menus.<menu>.items.<item_code>.label`, keyed by the item's own code
+	// directly under the root menu. The nested `items.<section>.items.<leaf>` form
+	// older syncs wrote is never created now; an existing one is tolerated by prune.
 	const menus = readJsonOrDefault<Record<string, Dict>>(paths.menus, {});
-	const walkMenu = (node: Dict, trail: string[]): void => {
-		const children =
-			(node.items as Record<string, Dict> | undefined) ??
-			(node.children as Record<string, Dict> | undefined) ??
-			{};
-		for (const [code, child] of Object.entries(children)) {
-			const next = [...trail, "items", code];
-			push("menus", [...next, "label"], str(child, "label") ?? titleize(code));
-			walkMenu(child, next);
-		}
-	};
 	for (const [code, m] of Object.entries(menus)) {
-		push("menus", ["menus", code, "label"], str(m, "label") ?? titleize(code));
+		push("menus", ["menus", code, "label"], str(m, "label") ?? str(m, "description") ?? titleize(code));
+		const seenItems = new Set<string>();
+		const walkMenu = (node: Dict, nested: string[]): void => {
+			const children =
+				(node.items as Record<string, Dict> | undefined) ?? (node.children as Record<string, Dict> | undefined) ?? {};
+			for (const [icode, child] of Object.entries(children)) {
+				if (!child || typeof child !== "object") continue;
+				const nestedNext = [...nested, "items", icode];
+				if (seenItems.has(icode)) {
+					notes.push(
+						`menu '${code}' uses item code '${icode}' more than once — install keys items by code, so rename one.`,
+					);
+				} else {
+					seenItems.add(icode);
+					push(
+						"menus",
+						["menus", code, "items", icode, "label"],
+						str(child, "label") ?? str(child, "description") ?? titleize(icode),
+					);
+				}
+				if (nested.length > 2) {
+					entries.push({ pathParts: [...nestedNext, "label"], english: "", required: false, tolerated: true });
+				}
+				walkMenu(child, nestedNext);
+			}
+		};
 		walkMenu(m, ["menus", code]);
 	}
 
 	// ── roles — the only completeness-ENFORCED section ──
 	const roles = readJsonOrDefault<Record<string, Dict>>(paths.roles, {});
 	for (const [code, r] of Object.entries(roles)) {
-		push(
-			"roles",
-			["roles", code, "label"],
-			str(r, "description") ?? titleize(code.split(".").pop() ?? code),
-			true,
-		);
+		push("roles", ["roles", code, "label"], str(r, "description") ?? titleize(code.split(".").pop() ?? code), true);
 	}
 
 	// ── actions ──
 	const actions = readJsonOrDefault<Record<string, Dict>>(paths.actions, {});
+	const joined: JoinedMessage[] = [];
 	for (const [code, a] of Object.entries(actions)) {
-		push("actions", ["actions", code, "label"], str(a, "label") ?? titleize(code));
+		push("actions", ["actions", code, "label"], str(a, "label") ?? str(a, "description") ?? titleize(code));
+		// Params are declared in the script's `params:` block; install requires a label for each.
+		const declared = a?.script;
+		const script = typeof declared === "string" && declared ? declared : code;
+		const file = path.join(paths.logicDir, "actions", `${script}.dsl`);
+		if (!fs.existsSync(file)) continue;
+		let doc: ReturnType<typeof parseDsl>;
+		try {
+			doc = parseDsl(fs.readFileSync(file, "utf8"));
+		} catch {
+			continue;
+		}
+		for (const p of doc.params) {
+			push("action params", ["actions", code, "params", p.name, "label"], p.label?.trim() || titleize(p.name));
+		}
+		for (const m of extractMessages(doc)) {
+			if (m.text === undefined) joined.push({ script: `logic/actions/${script}.dsl`, builtin: m.builtin });
+		}
+	}
+
+	// ── reports: label, params (report level and per dataset), dataset captions ──
+	const reports = readJsonOrDefault<Record<string, Dict>>(paths.reports, {});
+	for (const [code, r] of Object.entries(reports)) {
+		if (!r || typeof r !== "object") continue;
+		push("reports", ["reports", code, "label"], str(r, "label") ?? str(r, "description") ?? titleize(code));
+		const datasets = (r.datasets as Record<string, Dict> | undefined) ?? {};
+		const params: Record<string, Dict> = {};
+		for (const d of Object.values(datasets)) {
+			if (d?.params && typeof d.params === "object") Object.assign(params, d.params as Dict);
+		}
+		for (const key of ["parameters", "params"]) {
+			if (r[key] && typeof r[key] === "object" && !Array.isArray(r[key])) Object.assign(params, r[key] as Dict);
+		}
+		for (const [pcode, p] of Object.entries(params)) {
+			if (!p || typeof p !== "object") continue;
+			push("report params", ["reports", code, "params", pcode, "label"], str(p, "label") ?? titleize(pcode));
+			pushOptions("options", ["reports", code, "params", pcode], p);
+		}
+		for (const [dcode, d] of Object.entries(datasets)) {
+			push("captions", ["reports", code, "datasets", dcode, "caption"], str(d, "caption") ?? titleize(dcode));
+		}
+	}
+
+	// ── registers (registers.json at the module root) ──
+	const registers = readJsonOrDefault<Record<string, Dict>>(path.join(paths.root, "registers.json"), {});
+	for (const [code, g] of Object.entries(registers)) {
+		if (!g || typeof g !== "object") continue;
+		push("registers", ["registers", code, "label"], str(g, "label") ?? str(g, "description") ?? titleize(code));
 	}
 
 	// ── folders (root + every nested sub-folder) ──
@@ -196,9 +292,7 @@ function buildSkeleton(moduleDir: string): { entries: SkeletonEntry[]; counts: R
 	if (Object.keys(folders).length > 0) {
 		const dupes = duplicateFolderCodes(folders);
 		if (dupes.size > 0) {
-			const detail = [...dupes]
-				.map(([code, paths_]) => `'${code}' (${paths_.join(", ")})`)
-				.join("; ");
+			const detail = [...dupes].map(([code, paths_]) => `'${code}' (${paths_.join(", ")})`).join("; ");
 			throw new Error(
 				`ui/folders.json reuses folder code(s) across branches: ${detail}. Role rights ` +
 					"(`folder:<code>`) can't tell them apart. Rename them to unique codes, then re-run.",
@@ -223,15 +317,22 @@ function buildSkeleton(moduleDir: string): { entries: SkeletonEntry[]; counts: R
 	// `desc` are fallbacks for older files.
 	const settings = readJsonOrDefault<Record<string, Dict>>(paths.settings, {});
 	for (const [code, s] of Object.entries(settings)) {
-		push("settings", ["settings", code, "label"], str(s, "description") ?? str(s, "label") ?? str(s, "desc") ?? titleize(code));
+		push(
+			"settings",
+			["settings", code, "label"],
+			str(s, "description") ?? str(s, "label") ?? str(s, "desc") ?? titleize(code),
+		);
 	}
 
 	// ── DSL messages: info / warn / error / exit texts, keyed by the English text ──
-	for (const text of actionMessageTexts(paths.logicDir, actions).keys()) {
+	// Library functions (logic/functions/*.dsl) are called from the actions, so their
+	// texts show at run time and the CLI reports them untranslated: seed them too.
+	for (const text of allMessageTexts(paths.logicDir, actions).keys()) {
 		push("messages", ["messages", text], text);
 	}
+	joined.push(...libraryMessages(paths.logicDir).joined);
 
-	return { entries, counts };
+	return { entries, counts, joined, notes };
 }
 
 const getIn = (root: Dict, parts: string[]): unknown =>
@@ -246,24 +347,62 @@ function setIn(root: Dict, parts: string[], value: unknown): void {
 	cursor[parts[parts.length - 1]] = value;
 }
 
-/** Drop keys that the skeleton no longer contains, then prune emptied objects. */
-function pruneTo(existing: Dict, keep: Set<string>, trail: string[] = []): Dict {
-	const out: Dict = {};
-	for (const [k, v] of Object.entries(existing)) {
-		const parts = [...trail, k];
-		if (v && typeof v === "object" && !Array.isArray(v)) {
-			const sub = pruneTo(v as Dict, keep, parts);
-			if (Object.keys(sub).length > 0) out[k] = sub;
-			continue;
-		}
-		if (keep.has(compositeKey(...parts))) out[k] = v;
+/** Top-level sections sync manages: only inside these may prune delete anything. */
+const MANAGED = new Set([
+	"entities",
+	"views",
+	"menus",
+	"roles",
+	"actions",
+	"reports",
+	"registers",
+	"settings",
+	"folders",
+	"messages",
+]);
+/** Keys that hold a collection of codes — a member there that nothing declares is an orphan. */
+const COLLECTIONS = new Set(["fields", "params", "datasets", "constraints", "items"]);
+
+/**
+ * Drop keys that correspond to nothing in the module. A leaf is kept when it is a
+ * skeleton key, or when it hangs off an object that still exists (the object's
+ * `desc`, hand-added `options`, ...). It is dropped only when its owner (an entity,
+ * field, action, param, dataset, menu item ...) is gone. `messages` is exact.
+ */
+function pruneTo(existing: Dict, entries: SkeletonEntry[]): Dict {
+	const keep = new Set(entries.map((e) => compositeKey(...e.pathParts)));
+	// Every live owner path: each skeleton key's parent and its ancestors.
+	const live = new Set<string>();
+	for (const e of entries) {
+		for (let n = 2; n < e.pathParts.length; n++) live.add(compositeKey(...e.pathParts.slice(0, n)));
 	}
-	return out;
+	const keepLeaf = (parts: string[]): boolean => {
+		if (!MANAGED.has(parts[0])) return true;
+		if (keep.has(compositeKey(...parts))) return true;
+		if (parts[0] === "messages") return false;
+		for (let n = parts.length - 1; n >= 2; n--) {
+			if (COLLECTIONS.has(parts[n - 1])) continue; // a container, not an owner
+			if (live.has(compositeKey(...parts.slice(0, n)))) return !COLLECTIONS.has(parts[n]);
+		}
+		return false;
+	};
+	const walk = (node: Dict, trail: string[]): Dict => {
+		const out: Dict = {};
+		for (const [k, v] of Object.entries(node)) {
+			const parts = [...trail, k];
+			if (v && typeof v === "object" && !Array.isArray(v)) {
+				const sub = walk(v as Dict, parts);
+				if (Object.keys(sub).length > 0) out[k] = sub;
+				continue;
+			}
+			if (keepLeaf(parts)) out[k] = v;
+		}
+		return out;
+	};
+	return walk(existing, []);
 }
 
-export function translationSync(
-	args: z.infer<z.ZodObject<typeof translationSyncSchema>>,
-): ToolResult {
+export function translationSync(args: z.infer<z.ZodObject<typeof translationSyncSchema>>): ToolResult {
 	const { paths, manifest } = loadManifest(args.moduleDir);
 	const declared = Array.isArray(manifest.supportedLocales)
 		? (manifest.supportedLocales as unknown[]).filter((l): l is string => typeof l === "string")
@@ -279,26 +418,30 @@ export function translationSync(
 	}
 	// A manifest that still lists English (legacy shape) must not get an English file: skip it.
 	const ignored = fs.existsSync(paths.translationsDir)
-		? fs.readdirSync(paths.translationsDir).filter((f) => f.toLowerCase().endsWith(".json") && isEnglish(f.slice(0, -5)))
+		? fs
+				.readdirSync(paths.translationsDir)
+				.filter((f) => f.toLowerCase().endsWith(".json") && isEnglish(f.slice(0, -5)))
 		: [];
-	const staleEnglish = ignored.length > 0
-		? ` Leftover ${ignored.map((f) => `translations/${f}`).join(", ")} is never read by install — move any wording you want from it into the definitions, then delete it.`
-		: "";
+	const staleEnglish =
+		ignored.length > 0
+			? ` Leftover ${ignored.map((f) => `translations/${f}`).join(", ")} is never read by install — move any wording you want from it into the definitions, then delete it.`
+			: "";
 	const locales = args.locales ?? declared.filter((l) => !isEnglish(l));
 	if (locales.length === 0) {
 		throw new Error(
 			"No locales to sync. An English-only module needs no translation files: its English text lives in the " +
-				"definitions. To translate, declare the other locales in manifest.supportedLocales (e.g. [\"uk-UA\"])." + staleEnglish,
+				'definitions. To translate, declare the other locales in manifest.supportedLocales (e.g. ["uk-UA"]).' +
+				staleEnglish,
 		);
 	}
 
-	const { entries, counts } = buildSkeleton(args.moduleDir);
+	const { entries: allEntries, counts, joined, notes } = buildSkeleton(args.moduleDir);
+	const entries = allEntries.filter((e) => !e.tolerated);
 	if (entries.length === 0) {
 		throw new Error(
 			"Nothing translatable found — the module has no entities, views, menus, or roles yet. Author them first.",
 		);
 	}
-	const keep = new Set(entries.map((e) => compositeKey(...e.pathParts)));
 
 	const files: Record<string, string> = {};
 	const report: string[] = [];
@@ -317,7 +460,7 @@ export function translationSync(
 			}
 		}
 
-		const next: Dict = args.prune ? pruneTo(existing, keep) : JSON.parse(JSON.stringify(existing));
+		const next: Dict = args.prune ? pruneTo(existing, allEntries) : JSON.parse(JSON.stringify(existing));
 		let added = 0;
 		for (const entry of entries) {
 			const current = getIn(next, entry.pathParts);
@@ -348,6 +491,16 @@ export function translationSync(
 				"definitions' own `description` / `label`. Move any wording you want from it into the definitions, then delete it.",
 		);
 	}
+	if (joined.length > 0) {
+		const byScript = new Map<string, number>();
+		for (const j of joined) byScript.set(j.script, (byScript.get(j.script) ?? 0) + 1);
+		const list = [...byScript].map(([s, n]) => `${s} (${n})`).join(", ");
+		warnings.push(
+			`${joined.length} message(s) in actions or function libraries join text and values, so they cannot be translated and are not in \`messages\`: ${list}. ` +
+				"Rewrite each with placeholders, e.g. error('Only {n} left', { n: qty }).",
+		);
+	}
+	warnings.push(...notes);
 	const warning = warnings.length > 0 ? warnings.join(" ") : undefined;
 
 	const sections = Object.entries(counts)

@@ -13,10 +13,11 @@ import { translationSync } from "../src/tools/translations";
 import { moduleValidate } from "../src/tools/module-validate";
 import { walkFolders, duplicateFolderCodes } from "../src/tools/_helpers";
 import { applyToDisk } from "../src/tools/apply";
+import { guardSchemas } from "../src/tools/schema-guard";
 import type { ToolResult } from "../src/tools/_helpers";
 
 let dir: string;
-const apply = (r: ToolResult) => applyToDisk(dir, r);
+const apply = (r: ToolResult) => applyToDisk(dir, guardSchemas(dir, r));
 
 function makeModule(folders?: Record<string, unknown>): void {
 	mkdirSync(join(dir, "entities"), { recursive: true });
@@ -58,7 +59,9 @@ afterEach(() => rmSync(dir, { recursive: true, force: true }));
 
 describe("walkFolders / duplicateFolderCodes", () => {
 	it("yields every sub-folder with its path, excluding the root", () => {
-		const found = walkFolders(COLLIDING_TREE).map((f) => f.path).sort();
+		const found = walkFolders(COLLIDING_TREE)
+			.map((f) => f.path)
+			.sort();
 		expect(found).toEqual(["north", "north/admin", "south", "south/admin"]);
 	});
 
@@ -101,9 +104,10 @@ describe("folder_add enforces tree-wide uniqueness", () => {
 			folder: { label: "North Admin" },
 		});
 		apply(r);
-		expect(JSON.parse(
-			require("node:fs").readFileSync(join(dir, "ui", "folders.json"), "utf8"),
-		).children.north.children.north_admin.label).toBe("North Admin");
+		expect(
+			JSON.parse(require("node:fs").readFileSync(join(dir, "ui", "folders.json"), "utf8")).children.north.children
+				.north_admin.label,
+		).toBe("North Admin");
 	});
 });
 
@@ -138,9 +142,7 @@ describe("translation_sync and folder codes", () => {
 			children: { north: { label: "North" }, south: { label: "South" } },
 		});
 		apply(translationSync({ moduleDir: dir, locales: ["de-DE"], prune: false }));
-		const tx = JSON.parse(
-			require("node:fs").readFileSync(join(dir, "translations", "de-DE.json"), "utf8"),
-		);
+		const tx = JSON.parse(require("node:fs").readFileSync(join(dir, "translations", "de-DE.json"), "utf8"));
 		// The module code and the folder's path, joined with `_` — what install resolves.
 		expect(tx.folders.ops.label).toBe("Ops Root");
 		expect(tx.folders.ops_north.label).toBe("North");
@@ -153,9 +155,7 @@ describe("translation_sync and folder codes", () => {
 		mkdirSync(join(dir, "translations"), { recursive: true });
 		writeFileSync(join(dir, "translations", "de-DE.json"), JSON.stringify({ folders: { north: { label: "Nord" } } }));
 		apply(translationSync({ moduleDir: dir, prune: true, locales: ["de-DE"] }));
-		const tx = JSON.parse(
-			require("node:fs").readFileSync(join(dir, "translations", "de-DE.json"), "utf8"),
-		);
+		const tx = JSON.parse(require("node:fs").readFileSync(join(dir, "translations", "de-DE.json"), "utf8"));
 		expect(tx.folders.ops_north.label).toBe("Nord");
 		expect(tx.folders.north).toBeUndefined();
 	});

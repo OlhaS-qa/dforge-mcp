@@ -41,6 +41,7 @@ export interface ModulePaths {
 	triggers: string;
 	webhooks: string;
 	printTemplates: string;
+	exportTemplates: string;
 	settings: string;
 	domains: string;
 }
@@ -65,6 +66,7 @@ export function modulePaths(moduleDir: string): ModulePaths {
 		queries: path.join(root, "ui", "queries.json"),
 		storedProcedures: path.join(root, "logic", "stored_procedures.json"),
 		printTemplates: path.join(root, "ui", "print_templates.json"),
+		exportTemplates: path.join(root, "ui", "export_templates.json"),
 		roles: path.join(root, "security", "roles.json"),
 		jobs: path.join(root, "logic", "jobs.json"),
 		triggers: path.join(root, "logic", "triggers.json"),
@@ -72,6 +74,20 @@ export function modulePaths(moduleDir: string): ModulePaths {
 		settings: path.join(root, "settings.json"),
 		domains: path.join(root, "domains.json"),
 	};
+}
+
+/**
+ * Resolve a manifest-declared entity file against the module root, refusing
+ * anything that escapes it (`../..`, absolute paths) so a bad manifest cannot
+ * make a tool read files outside the module.
+ */
+export function entityFilePath(root: string, relPath: string): string {
+	const base = path.resolve(root);
+	const abs = path.resolve(base, relPath.replace(/^\.\//, ""));
+	if (abs !== base && !abs.startsWith(base + path.sep)) {
+		throw new Error(`Manifest path '${relPath}' resolves outside the module directory — refusing to read it.`);
+	}
+	return abs;
 }
 
 export function readJson<T = unknown>(absPath: string): T {
@@ -224,9 +240,7 @@ export function loadManifest(moduleDir: string): {
 } {
 	const paths = modulePaths(moduleDir);
 	if (!fs.existsSync(paths.manifest)) {
-		throw new Error(
-			`No manifest.json at ${paths.manifest} — is this a dForge module directory?`,
-		);
+		throw new Error(`No manifest.json at ${paths.manifest} — is this a dForge module directory?`);
 	}
 	const manifest = readJson<Manifest>(paths.manifest);
 	if (!manifest.code) {
@@ -281,18 +295,45 @@ export const PHASE_STATE_FILE = "docs/phase.json";
 export const BUILD_PHASES = ["1", "2", "3", "4", "5", "6"] as const;
 export type BuildPhase = (typeof BUILD_PHASES)[number];
 
+/** One recorded build phase. */
+export interface PhaseRecord {
+	completedAt: string;
+	skipped?: boolean;
+	note?: string;
+}
+
+/**
+ * A change iteration on an already-built module (begin_change ... end_change).
+ * The top-level `phases` ledger is the module's FIRST build and is never
+ * overwritten once iterations exist; each iteration records its own phases.
+ */
+export interface PhaseIteration {
+	id: string;
+	note: string;
+	startedAt: string;
+	/** Spec statements (S-1, N-3, ...) this change affects, if the caller named them. */
+	statements?: string[];
+	/** Free-form notes added with note_change while the iteration is open. */
+	notes?: string[];
+	phases: Record<string, PhaseRecord>;
+	closedAt?: string;
+	closeNote?: string;
+}
+
 export interface PhaseState {
 	phase?: string;
 	readyToScaffold?: boolean;
 	validatedAt?: string;
 	/**
-	 * Ledger of completed build phases. Before this existed, a resumed session
-	 * had to GUESS the last completed phase by cross-referencing inspect output
-	 * — which can't distinguish "Phase 2 skipped deliberately" from "Phase 2 not
-	 * started". Recording it makes resume (and the design → build → ship skill
-	 * handoff) deterministic.
+	 * Ledger of completed build phases (the first build). Before this existed, a
+	 * resumed session had to GUESS the last completed phase by cross-referencing
+	 * inspect output — which can't distinguish "Phase 2 skipped deliberately" from
+	 * "Phase 2 not started". Recording it makes resume (and the design → build →
+	 * ship skill handoff) deterministic.
 	 */
-	phases?: Record<string, { completedAt: string; skipped?: boolean; note?: string }>;
+	phases?: Record<string, PhaseRecord>;
+	/** Later change iterations, oldest first. The open one has no `closedAt`. */
+	iterations?: PhaseIteration[];
 }
 
 /** Serialize a phase-state marker (for the validate action's file map). */
@@ -311,35 +352,113 @@ export function readPhaseState(moduleDir: string): PhaseState | null {
 	}
 }
 
+/** The open change iteration (last one without `closedAt`), if any. */
+export function openIteration(state: PhaseState | null | undefined): PhaseIteration | undefined {
+	const its = state?.iterations ?? [];
+	const last = its[its.length - 1];
+	return last && !last.closedAt ? last : undefined;
+}
+
+/**
+ * Merge a completed/skipped build phase into the on-disk state and return the
+ * serialized marker for the caller's file map. Never clobbers Phase 0 fields or
+ * earlier iterations. While a change iteration is open the phase is recorded
+ * against it (the first-build ledger is left intact); completing Phase 6 (not
+ * skipped) closes the iteration.
+ */
+export function markPhase(
+	moduleDir: string,
+	phase: BuildPhase,
+	opts: { skipped?: boolean; note?: string; statements?: string[] } = {},
+): { state: PhaseState; json: string; iteration?: string; closedIteration?: boolean } {
+	const prior = readPhaseState(moduleDir) ?? {};
+	const record: PhaseRecord = {
+		completedAt: new Date().toISOString().slice(0, 10),
+		...(opts.skipped ? { skipped: true } : {}),
+		...(opts.note ? { note: opts.note } : {}),
+	};
+	const open = openIteration(prior);
+	if (open) {
+		const iterations = (prior.iterations ?? []).map((it) => ({ ...it }));
+		const cur = iterations[iterations.length - 1];
+		cur.phases = { ...cur.phases, [phase]: record };
+		if (opts.statements?.length) cur.statements = mergeStatements(cur.statements, opts.statements);
+		const closing = phase === "6" && !opts.skipped;
+		if (closing) cur.closedAt = new Date().toISOString();
+		const state: PhaseState = { ...prior, iterations };
+		return { state, json: phaseStateJson(state), iteration: cur.id, closedIteration: closing };
+	}
+	const state: PhaseState = {
+		...prior,
+		phases: { ...(prior.phases ?? {}), [phase]: record },
+	};
+	return { state, json: phaseStateJson(state) };
+}
+
+/** Append statement ids to a list, keeping first-seen order and dropping duplicates. */
+function mergeStatements(existing: string[] | undefined, added: string[]): string[] {
+	return [...new Set([...(existing ?? []), ...added])];
+}
+
+/** Append `statements` (deduped) to the open iteration without recording a phase. Throws if none is open. */
+export function noteIteration(
+	moduleDir: string,
+	opts: { statements: string[]; note?: string },
+): { state: PhaseState; json: string; iteration: PhaseIteration } {
+	const prior = readPhaseState(moduleDir) ?? {};
+	if (!openIteration(prior)) throw new Error("No open change iteration (call action 'begin_change' first).");
+	const iterations = (prior.iterations ?? []).map((it) => ({ ...it }));
+	const cur = iterations[iterations.length - 1];
+	if (opts.statements.length) cur.statements = mergeStatements(cur.statements, opts.statements);
+	if (opts.note) cur.notes = [...(cur.notes ?? []), opts.note];
+	const state: PhaseState = { ...prior, iterations };
+	return { state, json: phaseStateJson(state), iteration: cur };
+}
+
+/** Open a change iteration. Throws if one is already open. */
+export function beginIteration(
+	moduleDir: string,
+	opts: { note: string; statements?: string[] },
+): { state: PhaseState; json: string; iteration: PhaseIteration } {
+	const prior = readPhaseState(moduleDir) ?? {};
+	if (openIteration(prior)) {
+		throw new Error(
+			`Change iteration '${openIteration(prior)!.id}' is still open — finish it (complete_phase 6, or action 'end_change') before beginning another.`,
+		);
+	}
+	const its = prior.iterations ?? [];
+	const iteration: PhaseIteration = {
+		id: `it-${its.length + 1}`,
+		note: opts.note,
+		startedAt: new Date().toISOString(),
+		...(opts.statements && opts.statements.length ? { statements: opts.statements } : {}),
+		phases: {},
+	};
+	const state: PhaseState = { ...prior, iterations: [...its, iteration] };
+	return { state, json: phaseStateJson(state), iteration };
+}
+
+/** Close the open change iteration explicitly. Throws if none is open. */
+export function endIteration(
+	moduleDir: string,
+	opts: { note?: string } = {},
+): { state: PhaseState; json: string; iteration: PhaseIteration } {
+	const prior = readPhaseState(moduleDir) ?? {};
+	const open = openIteration(prior);
+	if (!open) throw new Error("No open change iteration to end (call action 'begin_change' first).");
+	const iterations = (prior.iterations ?? []).map((it) => ({ ...it }));
+	const cur = iterations[iterations.length - 1];
+	cur.closedAt = new Date().toISOString();
+	if (opts.note) cur.closeNote = opts.note;
+	const state: PhaseState = { ...prior, iterations };
+	return { state, json: phaseStateJson(state), iteration: cur };
+}
+
 /**
  * Whether Phase 0 design validation has passed. Prefers the parsed marker;
  * falls back to the legacy `readyToScaffold: true` substring in VALIDATION.md
  * for modules validated before the marker existed.
  */
-/**
- * Merge a completed/skipped build phase into the on-disk state and return the
- * serialized marker for the caller's file map. Never clobbers Phase 0 fields.
- */
-export function markPhase(
-	moduleDir: string,
-	phase: BuildPhase,
-	opts: { skipped?: boolean; note?: string } = {},
-): { state: PhaseState; json: string } {
-	const prior = readPhaseState(moduleDir) ?? {};
-	const state: PhaseState = {
-		...prior,
-		phases: {
-			...(prior.phases ?? {}),
-			[phase]: {
-				completedAt: new Date().toISOString().slice(0, 10),
-				...(opts.skipped ? { skipped: true } : {}),
-				...(opts.note ? { note: opts.note } : {}),
-			},
-		},
-	};
-	return { state, json: phaseStateJson(state) };
-}
-
 export function isReadyToScaffold(moduleDir: string): boolean {
 	const state = readPhaseState(moduleDir);
 	if (state && typeof state.readyToScaffold === "boolean") return state.readyToScaffold;
@@ -364,7 +483,11 @@ export function isReadyToScaffold(moduleDir: string): boolean {
 // installer resolves across modules (SecurityRegistrar.AddCrossModuleSecObjects).
 // A dotted action:/folder: key resolves to nothing and is silently skipped.
 
-const RIGHTS_ENTITY = /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)?$/;
+/** `code` or `dep.code`: an entity / action reference, local or from a dependency. */
+export const DOTTED_CODE_RE = /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)?$/;
+/** `dep.code` only — a full role code such as `shop.buyer`. */
+export const ROLE_CODE_RE = /^[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)+$/;
+const RIGHTS_ENTITY = DOTTED_CODE_RE;
 const RIGHTS_OBJECT = /^(action|folder):[a-z][a-z0-9_]*$/;
 const RIGHTS_OBJECT_QUALIFIABLE = /^(report|sp):[a-z][a-z0-9_]*(\.[a-z][a-z0-9_]*)?$/;
 const RIGHTS_OBJECT_DOT = /^(action|report|sp|folder)\.[a-z]/;
@@ -606,14 +729,8 @@ export const traitsInput = z
  * first. (`traitsInput` covers the authoring tools; this covers entities that
  * arrived via import or a hand edit.)
  */
-export function unknownTraits(
-	traitCodes: readonly string[],
-	localTraits?: TraitsFile,
-): string[] {
-	return traitCodes.filter(
-		(cd) => !TRAIT_CODE_SET.has(cd) && localTraits?.[cd] === undefined,
-	);
-}
+export const unknownTraits = (traitCodes: readonly string[], localTraits?: TraitsFile): string[] =>
+	traitCodes.filter((cd) => !TRAIT_CODE_SET.has(cd) && localTraits?.[cd] === undefined);
 
 /** The outcome of reading a module's own `traits.json`. */
 export interface LocalTraits {
@@ -735,10 +852,7 @@ export function expandedEntity(
 } {
 	const fields = (entity.fields as Record<string, Record<string, unknown>> | undefined) ?? {};
 	const traitCodes = (entity.traits as string[] | undefined) ?? [];
-	const traitFields = expandTraits(traitCodes, entityName, localTraits) as Record<
-		string,
-		Record<string, unknown>
-	>;
+	const traitFields = expandTraits(traitCodes, entityName, localTraits) as Record<string, Record<string, unknown>>;
 	return {
 		columns: new Set([...Object.keys(fields), ...Object.keys(traitFields)]),
 		fieldDefs: { ...traitFields, ...fields },
@@ -803,7 +917,7 @@ export function entityRecordContext(
 	if (!local) return undefined;
 	const relPath = (manifest.entities ?? {})[local];
 	if (!relPath) return undefined;
-	const abs = path.join(paths.root, relPath.replace(/^\.\//, ""));
+	const abs = entityFilePath(paths.root, relPath);
 	if (!fs.existsSync(abs)) return undefined;
 	let entity: Record<string, unknown>;
 	try {
@@ -822,11 +936,7 @@ export function entityRecordContext(
 }
 
 /** Throw if any trait code is unknown, naming them and the valid set. */
-export function assertKnownTraits(
-	traitCodes: readonly string[],
-	entityName: string,
-	localTraits?: TraitsFile,
-): void {
+export function assertKnownTraits(traitCodes: readonly string[], entityName: string, localTraits?: TraitsFile): void {
 	const bad = unknownTraits(traitCodes, localTraits);
 	if (bad.length === 0) return;
 	const local = Object.keys(localTraits ?? {});
@@ -839,10 +949,7 @@ export function assertKnownTraits(
 }
 
 /** Override a built entity's `traits` array with a validated code list. */
-export function withTraits<T extends object>(
-	entity: T,
-	traitCodes: readonly string[],
-): T & { traits: string[] } {
+export function withTraits<T extends object>(entity: T, traitCodes: readonly string[]): T & { traits: string[] } {
 	return { ...entity, traits: [...traitCodes] };
 }
 

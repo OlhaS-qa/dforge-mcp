@@ -114,16 +114,15 @@ describe("dbDatatype derivation (entity_field_add)", () => {
 	});
 
 	it("does not override an explicit dbDatatype", () => {
-		expect(addField("code", { fieldTypeCd: "text", dbDatatype: "varchar(50)", flags: "VE" }).dbDatatype).toBe("varchar(50)");
+		expect(addField("code", { fieldTypeCd: "text", dbDatatype: "varchar(50)", flags: "VE" }).dbDatatype).toBe(
+			"varchar(50)",
+		);
 	});
 });
 
 describe("traits applied to a new entity (add_entity)", () => {
 	const dir = mkdtempSync(join(tmpdir(), "dforge-mcp-traits-"));
-	writeFileSync(
-		join(dir, "manifest.json"),
-		JSON.stringify({ code: "test", displayName: "Test", entities: {} }),
-	);
+	writeFileSync(join(dir, "manifest.json"), JSON.stringify({ code: "test", displayName: "Test", entities: {} }));
 	afterAll(() => rmSync(dir, { recursive: true, force: true }));
 
 	it("writes the full validated trait set into the entity JSON", () => {

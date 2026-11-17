@@ -1040,7 +1040,7 @@ When creating a module, ensure:
 - [ ] `roles.json` uses `"rights"` property (not `"entityRights"`)
 - [ ] Seed data files are numbered for FK dependency order (01-, 02-, etc.)
 - [ ] Seed data includes explicit numeric (int8) PKs for cross-entity references — NOT UUID strings (`cuid` is `int8`)
-- [ ] `translations/<locale>.json` covers entities (+ fields), folders, views, menus (+ items), actions (+ params), and reports (+ dataset captions, + params) for every locale declared in `manifest.supportedLocales`. Do not include `en`/`en-US`. Sections `roles` and `print_templates` are not displayed even if listed.
+- [ ] `translations/<locale>.json` covers entities (+ fields), folders, views, menus (+ items, FLAT: `menus.<menu>.items.<code>.label`), actions (+ params), and reports (+ dataset captions, + params; no `description`) for every locale declared in `manifest.supportedLocales`, plus `roles.<code>.label` for every role (completeness-enforced). Do not include `en`/`en-US`. A `print_templates` section is not consumed even if listed.
 - [ ] Constraints have clear user-facing `message` values
 - [ ] Check constraint `expression` uses standard SQL subset (test in PostgreSQL first)
 - [ ] Number sequences declared as `numberSequence` on entity definitions (auto-fills on INSERT, never manual counting)

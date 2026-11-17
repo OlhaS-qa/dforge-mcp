@@ -105,9 +105,9 @@ Translation files mirror the module's content structure. Each translatable objec
 | `folders` | Folder labels | Folder codes (root folder key from `ui/folders.json`) |
 | `roles` | Role display labels | Role codes (keys from `security/roles.json`, already module-qualified — e.g. `crm.admin`) → `{ label }` |
 | `views` | Data view labels and descriptions (`label`, `desc`) | View codes (keys from `ui/data_views.json`) → `{ label, desc }` |
-| `menus` | Menu node labels (root + nested items) | Menu root key → `{ label, items: { item_code: { label } } }` matching `ui/menus.json` structure |
+| `menus` | Menu labels: the root plus every section/leaf | Menu root key → `{ label, items: { item_code: { label } } }`. `items` is **FLAT**: every section and leaf code sits directly under the root (`menus.<menu>.items.<code>.label`); the schema forbids nested `items` inside an item |
 | `actions` | Action labels, descriptions, param labels **and param dropdown option labels** | Action codes (keys from `ui/actions.json`) → `{ label, desc, params: { param_cd: { label, options: { value: … } } } }` |
-| `reports` | Report `label`, `desc`, dataset captions, param labels **and param dropdown option labels**, and **panel titles** (opt-in) | Report codes → `{ datasets: { ds_cd: { caption } }, params: { param_cd: { label, options: { value: … } } }, panels: { "<title as authored>": "<translation>" } }` |
+| `reports` | Report `label`, dataset captions, param labels **and param dropdown option labels**, and **panel titles** (opt-in) | Report codes → `{ label, datasets: { ds_cd: { caption } }, params: { param_cd: { label, options: { value: … } } }, panels: { "<title as authored>": "<translation>" } }`. A report must **not** carry `description` in translations (the schema rejects it) |
 | `storedProcedures` | Result-column headers of a stored procedure (`logic/stored_procedures.json`), shared by every report bound to it | Procedure codes → `{ columns: { column_cd: { label } } }` |
 | `entities.<e>.constraints` | Check/unique constraint violation messages (opt-in — warned, not enforced) | Constraint codes → `{ message }` under the owning entity |
 | `messages` | DSL `info` / `warn` / `error` / `exit` texts (opt-in — warned, not enforced) | Exact English text → translated text |
@@ -307,7 +307,7 @@ A result column's header belongs to the procedure, not to a report. `module pack
 2. **Locale format is `ll-CC`** (e.g. `de-DE`, `uk-UA`, `fr-FR`) — language code + country code, hyphen-separated.
 3. **Translate everything user-visible**: entity labels, every field label (including trait-provided fields like `created_date`, `last_updated`), view names, menu items, action labels, **role labels (required — completeness-enforced, `roles.<code>.label` for every role in every declared locale)**, setting labels, folder names.
 4. **Include virtual columns** (references, sets, formulas) in field translations — they appear in the UI just like physical columns.
-5. **Menu translations mirror the `ui/menus.json` structure** — root key → `items` → nested items.
+5. **Menu translations are FLAT** — root key → `items` → one entry per item code (sections and leaves alike), never nested `items` inside an item. Item codes must be unique across the menu for this reason.
 6. **Missing keys fall back** to the definition's English text, then to the raw code name. So it's safe to ship partial translations — untranslated items show in English rather than breaking.
 7. **Don't translate column codes** — only the `label` values. Codes stay as-is in all languages.
 8. **File naming**: `translations/<locale>.json` (e.g. `de-DE.json`) — each non-English file must match a locale listed in `supportedLocales`.
@@ -316,5 +316,5 @@ A result column's header belongs to the procedure, not to a report. `module pack
 ## When to create translations
 
 - **Never** create `translations/en-US.json` — install skips it. Give every definition a short English label instead, so nothing falls back to a column code.
-- **On request** create additional languages: declare them in `supportedLocales` and run `dforge_translation_sync`, which seeds each file from the definitions' English text for you to translate in place.
+- **On request** create additional languages: declare them in `supportedLocales` (`dforge_manifest_set`) and run `dforge_translation_sync`, which seeds each file from the definitions' English text for you to translate in place. It covers entity/field labels, views, flat menu items, roles, folders, settings, actions **and their param labels**, reports (label, param labels, dataset captions), registers, constraint messages and dropdown option labels. `prune: true` removes only orphaned keys. It also lists action messages that join text and values, which cannot be translated as one string.
 - **Include all fields** in each language file, including trait-provided fields (`created_date`, `last_updated`, `created_by`, etc.) — users see these columns and they need labels.

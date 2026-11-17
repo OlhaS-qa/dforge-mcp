@@ -63,14 +63,7 @@ describe("dforge_module_install shell bridge", () => {
 			expect(result.output).toContain("MODULE_INSTALL_ERROR: missing translation key");
 
 			const captured = JSON.parse(readFileSync(capturePath, "utf8"));
-			expect(captured.argv).toEqual([
-				"module",
-				"install",
-				"--path",
-				"/tmp/bad-module.dforge",
-				"--code",
-				"demo",
-			]);
+			expect(captured.argv).toEqual(["module", "install", "--path", "/tmp/bad-module.dforge", "--code", "demo"]);
 			expect(captured.url).toBe("http://localhost:5001");
 			expect(captured.token).toBe("test-token");
 		} finally {

@@ -47,9 +47,7 @@ describe("source hygiene", () => {
 				}
 			});
 		}
-		expect(offenders, `raw NUL bytes found — use compositeKey()/KEY_SEP:\n${offenders.join("\n")}`).toEqual(
-			[],
-		);
+		expect(offenders, `raw NUL bytes found — use compositeKey()/KEY_SEP:\n${offenders.join("\n")}`).toEqual([]);
 	});
 
 	it("contains no other invisible control characters anywhere in the source", () => {

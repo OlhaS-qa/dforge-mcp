@@ -153,3 +153,36 @@ the others, only its process; the design skill was not found in the clean sessio
 followed the router only. A cleaner comparison needs a separate session without the
 specification and a customer who answers naturally on the same story.
 
+## Run 3 — the written skill on a customer-knowledge sheet (business trips)
+
+A new domain. The customer (a person) answered only from a prepared sheet that the
+session could not see: how it works now, who does what, rules and figures, documents,
+notifications, reports, initial data, plus things the customer does not know. The sheet
+ends with ten "traps" used to see what the skill raises on its own.
+
+- **Turns:** about 16 customer answers up to an approved specification.
+- **Needs from the sheet captured:** all of them, with the figures correct (the skill
+  first took a 5-day report deadline and the customer corrected it to 3).
+- **Traps raised without a prompt:** 10 of 10 (approval by amount and for trips abroad;
+  a manager hierarchy, raised as an open question; working days; two currencies and a
+  rate; reminders and overdue; receipts as files; reports and scenarios proposed;
+  trips of managers and of the director; signature of the order; a link to an
+  accounting program, dropped).
+- **Scope inflation:** 13 notifications proposed for 5 needed and 6 task lists for 4;
+  about 11 statements in the specification are accepted proposals of the skill.
+- **Rule breaks:** several topics in one message, "sees and changes" written where the
+  customer said "sees", accepted proposals labelled as the customer's own words, an
+  Excel list turned into a report, the design-notes file and statement ids mentioned to
+  the customer.
+- **Main weakness:** the quiet platform check was not done: every row of the design notes
+  was marked unchecked and no reference was actually read, so the claimed benefit
+  (platform limits known before the requirements) was not obtained in this run.
+- The design phase was not run: the design skill was not installed in that session.
+
+Changes made after this run: the platform check now requires opening the references
+and quoting what they say (a file with every row unchecked means the check was not
+done); origins are strict; one topic per turn; figures come from the user or are marked
+as proposals; the user's own wording of an output is kept; proposals carry a reason and
+notifications start from events that need action; two new completeness checks. These
+changes have not been re-tested yet.
+

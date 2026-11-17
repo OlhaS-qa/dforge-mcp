@@ -22,7 +22,7 @@ People, directories, other modules, with origin. Exports and imports appear in s
 - U-1 <descriptor of the person> <verb phrase>. Sees: … Changes: …
 
 ## Access Needs
-- U-1 needs: … / must not: …   (verb-led, no role codes)
+- <Users> (U-1) need: … / must not: …   (verb-led, no role codes; refer to the id inside the sentence, never at the start of the bullet, so it is defined only once)
 
 ## 5. Entities
 Name — purpose — key fields.

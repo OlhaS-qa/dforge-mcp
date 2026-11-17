@@ -25,9 +25,9 @@ Typical equipment-maintenance solution: equipment, maintenance request, preventi
 - The chief mechanic signs on paper only; no role in the system (`user`).
 
 ## Access Needs
-- U-1 needs: raise a request, see own requests, see the equipment list / must not: see or change other people's requests.
-- U-2 needs: see all requests, work on requests taken into work, use parts / must not: close a request.
-- U-3 needs: see the requests of their section, close, send back, see reports / must not: change work already recorded by a mechanic.
+- Users (U-1) need: raise a request, see own requests, see the equipment list / must not: see or change other people's requests.
+- Users (U-2) need: see all requests, work on requests taken into work, use parts / must not: close a request.
+- Users (U-3) need: see the requests of their section, close, send back, see reports / must not: change work already recorded by a mechanic.
 
 ## 5. Entities
 Equipment (name, inventory number, area, criticality, condition); Area (directory); Request; Work on a request; Part (name, number, stock, minimum stock, price); Part used on a request; Preventive schedule.

@@ -71,8 +71,9 @@ These matter more than the step list.
 10. **Propose less, tied to the user's words.** At most five numbered proposals per
     message. Each must serve a pain or a goal the user named, or close a failed
     check, and say what is lost without it. Do not offer the rest of the typical list:
-    keep it in your notes and end the topic with one open question ("what else would
-    you want to be told about / to see?"). Never offer something that only serves a
+    keep it in your notes and end the topic with one yes/no check ("is anything
+    important missing here? If not, answer no"), never an invitation to wish for more
+    ("what else would you like?"). Never offer something that only serves a
     kind of person the user did not say needs it.
 
 ## Step 0 — which path
@@ -186,8 +187,8 @@ to twelve turns. Phrasing and proposals: `references/interview.md`. Order:
    expiring document, low stock. Start from the pains the user named (for
    example "requests get lost" → the first person who must act) and offer at most five
    events (rule 10), each with what is lost without it; do not offer an event for a kind
-   of person who gets work done without it. End with one open question about who else
-   must be told. Ask which are needed, which only in the system, which also by e-mail.
+   of person who gets work done without it. End with the yes/no check about whether
+   anyone who must be told is missing. Ask which are needed, which only in the system, which also by e-mail.
 5. **Documents and files** — which printed forms, spreadsheets or exports; ask for a
    sample or the field list; note who signs (paper or in the system). The language
    of a printed form is the language of its sample; the language of the screens is

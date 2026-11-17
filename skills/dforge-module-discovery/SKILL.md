@@ -94,7 +94,7 @@ yourself and do not tell the user how:
 If you have no ready solution, say so in one sentence (rule 1). Record the base in
 section 2 of the spec and the platform decisions, as assumptions, in section 3.
 
-## Step 3 — business analysis (at most four questions, now short)
+## Step 3 — business analysis (three questions, short)
 
 The draft already holds the typical answers, so most of this becomes a numbered
 proposal instead of an open question. One at a time, each only if not answered:
@@ -104,13 +104,16 @@ proposal instead of an open question. One at a time, each only if not answered:
 2. Goals: restate what follows from their pains, then propose the typical goals from
    the draft as a numbered list ("usually teams also want: 1 … 2 … 3 …; which apply?").
 3. Scale: roughly how many items, records per month, people. Offer ranges.
-4. Launch date and what is definitely **not** needed in the first version: two
-   separate short questions.
 
 Do not ask about connections to other programs as a separate question: an export or
 a file for another program is asked with the documents (Step 4), data coming from
 another place with the initial data. Ask about another system only if the user
 mentions one.
+
+Do not ask about a launch date (it does not change the design) and do not ask what
+is out of scope as a question: whatever the user removes or declines during the
+interview goes to section 13 of the spec, and the user can still remove more when
+reading the file in Step 7.
 
 Record the answers in section 1 of the spec.
 

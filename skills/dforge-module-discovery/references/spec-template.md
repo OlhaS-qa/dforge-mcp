@@ -48,6 +48,7 @@ For whom — the decision it helps to make — default period.
 
 ## 12. Initial data
 ## 13. Out of scope
+What the user removed or declined during the interview (nothing is asked separately).
 ## 14. Scenarios
 Main and negative cases (title, steps, expected result).
 

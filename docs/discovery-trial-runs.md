@@ -25,7 +25,7 @@ initial data.
 
 **Not covered:** reports and scenarios (step 5), the completeness check (step 6), writing and
 approving `docs/SPEC.md` (step 7) on this run as a conversation, the handoff to `dforge-module-design`,
-the out-of-scope question, a second domain, repeatability.
+a second domain, repeatability.
 
 **Result:** a draft specification of the module (see
 `skills/dforge-module-discovery/examples/equipment-repair-spec.md`, which is
@@ -47,7 +47,7 @@ shortened and cleaned for the example).
 | 10 | Offered options were bullets; the user had to retype them to answer | Numbered proposals so the user can answer by numbers (rule 3) |
 | 11 | A promise "exactly the fields of your paper" | Do not promise; ask for the sample or its fields and check each field (rule 8, `interview.md`) |
 | 12 | A sample form must be compared with what was already agreed | Say in one line what is already covered; ask only about the missing fields (`interview.md`) |
-| 13 | There was almost no business analysis before the design questions | Added Step 3: how it works now, what hurts, scale, goals, launch date and what is out of scope |
+| 13 | There was almost no business analysis before the design questions | Added Step 3: how it works now, what hurts, scale, goals |
 | 14 | Three different things (deadline, other programs, out of scope) were asked in one block; "other programs" read as third-party integrations | One short question each; the separate question about other programs was dropped: an export is asked with the documents, data from elsewhere with the initial data (Step 3) |
 | 15 | Reports and scenarios were proposed together | Separate proposals (rule 7, Step 5) |
 
@@ -68,6 +68,9 @@ proposed reports and scenarios, and one written specification.
   what exists and builds a first draft, shows only what the system usually consists
   of, and then runs a shorter business analysis that proposes typical reasons and
   goals instead of asking them open (Steps 2–3).
+- The questions about the launch date and about what is out of scope were removed:
+  the date does not change the design, and what the user removes or declines during
+  the interview is recorded as out of scope without asking.
 - The question about the language was removed: Phase 0a already asks for locales,
   and the language of a printed form follows from its sample.
 - The separate question about connections to other programs was removed: it

@@ -65,5 +65,8 @@ Request: New → In work ⇄ Waiting for parts → Done → Closed; Cancelled. U
 ## 12. Initial data
 Areas and equipment from the customer's tables; parts and people entered by hand.
 
+## 13. Out of scope
+Nothing was removed or declined during the interview.
+
 ## 15. Open questions and assumptions
-Launch date; what is out of scope; hourly rate; the position of the person raising a request is taken from the user profile (`assumption`).
+Hourly rate; the position of the person raising a request is taken from the user profile (`assumption`).

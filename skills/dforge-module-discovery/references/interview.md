@@ -11,7 +11,7 @@ user's business; keep the shape (restate, propose numbered, ask for corrections)
 | "Usually it works like this, correct me: 1 … 2 … 3 …" | Offer a menu of choices as if the user had to pick a role or a template |
 | "The system can tell people when something happens: in the system (they see it when they log in) or by e-mail." | Mention triggers, jobs, mail providers, modules, templates, search |
 | "By your words the main thing is that requests do not get lost and it is clear who is responsible. What else should get better after launch?" | Ask again what they have already said; add conditions ("a system this size should be simple") |
-| One short question about one thing | Three questions in one block (for example deadline, scale, what is out of scope) |
+| One short question about one thing | Three questions in one block (for example scale, goals, how it works now) |
 | "Do you already have a form? Send a sample or list its fields: we will check every field against the system." | Promise "exactly the fields of your paper" |
 
 ## Step 3 — business analysis
@@ -19,7 +19,6 @@ user's business; keep the shape (restate, propose numbered, ask for corrections)
 1. _How are these things handled now, and what bothers you most?_ (open)
 2. _Roughly how many … do you have, how many … a month, how many people work on it?_ (offer ranges: up to 50 / 50–200 / more)
 3. _By your words the main thing is …. What else should get better a month after launch?_ Offer one or two typical goals of the domain.
-4. _By when must it work?_ and, separately, _Is there anything that is definitely not needed in the first version?_
 
 ## Step 4 — details
 

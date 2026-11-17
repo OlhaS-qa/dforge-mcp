@@ -2,7 +2,11 @@
 
 Example output of the discovery flow on an invented customer (a small factory).
 Origin of facts: `user`, `typical`, `practice`, `assumption`, `open`. Statement ids
-are shortened; a real spec numbers every statement.
+are shortened; a real spec numbers every statement. The designer's notes for this
+case are in `equipment-repair-design-notes.md`.
+
+## Summary
+A system in which workers raise repair requests, mechanics take them into work and section heads close them. It keeps the equipment list and spare parts, calculates downtime and cost, tells people about overdue requests, prints the request and the act of work done, and offers three reports. About 50–200 pieces of equipment, up to 30 requests a month, up to 5 people in the repair service.
 
 ## 1. Task and organisation
 A system for repair requests for the equipment of a small factory.
@@ -11,15 +15,15 @@ A system for repair requests for the equipment of a small factory.
 - Goals: requests do not get lost; it is clear who is responsible; downtime is visible; there is a repair history per machine (`user`).
 
 ## 2. Starting point
-Typical equipment-maintenance solution: equipment, maintenance request, preventive schedule, spare parts (`typical`, accepted by the user).
+A typical system for tracking equipment maintenance, adapted to the customer's form and rules (`typical`, accepted by the user).
 
 ## 3. Platform decisions
-- People are platform users (`assumption`).
-- Spare part supplier is a text field (`assumption`).
+- The people who use the system are its users; nobody is kept in a separate directory (`assumption`).
+- The supplier of a spare part is a text field (`assumption`).
 - Spare part stock is kept in this system; there is no other warehouse (`user`).
 
 ## 4. Users
-- U-1 Workers of a shop raise repair requests and see and edit only their own until a mechanic takes them into work; they see the equipment list (`user`, `practice`).
+- U-1 Workers of a shop raise repair requests and see their own until a mechanic takes them into work; they see the equipment list (`user`, `practice`).
 - U-2 Mechanics take requests into work, see all requests of the plant, add work done and parts used, set the deadline, note the work permit number and whether parts are needed (`user`).
 - U-3 Section heads close requests, see the requests of their section and the reports, and can send a finished request back with a reason (`user`, `practice`).
 - The chief mechanic signs on paper only; no role in the system (`user`).
@@ -30,7 +34,7 @@ Typical equipment-maintenance solution: equipment, maintenance request, preventi
 - Users (U-3) need: see the requests of their section, close, send back, see reports / must not: change work already recorded by a mechanic.
 
 ## 5. Entities
-Equipment (name, inventory number, area, criticality, condition); Area (directory); Request; Work on a request; Part (name, number, stock, minimum stock, price); Part used on a request; Preventive schedule.
+Equipment (name, inventory number, section, criticality, condition); Section (directory, names its head); Request; Work on a request; Part (name, number, stock, minimum stock, price); Part used on a request; Receipt of parts; Preventive schedule.
 
 ## 6. Lifecycles
 Request: New → In work ⇄ Waiting for parts → Done → Closed; Cancelled. Urgency: emergency / urgent / planned (from the user's form).
@@ -44,7 +48,7 @@ Request: New → In work ⇄ Waiting for parts → Done → Closed; Cancelled. U
 - S-1 Request number like RM-2026-0001 (`typical`).
 - S-2 Downtime in hours from raising to Done, only when the request says the equipment is stopped (`user`).
 - S-3 Overdue: emergency or urgent request not closed within 24 hours; also past its deadline (`user`).
-- S-4 Repair cost: parts (quantity × price) plus hours of work (`user`; hourly rate `open`).
+- S-4 Repair cost: parts (quantity × price) plus hours of work × an hourly rate (`user`; the rate is set by the section head).
 - S-5 Stock of a part decreases when a mechanic records its use (`practice`).
 
 ## 9. Documents and files
@@ -62,11 +66,18 @@ Request: New → In work ⇄ Waiting for parts → Done → Closed; Cancelled. U
 - N-6 Emergency or urgent request not closed in 24 hours → section head, in the system **and by e-mail**.
 - Low stock: not needed (`user`).
 
-## 12. Initial data
-Areas and equipment from the customer's tables; parts and people entered by hand.
+## 12. Scheduled checks and settings
+- Overdue requests are checked every hour; each notice is sent once (`practice`).
+- The hourly rate for work is a setting changed by the section head; until it is set the cost counts parts only (`assumption`).
 
-## 13. Out of scope
+## 13. Initial data
+Sections and equipment from the customer's tables; parts and people entered by hand.
+
+## 14. Out of scope
 Nothing was removed or declined during the interview.
 
-## 15. Open questions and assumptions
-Hourly rate; the position of the person raising a request is taken from the user profile (`assumption`).
+## 17. Decisions to confirm
+| Question | Our proposal | Status |
+|---|---|---|
+| Value of the hourly rate | set by the section head after launch | open: the customer names the rate |
+| Position of the person raising a request | taken from the user's profile | assumption |

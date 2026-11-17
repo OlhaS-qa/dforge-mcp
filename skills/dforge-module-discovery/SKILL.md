@@ -1,6 +1,6 @@
 ---
 name: dforge-module-discovery
-description: Stage before Phase 0 of dForge module authoring, for a NEW module when the user describes a business problem or a wish ("we need a system for…", "we have a problem with…", "what is already there?") and has no finished data model or requirements. Interviews the user about the business task (how it works now, what hurts, scale, goals), proposes a typical solution (entities, statuses, calculations, notifications, reports, scenarios) for the user to correct, and writes one approved specification, docs/SPEC.md, that dforge-module-design then uses. Do not use when the module already exists (dforge-module-build), for install and release (dforge-module-ship), or when the user brings a complete data model and requirements (go straight to dforge-module-design).
+description: Stage before Phase 0 of dForge module authoring, for a NEW module when the user describes a business problem or a wish ("we need a system for…", "we have a problem with…", "what is already there?") and has no finished data model or requirements. Interviews the user about the business task (how it works now, what hurts, scale, goals), proposes a typical solution (entities, statuses, calculations, notifications, reports, scenarios) for the user to correct, and writes one approved specification, docs/SPEC.md (plus docs/SPEC-design-notes.md for the designer), that dforge-module-design then uses. Do not use when the module already exists (dforge-module-build), for install and release (dforge-module-ship), or when the user brings a complete data model and requirements (go straight to dforge-module-design).
 ---
 
 # dForge module — Discovery (before Phase 0)
@@ -12,8 +12,10 @@ without asking about meaning again, and so that the gaps users usually find only
 while testing (who sees what, what is forbidden at each status, who gets notified,
 which reports and documents) are decided **before** anything is built.
 
-Output: `docs/SPEC.md` in the module directory (format: `references/spec-template.md`).
-Nothing here creates module files or calls `dforge_module_create`.
+Output: `docs/SPEC.md` in the module directory (format: `references/spec-template.md`),
+which the user reads and approves, and `docs/SPEC-design-notes.md` (format:
+`references/design-notes-template.md`), which only the design phase reads. Nothing
+here creates module files or calls `dforge_module_create`.
 
 > **Prerequisite:** you know `moduleDir` (the router asks for it first) and
 > `docs/SPEC.md` does not exist yet. If it exists, read it and continue from the
@@ -57,13 +59,22 @@ These matter more than the step list.
 
 ## Step 0 — which path
 
-Decide silently from the first answer. If the user brings a finished data model, a
-DBML, a migration from another system or a detailed description, skip the interview:
-check the model (optional links, status recovery, who sees what, what happens on
-cancel and delete), ask only about the gaps you find, write the spec from it and
-go to the handoff. Otherwise take the open path below. If unsure, ask exactly one
-question: _"Do you already have a data model or a description, or shall we start
-from the task?"_
+Decide silently from the first answer.
+
+- **The user has no list** ("we need a system for X"): take the open path below.
+- **The user brings their own list**: a document of requirements, a spreadsheet, a
+  description, a DBML, a migration from another system. Do not interview. Read it,
+  map every item into the sections of the spec (origin `user`), run the
+  completeness checks of Step 6 on it, ask only about the gaps you find (one
+  numbered list of proposals), do the quiet platform check of Step 2, write the
+  spec and go to the handoff. A list that covers only part of the picture is used as
+  the start of the draft in Step 2 and the interview asks only for the rest.
+- **The user brings a finished data model**: check it (optional links, status
+  recovery, who sees what, what happens on cancel and delete), and treat it like
+  their own list.
+
+If it is unclear, ask exactly one question: _"Do you already have a list of
+requirements or a description, or shall we start from the task?"_
 
 ## Step 1 — understand the task
 
@@ -79,7 +90,15 @@ yourself and do not tell the user how:
    with `dforge_module_inspect` on a dependency directory), a library of ready
    solutions if you have one, and your knowledge of the domain. No internet. Choose
    silently: people = platform users, a separate directory only when the user manages
-   it, own tables otherwise.
+   it, own tables otherwise. Check, silently, what the draft needs from the platform
+   (visibility by owner or by a related record, hierarchies, exports, notices and
+   e-mail, scheduled checks, print forms, reports) against the references
+   `dforge://reference/security`, `dforge://reference/reports`,
+   `dforge://reference/jobs`, `dforge://reference/print-templates` and
+   `dforge://reference/settings`, and against the modules you can see. Write what you
+   found to `docs/SPEC-design-notes.md`, mark what you could not confirm
+   `unchecked`, and tell the user only the consequences, in business words, and only
+   when they need a decision.
 2. Assemble the **whole** draft in your notes, for every topic of Step 4 and Step 5:
    the entities, the typical lifecycle and forbidden actions, kinds of people,
    calculated values, notifications, documents, reports, scenarios, and the typical
@@ -179,7 +198,8 @@ spec, not whether it can be built on the platform; that is Phase 0 and
 
 ## Step 7 — write the specification
 
-Write `docs/SPEC.md` using `references/spec-template.md`. Number every statement
+Write `docs/SPEC.md` using `references/spec-template.md` and bring
+`docs/SPEC-design-notes.md` up to date (`references/design-notes-template.md`). Number every statement
 (`S-`, `N-`, `V-`, `U-`, `R-`, `P-`, `O-`; each id defined once, at the start of
 its line) so that Phase 0 can cite them. Put what is still open in the last
 section. Then give a short orientation — section names, counts of entities,
@@ -189,7 +209,8 @@ line, ask again. Nothing moves on before "yes".
 
 ## Step 8 — handoff
 
-Tell the user the specification is agreed. Invoke **`dforge-module-design`**; it
+Tell the user the specification is agreed. Invoke **`dforge-module-design`** and tell
+it to read `docs/SPEC.md` and `docs/SPEC-design-notes.md`; it
 turns sections 4, 6 and 14 into `REQUIREMENTS.md` (verb sentences, `## Access Needs`,
 `## Outputs`, core processes) and shows it to the user in one message instead of
 asking the questions again. Open questions from the spec must be closed with the
@@ -208,5 +229,8 @@ user before Phase 0d (the design check rejects `TBD`/`open:` wording in Gaps).
 
 - The library of ready solutions and its search are a prototype and may not be
   available; the skill works without them.
+- There is no short reference of what the platform can do yet. The quiet platform
+  check reads the references and the modules it can see, and anything it cannot
+  confirm is marked `unchecked`.
 - `dforge-module-design` does not read `docs/SPEC.md` directly yet (only the statement
   ids are checked against it); the agent derives `REQUIREMENTS.md` from it.

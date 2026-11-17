@@ -5,8 +5,10 @@ during the quiet research of Step 2 and updated while the interview changes the
 picture. The customer sees only the consequences in business words, in
 `docs/SPEC.md` (sections 3, 14 and 17).
 
-Mark everything you could not confirm as `unchecked`; an unchecked platform fact is a
-question for the design phase, never a promise to the customer.
+Read the references for every need and write what you read in the last column.
+Mark as `unchecked` only what the references do not answer; an unchecked platform fact
+is a question for the design phase, never a promise to the customer. A file with every
+row `unchecked` means the check was not done.
 
 ```markdown
 # <Module> — design notes

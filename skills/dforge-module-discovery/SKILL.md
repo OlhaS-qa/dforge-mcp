@@ -31,18 +31,26 @@ These matter more than the step list.
    here is a first draft"), nothing more.
 2. **One question per turn.** After each answer restate it in one line ("Understood:
    requests are in a paper log and get lost"), then ask the next question. Skip a
-   question whose answer is already known.
+   question whose answer is already known. A turn holds one topic: a numbered list of
+   proposals on that topic is one question; a second topic (for example the scale and
+   how many people travel, or documents and a question about another program) waits
+   for the next turn.
 3. **Build the typical solution yourself and propose it; ask open only for what only
    the user knows.** Write the typical answer as a **numbered** list and ask "Is this how
    it works for you, or what should change?" so the user can reply by numbers
    ("1 and 2 as is, 3 by e-mail too, 4 not needed"). Names, people, their own
    forms and numbers are always open questions. Mark where each fact in the
-   spec came from: `user`, `typical`, `practice` (your proposal the user accepted) or
-   `assumption`.
+   spec came from, strictly: `user` only for what the user said in their own words
+   or numbers; `typical` or `practice` for your proposal that the user accepted (even
+   when they accepted it unchanged), never `user`; `assumption` for what you took by
+   default.
 4. **Build questions from the user's own words.** Do not decide for the user ("a
    system this size should be simple"), do not repeat what they have already said,
    do not promise absolutes ("no request is ever lost" → "requests do not get
-   lost").
+   lost"). Never fill a figure, limit or deadline from your own knowledge (a report
+   deadline of 5 days): ask for it, or propose it in a numbered list as a proposal.
+   For what each kind of person may change, write only what the user said; propose the
+   rest.
 5. **Say what the platform does, in business words** ("the system will tell the
    mechanic", not "a trigger will fire"). The user never sets up e-mail or any
    platform feature; do not mention it.
@@ -56,6 +64,13 @@ These matter more than the step list.
 8. **A real sample beats a description.** For every printed form, report or file
    ask for a sample, or for the list of its fields, and check each field against the
    spec.
+9. **Keep the user's own wording of an output.** An Excel list stays an Excel
+   list; if you turn it into something else (a report), say so and ask.
+10. **Propose less, with a reason.** Offer only what follows from the user's words,
+    from a failed check or from the typical solution of the domain, and for each
+    proposal say what happens if the user declines it. For notifications start from
+    the events where someone must act or would not otherwise notice, not from every
+    status change.
 
 ## Step 0 — which path
 
@@ -92,13 +107,18 @@ yourself and do not tell the user how:
    silently: people = platform users, a separate directory only when the user manages
    it, own tables otherwise. Check, silently, what the draft needs from the platform
    (visibility by owner or by a related record, hierarchies, exports, notices and
-   e-mail, scheduled checks, print forms, reports) against the references
-   `dforge://reference/security`, `dforge://reference/reports`,
-   `dforge://reference/jobs`, `dforge://reference/print-templates` and
-   `dforge://reference/settings`, and against the modules you can see. Write what you
-   found to `docs/SPEC-design-notes.md`, mark what you could not confirm
-   `unchecked`, and tell the user only the consequences, in business words, and only
-   when they need a decision.
+   e-mail, scheduled checks, print forms, reports, files, settings). **Open and read**
+   the references `dforge://reference/security`, `dforge://reference/filters`,
+   `dforge://reference/reports`, `dforge://reference/jobs`,
+   `dforge://reference/print-templates`, `dforge://reference/settings` and
+   `dforge://reference/action-dsl` for the needs of this draft, and look at the
+   modules you can see (for example with `dforge_module_inspect` on a dependency
+   directory). In `docs/SPEC-design-notes.md` fill, for every need, what the platform
+   does, the workaround and **the section you read and what it says**. `unchecked` is
+   allowed only for a need that the references do not answer, and then you list the
+   question in section 6; a notes file with every row `unchecked` means the check was
+   not done. Tell the user only the consequences, in business words, and only when
+   they need a decision.
 2. Assemble the **whole** draft in your notes, for every topic of Step 4 and Step 5:
    the entities, the typical lifecycle and forbidden actions, kinds of people,
    calculated values, notifications, documents, reports, scenarios, and the typical
@@ -157,8 +177,9 @@ to twelve turns. Phrasing and proposals: `references/interview.md`. Order:
 4. **Notifications** — for **every date that has a deadline** and **every status
    change**, propose _event → who is told → in the system or by e-mail_. Typical
    triggers: new record, taken into work, waiting, finished, sent back, overdue,
-   expiring document, low stock. Ask which are needed, which only in the system,
-   which also by e-mail.
+   expiring document, low stock. Offer only the events where someone must act or
+   would not otherwise notice (rule 10), each with what is lost without it. Ask
+   which are needed, which only in the system, which also by e-mail.
 5. **Documents and files** — which printed forms, spreadsheets or exports; ask for a
    sample or the field list; note who signs (paper or in the system). The language
    of a printed form is the language of its sample; the language of the screens is

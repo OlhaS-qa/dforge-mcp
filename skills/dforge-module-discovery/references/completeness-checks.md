@@ -19,8 +19,10 @@ cannot be settled becomes an open question in the last section of the spec.
 | 10 | Every directory has a source and a volume for its initial data; the people and kinds of access to be created are listed. | An empty system at launch; roles nobody created |
 | 11 | No two statements contradict each other (for example "workers see only their own" and "everyone sees all"); every statement id is defined once. | Conflicting rules found at design validation or later |
 | 12 | Every open item says who must answer or which assumption must be confirmed. | `TBD` that blocks the Phase 0 design check |
+| 13 | Every fact marked `user` was said by the user; an accepted proposal is `typical` or `practice`. | Requirements that nobody asked for presented as the user's |
+| 14 | Every output keeps the form the user named (an Excel list is not silently turned into a report) and every figure comes from the user or is marked as a proposal. | A lost output form; a deadline invented by the skill |
 
 How to run: go through the list silently, in this order. Do not narrate each check.
 Ask only about failures, one question per turn. After the user answers, re-run the
 affected check. Record the outcome in one line at the end of the spec (for example
-"completeness: 12 checks, 3 questions asked, 1 open").
+"completeness: 14 checks, 3 questions asked, 1 open").

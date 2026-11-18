@@ -140,7 +140,7 @@ yourself and do not tell the user how:
    another dForge module?").
 
 If you have no ready solution, say so in one sentence (rule 1). Record the base in
-section 2 of the spec and the platform decisions, as assumptions, in section 3.
+section 2 of the spec and the platform decisions, as defaults, in section 3.
 
 ## Step 3 — business analysis (two questions, short)
 
@@ -163,7 +163,7 @@ mentions one.
 
 Do not ask about a launch date (it does not change the design) and do not ask what
 is out of scope as a question: whatever the user removes or declines during the
-interview goes to section 13 of the spec, and the user can still remove more when
+interview goes to section 14 of the spec, and the user can still remove more when
 reading the file in Step 7.
 
 Record the answers in section 1 of the spec.
@@ -183,10 +183,12 @@ to twelve turns. Phrasing and proposals: `references/interview.md`. Order:
 2. **Lifecycle** of each record that goes through stages: statuses, who moves it,
    what is forbidden at each status, how it is cancelled, whether it can be sent
    back, what happens on delete (default: never deleted, only cancelled).
-3. **Rules and limits the user already works by** — ask **open**, once, before you
-   propose any: _"Are there amounts, norms, limits or deadlines you already work by
-   (a spending limit, a daily rate, an approval threshold, a deadline)?"_ These are
-   figures only the user has; a limit that nobody asked for is lost.
+3. **Rules, limits and exceptions the user already works by** — ask **open**, once,
+   before you propose any: _"Are there amounts, norms, limits or deadlines you already
+   work by (a spending limit, a daily rate, an approval threshold, a deadline)? Are there
+   people or cases that work differently (contractors, people who have left, temporary
+   staff), and things that must be blocked?"_ These are figures and exceptions only
+   the user has; one that nobody asked for is lost.
 4. **Calculated values** — numbers, totals, durations, overdue flags, stock.
 5. **Notifications** — for **every date that has a deadline** and **every status
    change**, propose _event → who is told → in the system or by e-mail_. Typical
@@ -225,7 +227,7 @@ A gap is a missing decision that the agreed items depend on, or a contradiction
 between them. It is **not a new feature**: do not use this step to propose new
 notifications, reports, reminders or lists, and do not re-ask what the user has
 already agreed. Ask at most five gap questions; if you have more, ask the five that
-block the design most and record the rest as assumptions in section 17. A gap whose
+block the design most and record the rest as defaults in section 17. A gap whose
 answer would not change the design is not asked.
 
 Before writing the file, go through `references/completeness-checks.md` yourself,
@@ -261,7 +263,7 @@ line, ask again. Nothing moves on before "yes".
 
 Tell the user the specification is agreed. Invoke **`dforge-module-design`** and tell
 it to read `docs/SPEC.md` and `docs/SPEC-design-notes.md`; it
-turns sections 4, 6 and 14 into `REQUIREMENTS.md` (verb sentences, `## Access Needs`,
+turns sections 4, 6 and 9 (users, lifecycles, outputs) into `REQUIREMENTS.md` (verb sentences, `## Access Needs`,
 `## Outputs`, core processes) and shows it to the user in one message instead of
 asking the questions again. Open questions from the spec must be closed with the
 user before Phase 0d (the design check rejects `TBD`/`open:` wording in Gaps).

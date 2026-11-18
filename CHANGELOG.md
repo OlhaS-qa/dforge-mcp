@@ -4,9 +4,11 @@ All notable changes to `@dforge-core/dforge-mcp`. This project uses semver-ish
 `0.1.0-rc.N` pre-release tags; the published version is set at publish time via
 the release workflow, so committed `package.json` versions are placeholders.
 
-## Unreleased
+## 0.2.59 - 2026-11-18
 
 **Skills synced with dForge-core.** `translations.md`: report panel titles (`reports.<cd>.panels`, opt-in). `menus.md` rule 8: entities-only and bridge modules drop their old folders on upgrade, and a host upgrade keeps what a bridge merged. `action-dsl.md`: `notify(userId, msg, { entity, recordId, caption? })` links to another record; a library function of another module reads its provider's settings, secrets and number prefixes.
+
+**Dependencies.** `@dforge-core/metadata` 0.0.58 (vendored schemas: manifest `secrets`, entity and column `lookupCreate`, module-test checks over rows and `$as`; `notify()` with a record link in the DSL checker) and `@dforge-core/dforge-cli` 0.2.45 (`module validate` checks declared secrets and module tests).
 
 ## 0.2.58 - 2026-11-14
 

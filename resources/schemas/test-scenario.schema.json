@@ -51,6 +51,13 @@
 				}
 			]
 		},
+		"addedAs": {
+			"type": "object",
+			"minProperties": 1,
+			"description": "{ \"<name>\": \"<entity>\" }: names the one record of each entity the step added (an action's insert(), or a synchronous `async: false` trigger's). The step fails the test unless exactly one was added.",
+			"propertyNames": { "pattern": "^[A-Za-z_][A-Za-z0-9_]*$" },
+			"additionalProperties": { "type": "string" }
+		},
 		"step": {
 			"oneOf": [
 				{
@@ -69,14 +76,18 @@
 					"additionalProperties": false,
 					"properties": {
 						"update": { "$ref": "#/$defs/recordRef" },
-						"values": { "$ref": "#/$defs/values" }
+						"values": { "$ref": "#/$defs/values" },
+						"$as": { "$ref": "#/$defs/addedAs" }
 					}
 				},
 				{
 					"type": "object",
 					"required": ["delete"],
 					"additionalProperties": false,
-					"properties": { "delete": { "$ref": "#/$defs/recordRef" } }
+					"properties": {
+						"delete": { "$ref": "#/$defs/recordRef" },
+						"$as": { "$ref": "#/$defs/addedAs" }
+					}
 				},
 				{
 					"type": "object",
@@ -87,7 +98,8 @@
 						"action": { "type": "string", "description": "action_cd." },
 						"record": { "$ref": "#/$defs/recordRef" },
 						"records": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/recordRef" } },
-						"params": { "type": "object" }
+						"params": { "type": "object" },
+						"$as": { "$ref": "#/$defs/addedAs" }
 					}
 				}
 			]
@@ -101,7 +113,7 @@
 					"properties": {
 						"record": { "$ref": "#/$defs/recordRef" },
 						"equals": { "type": "object", "minProperties": 1 },
-						"precision": { "type": "integer", "minimum": 0, "description": "Decimals numbers are compared at." }
+						"precision": { "type": "integer", "minimum": 0, "maximum": 28, "description": "Decimals numbers are compared at." }
 					}
 				},
 				{
@@ -135,8 +147,53 @@
 					"required": ["refused"],
 					"additionalProperties": false,
 					"properties": { "refused": { "const": "canExecute" } }
+				},
+				{
+					"type": "object",
+					"required": ["query"],
+					"allOf": [{ "$ref": "#/$defs/rows" }],
+					"additionalProperties": false,
+					"properties": {
+						"query": {
+							"type": "object",
+							"required": ["entity"],
+							"description": "A query.run query, read as the test's user: { entity, columns, filter, sort }. A column { \"c\", \"agg\" } aggregates (sum, count, avg, min, max) grouped by the columns with \"agg\": \"group\"; an aggregate is named by its column. At most 1000 rows.",
+							"properties": {
+								"entity": { "type": "string" },
+								"columns": { "type": "array" },
+								"filter": { "type": "object" },
+								"sort": { "type": "array" }
+							}
+						},
+						"equals": true, "contains": true, "rowCount": true, "precision": true
+					}
+				},
+				{
+					"type": "object",
+					"required": ["register"],
+					"allOf": [{ "$ref": "#/$defs/rows" }],
+					"additionalProperties": false,
+					"properties": {
+						"register": {
+							"type": "object",
+							"required": ["name", "resource"],
+							"description": "An accounting register's balances per account (query.runRegister), as a report's register dataset declares them: name, resource, interval, columns, filter, sort, rollup."
+						},
+						"params": { "type": "object", "description": "The values of the @params the register block names (an interval's from / to)." },
+						"equals": true, "contains": true, "rowCount": true, "precision": true
+					}
 				}
 			]
+		},
+		"rows": {
+			"description": "What rows to expect. equals: an array (exactly these rows, in order), an object (exactly one row) or a value (one row of one column); contains: rows each found among them; rowCount: how many. A row compares only the columns it names.",
+			"anyOf": [{ "required": ["equals"] }, { "required": ["contains"] }, { "required": ["rowCount"] }],
+			"properties": {
+				"equals": true,
+				"contains": { "type": "array", "items": { "type": "object" } },
+				"rowCount": { "type": "integer", "minimum": 0 },
+				"precision": { "type": "integer", "minimum": 0, "maximum": 28, "description": "Decimals numbers are compared at." }
+			}
 		}
 	}
 }

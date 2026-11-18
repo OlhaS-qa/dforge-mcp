@@ -4,6 +4,10 @@ All notable changes to `@dforge-core/dforge-mcp`. This project uses semver-ish
 `0.1.0-rc.N` pre-release tags; the published version is set at publish time via
 the release workflow, so committed `package.json` versions are placeholders.
 
+## Unreleased
+
+**Skills synced with dForge-core.** `manifest.md`: `secrets` declarations (undeclared code refused once declared, per-folder values). `column-types.md`: `lookupCreate` on an entity and on a Reference column. `dforge-module-ship`: module tests with `$as`, `query` and `register` row checks.
+
 ## 0.2.59 - 2026-11-18
 
 **Skills synced with dForge-core.** `translations.md`: report panel titles (`reports.<cd>.panels`, opt-in). `menus.md` rule 8: entities-only and bridge modules drop their old folders on upgrade, and a host upgrade keeps what a bridge merged. `action-dsl.md`: `notify(userId, msg, { entity, recordId, caption? })` links to another record; a library function of another module reads its provider's settings, secrets and number prefixes.

@@ -73,7 +73,21 @@ The manifest lists every file in the package by logical key. The installer reads
 | `seedData` | array | List of paths to seed files, in install order |
 | `supportedLocales` | string[] | IETF locale tags that the module ships translations for, e.g. `["de-DE", "uk-UA"]`. Files are **auto-discovered** at `./translations/{locale}.json` — there is no per-file manifest entry. English (`en`/`en-*`) is the default and must not be listed. |
 | `webhooks` | string | path to `./webhooks.json` |
+| `secrets` | object | `{ "<code>": { "label", "description"? } }`: the secrets the module's code reads. See **Declaring secrets** below. |
 | `features` | string[] | Opt-in platform behaviours this package was authored for, e.g. `["report-security"]`. Absent/empty = the pre-feature behaviour. See **Feature opt-ins** below. |
+
+## Declaring secrets
+
+A module whose code reads a secret (`getSecret('x')`, a webhook's `secretCd`, `fetchMail({ secret: 'x' })`) lists it under `secrets`. The admin Secrets page shows each as a slot to fill, and again under every module that imports this one's functions (`deps/<module>.json` `"functions"`).
+
+```json
+"secrets": { "anthropic_api_key": { "label": "Anthropic API key", "description": "Used by the summarise action." } }
+```
+
+- Codes match `^[a-z][a-z0-9_]{0,62}$`. Labels translate under `"secrets": { "<code>": { "label", "desc" } }` in `translations/<locale>.json`.
+- **Once the key is present**, a fixed-string reference to an undeclared code fails `dforge_module_validate`, pack and install, and `secret.set` refuses a code not listed. A name built at run time cannot be checked, so declare every value it can take.
+- Without the key nothing is checked (the old behaviour); `{}` declares that the module reads none.
+- An admin may give a secret a value per folder; `getSecret()` takes the nearest folder value, then the module-wide one, as settings do.
 
 ## Feature opt-ins
 

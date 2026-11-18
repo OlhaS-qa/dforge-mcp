@@ -384,7 +384,7 @@ A write the database refuses — a closed period, a posted document, a constrain
 | `callApi(url, method, headers?, body?)` | String | Make an HTTP request to an external API. Returns response body as string. Parse JSON with `JSON.parse()`. Max 10 calls per script, 120s timeout, 5MB response limit. Content-Type defaults to `application/json` but can be overridden via headers. |
 | `getFileBase64(fileFieldValue)` | String | Read a file from storage and return its content as a base64-encoded string. Use with `callApi()` to send files to AI APIs. Max 10 MB. Example: `getFileBase64([document_file])`. |
 | `getFileUrl(fileFieldValue)` | String | Generate a temporary signed download URL (relative path) for a file field. Use in email templates or notifications — not for `callApi()`. |
-| `getSecret('secret_cd')` | String | Retrieve a decrypted secret value (API keys, tokens). Secrets are managed in the admin UI. |
+| `getSecret('secret_cd')` | String | Retrieve a decrypted secret value (API keys, tokens). Secrets are managed in the admin UI; declare the code under manifest `secrets` (see manifest.md). |
 | `getFileInfo(fileFieldValue)` | Object \| null | File metadata for a file field. |
 | `download(url, fileName?)` | — | Set a download URL on the action result; the browser opens it when the action returns. It fetches and stores nothing: the URL must already serve the bytes. To hand over a file the script builds, use `downloadText()` / `downloadBase64()`. |
 | `callService('name', { args })` | Any | Invoke a registered host service. |

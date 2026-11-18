@@ -113,6 +113,16 @@ Two consequences for the entity you point at:
 
 `refFilter` and folder row filters still apply: they are AND-ed onto the search, so a filtered-out row does not surface just because the user typed its name.
 
+### "+ Create" in the lookup (`lookupCreate`)
+
+After a search with no match the picker offers **+ Create "text"** when the user may insert into the target and its display field is its only required column. Switch it off where a record cannot be made from its name alone (a category that needs a parent, a document, an account):
+
+- `"lookupCreate": false` on the **target entity** hides it in every lookup pointing at it, from any module. It is not allowed on an extension entity (`extends`).
+- `"params": { "lookupCreate": true|false }` on one **Reference column** overrides the entity's value for that lookup, either way.
+- A non-boolean value is refused at pack and install. A module-wide `lookupCreate` in the manifest is refused too: put it on the entity.
+
+Creating the record in its own view is unaffected.
+
 ## Set columns (`columnType: "S"`)
 
 Virtual 1:N backwards reference. Shows a grid of related records on the parent's detail view.

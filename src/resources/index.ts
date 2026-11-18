@@ -382,6 +382,10 @@ export const resources: ResourceDef[] = [
 	),
 	reference("conventions", "Cross-cutting module rules: naming, structure, translations, upgrade migrations."),
 	reference("validation-checklist", "Final pre-pack self-review checklist covering every file type."),
+	reference(
+		"requirements-completeness",
+		"Phase 0b completeness check run before REQUIREMENTS.md is written (14 checks) and the open question about rules, limits and exceptions.",
+	),
 
 	// ── Canonical example module (skills/.../examples/simple-todo) ────────
 	example("manifest.json", "Canonical manifest.json."),

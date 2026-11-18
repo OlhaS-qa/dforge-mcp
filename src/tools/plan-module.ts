@@ -163,7 +163,12 @@ function handleCheck(root: string): PlanResult {
 			],
 			followUpNote:
 				"After answers 1-2: ask any domain ambiguity questions that remain open (e.g. 'What counts as a " +
-				"closed item?', 'Can anonymous users submit?'). Continue one at a time until no open questions " +
+				"closed item?', 'Can anonymous users submit?'). Before writing REQUIREMENTS.md, ask once: 'Are there " +
+				"rules, limits or exceptions the system must know about — amounts and norms, time limits, thresholds, " +
+				"people who work differently (contractors, people who have left, temporary staff) — and anything that " +
+				"must be blocked?' (never invent a figure), then silently run the completeness check " +
+				"(dforge://reference/requirements-completeness) and ask only about failures. " +
+				"Continue one at a time until no open questions " +
 				"remain. Dependencies and locales are confirmed from Phase 0a — carry them into REQUIREMENTS.md " +
 				"without re-asking.",
 			writeAction:

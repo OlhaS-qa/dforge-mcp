@@ -260,3 +260,14 @@ describe("validate structural checks", () => {
 		expect(existsSync(join(dir, "CLAUDE.md"))).toBe(true);
 	});
 });
+
+describe("Phase 0b intake: rules, limits and exceptions", () => {
+	it("followUpNote asks once about rules, limits and exceptions and points to the completeness check", () => {
+		identity();
+		const c = plan({ action: "check" });
+		expect(c.currentPhase).toBe("0b");
+		expect(c.followUpNote).toMatch(/rules, limits or exceptions/);
+		expect(c.followUpNote).toMatch(/contractors, people who have left/);
+		expect(c.followUpNote).toContain("dforge://reference/requirements-completeness");
+	});
+});

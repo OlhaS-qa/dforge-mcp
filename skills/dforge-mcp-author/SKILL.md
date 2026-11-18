@@ -172,7 +172,8 @@ Load these by URI, one per step, at the step that needs them.
 `data-views`, `menus`, `action-dsl`, `filters`, `security`, `reports`,
 `settings`, `jobs`, `number-sequences`, `registers`, `reactions`, `document-extraction`,
 `print-templates`, `translations`, `queries`, `schema-import`, `excel-import`,
-`data-migration`, `manifest`, `conventions`, `validation-checklist`.
+`data-migration`, `manifest`, `conventions`, `validation-checklist`,
+`requirements-completeness` (Phase 0b).
 
 **Schemas** (fallback, when a reference points at one) — `dforge://schema/<name>`:
 `manifest`, `entity`, `domains`, `data-views`, `folders`, `menus`, `roles`,

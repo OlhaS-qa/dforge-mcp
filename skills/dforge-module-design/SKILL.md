@@ -100,10 +100,23 @@ forms from memory: a regulatory report or a labour order has exact fields, a for
 version and a signatory — ask for them, and if the user has none yet, record that
 as a Gap instead of inventing the layout.
 
+**And ask once about rules, limits and exceptions.** Near the end of the intake,
+before the gap scan: _"Are there rules, limits or exceptions the system must know
+about — amounts and norms, time limits, thresholds, people who work differently
+(contractors, people who have left, temporary staff) — and anything that must be
+blocked?"_ Only the customer knows these. Write each answer as a rule with its
+figure; if the answer is "no", say that nothing special was named. Never invent
+a figure.
+
 ### Requirements gap scan
 
 Run before writing `REQUIREMENTS.md`. Surface each finding inline as
 **"Gap:** … **Proposal:** … Confirm or change?"**
+
+First run the **completeness check** (`dforge://reference/requirements-completeness`,
+14 checks) silently on the agreed answers: do not announce it, ask only about
+failures, one topic per turn and at most five proposals per turn. A gap is a
+missing decision, not a new function. Then the scan below.
 
 - **Approval recovery** — is a reject terminal, or can it be re-submitted?
 - **Audit depth** — does the user need to record *who* changed each row, not just

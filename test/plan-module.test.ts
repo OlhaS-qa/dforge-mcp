@@ -254,7 +254,7 @@ describe("validate structural checks", () => {
 		identity();
 		write("CLAUDE.md", read("CLAUDE.md").replace("- [ ] **0b**", "- [x] **0b**"));
 		const c = plan({ action: "check" });
-		for (const h of ["## Visibility", "## Rules & Constraints", "## Notifications", "## Permissions Matrix"]) {
+		for (const h of ["## Visibility", "## Rules & Constraints", "## Notifications", "## Permissions Matrix", "## Platform Limits"]) {
 			expect(c.designTemplate).toContain(h);
 		}
 		expect(existsSync(join(dir, "CLAUDE.md"))).toBe(true);
@@ -269,5 +269,25 @@ describe("Phase 0b intake: rules, limits and exceptions", () => {
 		expect(c.followUpNote).toMatch(/rules, limits or exceptions/);
 		expect(c.followUpNote).toMatch(/contractors, people who have left/);
 		expect(c.followUpNote).toContain("dforge://reference/requirements-completeness");
+	});
+});
+
+describe("Phase 0a asks only the name and languages", () => {
+	it("returns two questions and tells the agent to decide code, dependencies and preset itself", () => {
+		dir = mkdtempSync(join(tmpdir(), "dforge-mcp-plan-"));
+		const c = plan({ action: "check" });
+		expect(c.currentPhase).toBe("0a");
+		expect(c.questions).toHaveLength(2);
+		expect(c.questions[0]).toMatch(/display name/);
+		expect(c.questions[1]).toMatch(/locales/);
+		expect(c.nextStep).toMatch(/Decide the technical items yourself/);
+		expect(c.nextStep).toMatch(/module code/);
+	});
+
+	it("0b followUpNote runs the quiet platform check and points to the Platform Limits section", () => {
+		identity();
+		const c = plan({ action: "check" });
+		expect(c.followUpNote).toMatch(/quiet platform check/);
+		expect(c.followUpNote).toContain("## Platform Limits");
 	});
 });

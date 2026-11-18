@@ -98,22 +98,22 @@ function handleCheck(root: string): PlanResult {
 			pending,
 			readyToScaffold: false,
 			nextStep:
-				"Phase 0a — Module Identity. Ask the user these questions ONE AT A TIME. After each answer, restate " +
-				"what you understood and confirm before continuing.",
+				"Phase 0a — Module Identity. Ask the user ONLY the two questions below, one at a time. Decide the " +
+				"technical items yourself and state them in one plain line (do not ask the user about them): the " +
+				"module code (snake_case from the display name: letters, digits, underscores; it becomes the DB " +
+				"schema name), dependencies (admin and metadata are platform-implicit; default None, or the module " +
+				"whose entities the task obviously needs, from the modules you can see), and the scaffold preset " +
+				"(default minimal = entities + default views + single admin role; minimal-plus = + settings stubs; " +
+				"full = + logic stubs + seed data structure). Change them only if the user asks.",
 			questions: [
 				'What\'s the module\'s display name? (e.g. "Purchase Orders", "HR Leave Requests")',
-				"What code should it use? (snake_case, letters + digits + underscores — becomes the DB schema name; " +
-					"suggest a default derived from the display name)",
-				"Does this module depend on any other dForge modules — e.g. needing entities from 'crm' or " +
-					"'parties'? (admin and metadata are platform-implicit; list any others, or say None)",
 				"English only, or which other locales should the module ship translations for (e.g. uk-UA)? English " +
 					"is the base and needs no translation file.",
-				"How complete should the initial scaffold be? (minimal = entities + default views + single admin " +
-					"role; minimal-plus = + settings stubs; full = + logic stubs + seed data structure)",
 			],
 			writeAction:
-				"Once all answers are collected and reflected back, call dforge_module_plan({ action: " +
-				"'write_identity', moduleDir, displayName, code, dependencies, locales, preset }).",
+				"Once both answers are collected and reflected back, tell the user the code you chose in one line, " +
+				"then call dforge_module_plan({ action: 'write_identity', moduleDir, displayName, code, " +
+				"dependencies, locales, preset }).",
 		};
 	}
 
@@ -167,10 +167,14 @@ function handleCheck(root: string): PlanResult {
 				"rules, limits or exceptions the system must know about — amounts and norms, time limits, thresholds, " +
 				"people who work differently (contractors, people who have left, temporary staff) — and anything that " +
 				"must be blocked?' (never invent a figure), then silently run the completeness check " +
-				"(dforge://reference/requirements-completeness) and ask only about failures. " +
-				"Continue one at a time until no open questions " +
-				"remain. Dependencies and locales are confirmed from Phase 0a — carry them into REQUIREMENTS.md " +
-				"without re-asking.",
+				"(dforge://reference/requirements-completeness) and ask only about failures. Before writing " +
+				"REQUIREMENTS.md also run the quiet platform check: for each capability the user asked for (print, " +
+				"export, e-mail, schedule, approval, visibility, notification) read its dforge://reference and " +
+				"dforge://pattern first; if the platform cannot do it as asked, tell the user in plain words and " +
+				"agree an alternative now, and keep the limit and the workaround for the '## Platform Limits' " +
+				"section of DESIGN.md. Continue one at a time until no open questions remain. Dependencies and " +
+				"locales come from Phase 0a — carry them into REQUIREMENTS.md; if the intake shows that another " +
+				"module's entities are needed, say so in REQUIREMENTS.md and add the dependency at build.",
 			writeAction:
 				"Draft REQUIREMENTS.md and write it directly to docs/REQUIREMENTS.md on disk (do not paste it into " +
 				"chat). Tell the user it's ready: give a short outline (section headings + counts) and gap status " +
@@ -223,6 +227,8 @@ function handleCheck(root: string): PlanResult {
 					"canExecute own-record fields / text only)",
 				"8c. Notifications (event -> recipient -> channel -> text)",
 				"8d. Permissions Matrix (every role x entity and action, every report; person-run actions need an E row)",
+				"8e. Platform Limits (what the platform cannot do that the requirements touch, the reference it comes " +
+					"from, and the agreed workaround; \"None found\" when the check found none)",
 			],
 			gapDetection:
 				"After drafting: run gap detection pass (FK optionality, status recovery, boolean-to-status smell, " +

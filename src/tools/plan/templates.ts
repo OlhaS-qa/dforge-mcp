@@ -89,6 +89,11 @@ Total FKs: <N>
 | <code>.<role> | action:<code> | E | S-2 |
 | <code>.<role> | <entity> | - | N-1 |
 
+## Platform Limits
+<limits found by the platform check before the requirements were written, one row each; write "None found" when the check found none>
+| Requirement touched | Limit (from dforge://reference/... or pattern) | Agreed workaround |
+|---|---|---|
+
 ## Gaps & Proposals
 <findings from the gap detection pass, or omit this section if none>
 

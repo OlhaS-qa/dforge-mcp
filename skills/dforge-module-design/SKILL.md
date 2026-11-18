@@ -21,7 +21,7 @@ re-derive them from memory.
 
 | Sub-phase | You do | Then call |
 |---|---|---|
-| **0a** Identity | Ask the 5 returned questions, ONE at a time | `write_identity` with `apply: true` (the tool writes `CLAUDE.md`; without `apply` write the returned file yourself before the next call) |
+| **0a** Identity | Ask the 2 returned questions (name, languages), ONE at a time; decide code, dependencies and preset yourself and tell the user the code in one line | `write_identity` with `apply: true` (the tool writes `CLAUDE.md`; without `apply` write the returned file yourself before the next call) |
 | **0b** Intake | Ask the returned questions in free-form prose; write `docs/REQUIREMENTS.md` to disk; get an explicit YES | `write_requirements { userConfirmed: true }` |
 | **0c** Design | Draft `docs/DESIGN.md` from the returned `designTemplate` covering all 8 `designItems`; run the gap scan; write to disk; get an explicit YES | `write_design { userConfirmed: true }` |
 | **0d** Validate | `validate` (structural) → evaluate the returned `semanticChecks` against the docs → `validate` again with `checkResults` | unlocks `readyToScaffold: true` |
@@ -56,6 +56,16 @@ Phase 5 needs to derive roles. Resume normal tool use in Phase 1.
 
 Forbidden picker variants that have leaked before: _"Single role / Two roles /
 Three+ roles"_; _"admin / manager / user / viewer"_.
+
+**Quiet platform check before you write requirements.** For each capability the
+user asked for (print forms, exports, e-mail, schedules, approvals, who sees what,
+notifications), read the matching `dforge://reference/<name>` or
+`dforge://pattern/<name>` first and cite the section you relied on. If the platform
+cannot do something as asked, say so in plain words and agree an alternative with
+the user **before** you write `REQUIREMENTS.md`; do not announce that you are
+checking. Keep the technical limit and the agreed workaround for the
+`## Platform Limits` section of `DESIGN.md` (table: requirement touched, limit and
+its reference, workaround), not for `REQUIREMENTS.md`.
 
 **Capture user types as verb-form sentences, never role labels.** Write each as
 `<descriptor of the person> <verb phrase>`:

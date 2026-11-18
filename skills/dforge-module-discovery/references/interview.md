@@ -55,4 +55,4 @@ Scenarios (written into the specification without asking the user), as: a title,
 
 ## When the user does not know
 
-Offer the typical answer and record it as `typical`. If there is no typical answer, record it as an open question; never fill it silently.
+Offer the typical answer and mark it "proposal accepted" (in the user's language). If there is no typical answer, record it as an open question; never fill it silently.

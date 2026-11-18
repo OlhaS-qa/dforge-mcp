@@ -19,7 +19,7 @@ cannot be settled becomes an open question in the last section of the spec.
 | 10 | Every directory has a source and a volume for its initial data; the people and kinds of access to be created are listed. | An empty system at launch; roles nobody created |
 | 11 | No two statements contradict each other (for example "workers see only their own" and "everyone sees all"); every statement id is defined once. | Conflicting rules found at design validation or later |
 | 12 | Every open item says who must answer or which assumption must be confirmed. | `TBD` that blocks the Phase 0 design check |
-| 13 | Every fact marked `user` was said by the user; an accepted proposal is `typical` or `practice`. | Requirements that nobody asked for presented as the user's |
+| 13 | Every fact marked "said by the user" was said by the user; an accepted proposal is marked "proposal accepted", a default "taken by default" (in the user's language). | Requirements that nobody asked for presented as the user's |
 | 14 | Every output keeps the form the user named (an Excel list is not silently turned into a report) and every figure comes from the user or is marked as a proposal. | A lost output form; a deadline invented by the skill |
 
 How to run: go through the list silently, in this order. Do not narrate each check.

@@ -86,7 +86,7 @@ Decide silently from the first answer.
 - **The user has no list** ("we need a system for X"): take the open path below.
 - **The user brings their own list**: a document of requirements, a spreadsheet, a
   description, a DBML, a migration from another system. Do not interview. Read it,
-  map every item into the sections of the spec (origin `user`), run the
+  map every item into the sections of the spec (origin: said by the user), run the
   completeness checks of Step 6 on it, ask only about the gaps you find (one
   numbered list of proposals), do the quiet platform check of Step 2, write the
   spec and go to the handoff. A list that covers only part of the picture is used as

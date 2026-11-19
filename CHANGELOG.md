@@ -4,6 +4,12 @@ All notable changes to `@dforge-core/dforge-mcp`. This project uses semver-ish
 `0.1.0-rc.N` pre-release tags; the published version is set at publish time via
 the release workflow, so committed `package.json` versions are placeholders.
 
+## 0.2.61 - 2026-11-19
+
+**Skills synced with dForge-core.** `manifest.md`: `secrets` declarations (undeclared code refused once declared, per-folder values). `column-types.md`: `lookupCreate` on an entity and on a Reference column. `dforge-module-ship`: module tests with `$as`, `query` and `register` row checks.
+
+**Release.** Merges the 0.2.59 skills branch with 0.2.60 (both were published from different branches, so 0.2.60 lacked the 0.2.59 skill changes).
+
 ## 0.2.60 - 2026-11-19
 
 **Dependencies.** `@dforge-core/metadata` 0.0.59 (module tests accept `{ "sql": … }` in `given` and `expect`; translations accept a `secrets` section) and `@dforge-core/dforge-cli` 0.2.46 (`module pack` / `module validate` warn about a missing `translations/README.<locale>.md`; pack adds a generated `assets/data-model.svg`). 0.2.59 was published without a changelog entry.
@@ -13,6 +19,12 @@ the release workflow, so committed `package.json` versions are placeholders.
 **New skill `dforge-module-discovery` (draft).** A stage before Phase 0 for a new module described as a business problem: it interviews the user about the task (how it works now, what hurts, scale, goals), proposes a typical solution (entities, statuses, calculations, notifications, reports, scenarios) for the user to correct, and writes one approved `docs/SPEC.md` that `dforge-module-design` uses. It asks only what Phase 0b does not (business analysis, lifecycle, calculations, notifications, documents with a sample, initial data) and produces the `## Access Needs` and `## Outputs` sections in the Phase 0b shape. Not yet routed from `dforge-mcp-author`.
 
 **README per language.** The author skills describe `translations/README.<locale>.md` (shown to readers of that language on the marketplace, dforge.io and the in-app dialog; a missing one is a `module pack` / `module validate` warning, never an error), the storefront page's three tabs (Details = README, Features = generated, Changelog = `changelog/<version>.md`) and `> [!NOTE]`-style callouts. The warning needs `@dforge-core/dforge-cli` 0.2.46.
+
+## 0.2.59 - 2026-11-18
+
+**Skills synced with dForge-core.** `translations.md`: report panel titles (`reports.<cd>.panels`, opt-in). `menus.md` rule 8: entities-only and bridge modules drop their old folders on upgrade, and a host upgrade keeps what a bridge merged. `action-dsl.md`: `notify(userId, msg, { entity, recordId, caption? })` links to another record; a library function of another module reads its provider's settings, secrets and number prefixes.
+
+**Dependencies.** `@dforge-core/metadata` 0.0.58 (vendored schemas: manifest `secrets`, entity and column `lookupCreate`, module-test checks over rows and `$as`; `notify()` with a record link in the DSL checker) and `@dforge-core/dforge-cli` 0.2.45 (`module validate` checks declared secrets and module tests).
 
 ## 0.2.58 - 2026-11-14
 

@@ -284,6 +284,7 @@ describe("Phase 0a asks only the name and languages", () => {
 		expect(c.questions[1]).toMatch(/locales/);
 		expect(c.nextStep).toMatch(/Decide the technical items yourself/);
 		expect(c.nextStep).toMatch(/module code/);
+		expect(c.nextStep).toMatch(/choose full when the user brings a requirements document/);
 	});
 
 	it("0b followUpNote runs the quiet platform check and points to the Platform Limits section", () => {

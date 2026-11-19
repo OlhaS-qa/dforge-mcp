@@ -104,7 +104,9 @@ function handleCheck(root: string): PlanResult {
 				"schema name), dependencies (admin and metadata are platform-implicit; default None, or the module " +
 				"whose entities the task obviously needs, from the modules you can see), and the scaffold preset " +
 				"(default minimal = entities + default views + single admin role; minimal-plus = + settings stubs; " +
-				"full = + logic stubs + seed data structure). Change them only if the user asks.",
+				"full = + logic stubs + seed data structure; choose full when the user brings a requirements " +
+				"document or describes a large module: several roles with approvals, budgets, reports, many " +
+				"entities). Change them only if the user asks.",
 			questions: [
 				'What\'s the module\'s display name? (e.g. "Purchase Orders", "HR Leave Requests")',
 				"English only, or which other locales should the module ship translations for (e.g. uk-UA)? English " +

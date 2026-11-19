@@ -21,7 +21,7 @@ re-derive them from memory.
 
 | Sub-phase | You do | Then call |
 |---|---|---|
-| **0a** Identity | Ask the 2 returned questions (name, languages), ONE at a time; decide code, dependencies and preset yourself and tell the user the code in one line | `write_identity` with `apply: true` (the tool writes `CLAUDE.md`; without `apply` write the returned file yourself before the next call) |
+| **0a** Identity | Ask the 2 returned questions (name, languages), ONE at a time; decide code, dependencies and preset yourself (`full` for a large module or a customer document, otherwise `minimal`) and tell the user the code in one line | `write_identity` with `apply: true` (the tool writes `CLAUDE.md`; without `apply` write the returned file yourself before the next call) |
 | **0b** Intake | Ask the returned questions in free-form prose; write `docs/REQUIREMENTS.md` to disk; get an explicit YES | `write_requirements { userConfirmed: true }` |
 | **0c** Design | Draft `docs/DESIGN.md` from the returned `designTemplate` covering all 8 `designItems`; run the gap scan; write to disk; get an explicit YES | `write_design { userConfirmed: true }` |
 | **0d** Validate | `validate` (structural) → evaluate the returned `semanticChecks` against the docs → `validate` again with `checkResults` | unlocks `readyToScaffold: true` |

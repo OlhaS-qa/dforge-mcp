@@ -111,7 +111,9 @@ version and a signatory — ask for them, and if the user has none yet, record t
 as a Gap instead of inventing the layout.
 
 **Always ask about rules, limits and exceptions (the last returned 0b question; never
-skip it, even when the customer has named no limits).** Near the end of the intake,
+skip it, even when the customer has named no limits; ask it as soon as the people and
+the process are clear). `write_requirements` refuses a file without a section named
+for limits or exceptions (English, Russian or Ukrainian words).** Near the end of the intake,
 before the gap scan: _"Are there rules, limits or exceptions the system must know
 about — amounts and norms, time limits, thresholds, people who work differently
 (contractors, people who have left, temporary staff) — and anything that must be

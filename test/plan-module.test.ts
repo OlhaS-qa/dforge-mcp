@@ -273,3 +273,30 @@ describe("Phase 0b intake: rules, limits and exceptions", () => {
 		expect(c.followUpNote).toContain("dforge://reference/requirements-completeness");
 	});
 });
+
+describe("write_requirements gate: rules, limits and exceptions", () => {
+	it("refuses a REQUIREMENTS.md without a section about rules, limits and exceptions", () => {
+		identity();
+		write(
+			"docs/REQUIREMENTS.md",
+			`${REQ}mod_x
+## Users
+- someone does something
+`,
+		);
+		expect(() => plan({ action: "write_requirements", userConfirmed: true })).toThrow(/rules, limits and exceptions/);
+	});
+
+	it("accepts it once the section exists, even when it says nothing special was named", () => {
+		identity();
+		write(
+			"docs/REQUIREMENTS.md",
+			`${REQ}mod_x
+## Rules, limits and exceptions
+- Nothing special was named.
+`,
+		);
+		const r = plan({ action: "write_requirements", userConfirmed: true });
+		expect(r.summary).toMatch(/Phase 0b complete/);
+	});
+});

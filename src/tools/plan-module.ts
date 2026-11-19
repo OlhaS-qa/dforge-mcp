@@ -330,9 +330,28 @@ dforge_module_install({ moduleDir: "${root}" })
 
 // ─── write_requirements ───────────────────────────────────────────────────────
 
+/** True when REQUIREMENTS.md has a heading about rules, limits or exceptions (any level, any language of the body). */
+function hasRulesSection(text: string): boolean {
+	return text.split(String.fromCharCode(10)).some((l) => /^#{1,6} +.*(rule|limit|exception|constraint)/i.test(l));
+}
+
 function handleWriteRequirements(root: string, args: Args): PlanResult {
 	const reqPath = path.join(root, P0.requirements);
 	assertDocReady(reqPath, P0.requirements);
+
+	// The customer is the only source of rules, limits and exceptions. A session can skip the question, so
+	// the gate checks the file: a section about rules, limits or exceptions must exist (it may say that
+	// nothing special was named).
+	if (!hasRulesSection(readFile(reqPath))) {
+		throw new Error(
+			"docs/REQUIREMENTS.md has no section about rules, limits and exceptions. Ask the user (question 5 of " +
+				"Phase 0b): are there amounts and norms, time limits, thresholds, people who work differently " +
+				"(contractors, people who have left, temporary staff), or anything that must be blocked? Add the " +
+				"answers under a heading such as '## Rules, limits and exceptions' (one rule per bullet with its " +
+				"figure; never invent a figure; write 'nothing special was named' if the user says so), then " +
+				"ask the user to confirm the file again.",
+		);
+	}
 
 	if (!args.userConfirmed) {
 		throw new Error(

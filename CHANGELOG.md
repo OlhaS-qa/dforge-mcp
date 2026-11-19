@@ -6,7 +6,7 @@ the release workflow, so committed `package.json` versions are placeholders.
 
 ## Unreleased
 
-**Phase 0b: completeness check and one question about rules, limits and exceptions.** New reference `dforge://reference/requirements-completeness` (14 checks run silently before `REQUIREMENTS.md` is written; a failed check becomes one question with a proposal). Phase 0b now asks, as a required question in the list returned by `dforge_module_plan`, about amounts, norms, time limits, people who work differently (contractors, leavers, temporary staff) and what must be blocked, so these rules are not found only while testing. Skill text in `dforge-module-design` and the 0b `followUpNote` in `dforge_module_plan` updated.
+**Phase 0b: completeness check and one question about rules, limits and exceptions.** New reference `dforge://reference/requirements-completeness` (14 checks run silently before `REQUIREMENTS.md` is written; a failed check becomes one question with a proposal). Phase 0b now asks, as a required question in the list returned by `dforge_module_plan`, about amounts, norms, time limits, people who work differently (contractors, leavers, temporary staff) and what must be blocked, so these rules are not found only while testing. `write_requirements` refuses a REQUIREMENTS.md that has no section about rules, limits and exceptions (it may say that nothing special was named), because a session can skip the question. Skill text in `dforge-module-design` and the 0b `followUpNote` in `dforge_module_plan` updated.
 
 ## 0.2.60 - 2026-11-19
 

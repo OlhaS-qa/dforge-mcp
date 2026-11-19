@@ -356,6 +356,8 @@ error('Insufficient stock. Available: {available}, requested: {requested}',
     { available: availableQty, requested: params[quantity] })
 ```
 
+A placeholder value is written for the reader: a date, time or number in the format they chose in Settings (Date, time & numbers), laid over their browser's own locale, else their culture. A **whole number prints as plain digits** (`10042`, `2026`), so a document number or a year is never grouped; a **fraction is grouped** and keeps the digits it has (`1250.5` reads `1 250,5` in Ukrainian, `1,250.5` in English). For an amount, name a .NET format after a colon: `{total:n2}` (two decimals, grouped), `{count:n0}` (grouped whole number), `{date:D}` (the culture's long date). A format the value cannot take (`{total:D}` on a fraction, `{name:n2}` on text) writes the value as it would be written without one, and the message still shows. Background actions and scheduled jobs have no browser behind them and follow the user's culture. Do not format a value yourself (`toFixed()`, `toLocaleString()`) to put it into a message: it fixes one reader's separators for everyone (core #1721, candy #115).
+
 A write the database refuses — a closed period, a posted document, a constraint — fails the action with the refusal itself, no "Script execution error:" prefix, and a closed period or posted document is translated into the user's language by the platform. Do not wrap such a write in `try/catch` just to `error()` the same text in English: let it through, and catch it only to do something else.
 
 ### Email

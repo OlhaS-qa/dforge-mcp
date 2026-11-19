@@ -2,6 +2,8 @@
 
 Comparison of plain Phase 0 and Phase 0 with edits 1-4, two runs of each flow, 18.11.2026. The needs-and-traps list was fixed before the runs and not changed.
 
+> **Status of the changes in this branch.** Edits 3 and 4 and the required rules question were checked in live runs (see the conclusions). The last two changes (completeness check 7 about how a document leaves the organisation, and the Phase 0c change about technical gaps) were made after the runs and are **trial changes: covered by text tests only, not yet confirmed in a live run.** Success criteria for the live check: with check 7 the session asks how an order reaches the supplier, how many copies and who signs; with the 0c change the customer is asked at most 2 gap questions and none technical.
+
 ## Conditions (the same in all runs)
 
 - Customer answers come only from the customer knowledge sheet; the needs checklist and traps were never shown to the sessions.

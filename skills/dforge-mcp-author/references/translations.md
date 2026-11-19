@@ -297,6 +297,9 @@ Non-English locales are declared in `supportedLocales` (an array of `ll-CC` tags
 
 Every listed locale MUST have a matching `translations/<locale>.json` with a label for each translatable resource, or install fails completeness validation.
 
+### The README in each language
+`README.md` is the English storefront page. For every non-English locale in `supportedLocales`, add `translations/README.<locale>.md` (same code as the JSON beside it, e.g. `README.de-DE.md`). The marketplace page, dforge.io and the in-app module dialog show it to a reader of that language (`de` finds `de-DE`) and fall back to `README.md` for any other. A missing file is a **warning** at `module pack` / `module validate` (`No README for de-DE: readers in that language get the English page`), never an error. Keep image and `assets/` paths as in `README.md` (relative to the package root, so one set of diagrams serves every language), leave callout markers (`> [!NOTE]`) and code untranslated, and take entity, action and role names from the locale's JSON so the page uses the words of the UI. The card text (`shortDescription`) is not translated.
+
 ### Stored-procedure column headers
 
 A result column's header belongs to the procedure, not to a report. `module pack` / `module validate` require one `storedProcedures.<sp_cd>.columns.<column_cd>.label` per declared column for each non-English supported locale; install only warns (also when a translation names a column the module lacks). A dataset's `columnsDef` label is a literal and overrides it, so leave the label out to keep the column translated.

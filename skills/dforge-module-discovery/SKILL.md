@@ -48,7 +48,9 @@ These matter more than the step list.
    they accepted it unchanged, never "со слов заказчика"; "по умолчанию" for what you
    took by default; "открыто" for what is still to be answered. (Examples are in
    Russian; use the user's language.) Section headings of the spec are also in the
-   user's language.
+   user's language. In this skill and its templates the four origins are written with
+   the English names `user`, `typical`, `assumption`, `open`; the spec itself uses the
+   user's-language words above.
 4. **Build questions from the user's own words.** Do not decide for the user ("a
    system this size should be simple"), do not repeat what they have already said,
    do not promise absolutes ("no request is ever lost" → "requests do not get
@@ -77,7 +79,9 @@ These matter more than the step list.
     keep it in your notes and end the topic with one yes/no check ("is anything
     important missing here? If not, answer no"), never an invitation to wish for more
     ("what else would you like?"). Never offer something that only serves a
-    kind of person the user did not say needs it.
+    kind of person the user did not say needs it. The cap of five also holds for the
+    bundled list of Step 6: if more are needed, ask the five that block the design most
+    and record the rest as assumptions.
 
 ## Step 0 — which path
 
@@ -163,7 +167,7 @@ mentions one.
 
 Do not ask about a launch date (it does not change the design) and do not ask what
 is out of scope as a question: whatever the user removes or declines during the
-interview goes to section 13 of the spec, and the user can still remove more when
+interview goes to section 14 of the spec, and the user can still remove more when
 reading the file in Step 7.
 
 Record the answers in section 1 of the spec.
@@ -174,8 +178,8 @@ The typical answers are already in your draft, so each topic is shown **as a
 complete numbered proposal from the draft**, not as questions for the user to fill
 in; the user corrects by numbers. Ask open only what only the user knows: how it
 works now, people (in free prose), their own forms and samples, volumes, initial
-data. One topic per turn, in this order, and keep the whole interview to roughly ten
-to twelve turns. Phrasing and proposals: `references/interview.md`. Order:
+data. One topic per turn, in this order, and keep the whole interview to about fifteen
+to eighteen customer turns (the steps below need about sixteen). Phrasing and proposals: `references/interview.md`. Order:
 
 1. **People and visibility** — free prose first (what each kind of person does,
    whose records they see and change). Then restate as verb sentences. Prefer
@@ -188,8 +192,11 @@ to twelve turns. Phrasing and proposals: `references/interview.md`. Order:
    (a spending limit, a daily rate, an approval threshold, a deadline)?"_ These are
    figures only the user has; a limit that nobody asked for is lost.
 4. **Calculated values** — numbers, totals, durations, overdue flags, stock.
-5. **Notifications** — for **every date that has a deadline** and **every status
-   change**, propose _event → who is told → in the system or by e-mail_. Typical
+5. **Notifications** — go through every date with a deadline and every status change
+   in your notes, but **offer only** the few that serve a pain (below), as _event →
+   who is told → in the system or by e-mail_. The rest are covered by the closing
+   check, which names the remaining kinds in one line ("also deadlines, expiring
+   documents, stock?"). Typical
    triggers: new record, taken into work, waiting, finished, sent back, overdue,
    expiring document, low stock. Start from the pains the user named (for
    example "requests get lost" → the first person who must act) and offer at most five
@@ -201,6 +208,11 @@ to twelve turns. Phrasing and proposals: `references/interview.md`. Order:
    of a printed form is the language of its sample; the language of the screens is
    asked in Phase 0a, do not ask it here.
 7. **Initial data** — where it comes from (table, by hand, from scratch) and how much.
+8. **Outsiders and blocks** — one open question, last: _"Does anyone besides the
+   people we discussed take part or get affected (visitors, contractors, people who
+   leave)? And is there anything that should stop someone from doing the next step
+   (for example an unreturned item, an unpaid amount, a missing document)?"_ Each
+   answer becomes a statement or an open item; do not propose answers.
 
 After each topic, restate the agreed result in a few lines.
 
@@ -252,16 +264,19 @@ its line) so that Phase 0 can cite them. Put what is still open in the last
 section. Then give a short orientation — section names, counts of entities,
 scenarios and open questions, in business words: do not mention statement ids, the
 design-notes file or any other technical file to the user. Name what you took by
-default in plain words ("We assumed this, please confirm or correct: …"), without the
-tags `assumption`, `open` or `typical` — and ask the user to read the **file** and answer
+default in plain words ("We assumed this, please confirm or correct: …"; the ten that
+change the design most, the rest are in the file), without the tags `assumption`,
+`open` or `typical` (the file itself carries the origin marks of rule 3) — and ask the user to read the **file** and answer
 "yes" or say what to change. Edit the file with targeted edits, say what changed in one
-line, ask again. Nothing moves on before "yes".
+line, ask again. Nothing moves on before "yes". "Yes" may be given with open
+items left in section 17: they stay open, are not invented, and are closed with the
+user in Phase 0 before Phase 0d (Step 8).
 
 ## Step 8 — handoff
 
 Tell the user the specification is agreed. Invoke **`dforge-module-design`** and tell
 it to read `docs/SPEC.md` and `docs/SPEC-design-notes.md`; it
-turns sections 4, 6 and 14 into `REQUIREMENTS.md` (verb sentences, `## Access Needs`,
+turns sections 4, 6 and 9 (with section 14 as the out-of-scope list) into `REQUIREMENTS.md` (verb sentences, `## Access Needs`,
 `## Outputs`, core processes) and shows it to the user in one message instead of
 asking the questions again. Open questions from the spec must be closed with the
 user before Phase 0d (the design check rejects `TBD`/`open:` wording in Gaps).

@@ -29,7 +29,9 @@ Standard module directory structure:
 ```
 my_module/
 ├── manifest.json
-├── README.md                    # module overview
+├── README.md                    # storefront page: what it is and why (no lists of entities/actions/roles: the Features tab generates them)
+├── changelog/
+│   └── <version>.md             # release notes of that version, shown on the Changelog tab
 ├── CHANGELOG.md                 # version history
 ├── MODULE-INFO.md               # user-facing intro (shown in module picker)
 ├── entities/
@@ -50,7 +52,8 @@ my_module/
 │   ├── 01-<first>.json
 │   └── 02-<second>.json
 ├── translations/
-│   └── de-DE.json              # IETF tags, one file per non-English locale
+│   ├── de-DE.json              # IETF tags, one file per non-English locale
+│   └── README.de-DE.md         # the README in that language (warning when missing)
 ├── print_templates/
 │   └── <template>.scriban
 ├── migrations/                  # upgrade data scripts, <version>.sql
@@ -134,6 +137,10 @@ Sample records live in `demo-data/`, not `seed-data/`. `seed-data/` holds refere
 Depth: the platform changelog entry "Demo data: its own folder, formulas, and a checkbox at install".
 
 **`demo-data/` inserts rows; it does not post them.** For an accounting or stock module the demo must show posted documents — balances, postings, a closed month — so a demo built only from files shows documents and empty registers. Load such a demo through the API instead: insert the documents, then run the module's own actions (post, import, close) on them, waiting for a background action by its record's state flag. Make it idempotent (fixed `DEMO-` codes, skip what exists) so it can run again.
+
+## README
+
+The marketplace page has three tabs: **Details** (your `README.md`), **Features** (generated from the module: entities with fields, views, reports, print forms, actions grouped by entity with their description and icon, roles, settings; labels follow the reader's language from `translations/`) and **Changelog** (`changelog/<version>.md` of each published version). So keep the README short and do not list entities, actions or roles in it. To mark something important use a GitHub-style callout: `> [!NOTE]`, `> [!TIP]`, `> [!IMPORTANT]`, `> [!WARNING]` or `> [!CAUTION]`. Diagrams in `assets/` are referenced relative to the package root.
 
 ## Translations
 

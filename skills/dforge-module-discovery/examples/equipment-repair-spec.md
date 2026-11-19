@@ -1,8 +1,9 @@
 # Equipment repair requests — specification (example)
 
 Example output of the discovery flow on an invented customer (a small factory).
-Origin of facts: `user`, `typical`, `practice`, `assumption`, `open`. Statement ids
-are shortened; a real spec numbers every statement. The designer's notes for this
+Origin of facts: `user`, `typical`, `assumption`, `open`. Statement ids
+are shortened; a real spec numbers every statement. Sections 7, 11, 15 and 16 of the
+template are left out here for brevity; a real spec has all of them. The designer's notes for this
 case are in `equipment-repair-design-notes.md`.
 
 ## Summary
@@ -23,9 +24,9 @@ A typical system for tracking equipment maintenance, adapted to the customer's f
 - Spare part stock is kept in this system; there is no other warehouse (`user`).
 
 ## 4. Users
-- U-1 Workers of a shop raise repair requests and see their own until a mechanic takes them into work; they see the equipment list (`user`, `practice`).
+- U-1 Workers of a shop raise repair requests and see their own until a mechanic takes them into work; they see the equipment list (`user`, `typical`).
 - U-2 Mechanics take requests into work, see all requests of the plant, add work done and parts used, set the deadline, note the work permit number and whether parts are needed (`user`).
-- U-3 Section heads close requests, see the requests of their section and the reports, and can send a finished request back with a reason (`user`, `practice`).
+- U-3 Section heads close requests, see the requests of their section and the reports, and can send a finished request back with a reason (`user`, `typical`).
 - The chief mechanic signs on paper only; no role in the system (`user`).
 
 ## Access Needs
@@ -38,10 +39,10 @@ Equipment (name, inventory number, section, criticality, condition); Section (di
 
 ## 6. Lifecycles
 Request: New → In work ⇄ Waiting for parts → Done → Closed; Cancelled. Urgency: emergency / urgent / planned (from the user's form).
-- R-1 Only a section head closes a request, and only a Done one (`practice`).
-- R-2 A request cannot be taken into work without equipment (`practice`).
-- R-3 A worker may cancel their own New request; a reason is required (`practice`).
-- R-4 Requests are never deleted, only cancelled (`practice`).
+- R-1 Only a section head closes a request, and only a Done one (`typical`).
+- R-2 A request cannot be taken into work without equipment (`typical`).
+- R-3 A worker may cancel their own New request; a reason is required (`typical`).
+- R-4 Requests are never deleted, only cancelled (`typical`).
 - R-5 A section head can send a Done request back to In work with a reason (`user`).
 
 ## 8. Calculated values
@@ -49,7 +50,7 @@ Request: New → In work ⇄ Waiting for parts → Done → Closed; Cancelled. U
 - S-2 Downtime in hours from raising to Done, only when the request says the equipment is stopped (`user`).
 - S-3 Overdue: emergency or urgent request not closed within 24 hours; also past its deadline (`user`).
 - S-4 Repair cost: parts (quantity × price) plus hours of work × an hourly rate (`user`; the rate is set by the section head).
-- S-5 Stock of a part decreases when a mechanic records its use (`practice`).
+- S-5 Stock of a part decreases when a mechanic records its use (`typical`).
 
 ## 9. Documents and files
 ## Outputs
@@ -67,7 +68,7 @@ Request: New → In work ⇄ Waiting for parts → Done → Closed; Cancelled. U
 - Low stock: not needed (`user`).
 
 ## 12. Scheduled checks and settings
-- Overdue requests are checked every hour; each notice is sent once (`practice`).
+- Overdue requests are checked every hour; each notice is sent once (`typical`).
 - The hourly rate for work is a setting changed by the section head; until it is set the cost counts parts only (`assumption`).
 
 ## 13. Initial data

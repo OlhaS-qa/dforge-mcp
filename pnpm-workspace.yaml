@@ -1,3 +1,5 @@
+packages:
+  - '.'
 allowBuilds:
   esbuild: set this to true or false
 # Install the native dforge-cli binary for the current machine only, and always install it

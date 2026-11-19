@@ -30,7 +30,7 @@ _Usually a record goes New → In progress → Done → Closed, and can be Cance
 
 **Calculated values.** _The system can calculate these without anyone typing them: 1) a running number such as RM-2026-0001; 2) duration or downtime; 3) overdue flag (after how many hours/days?); 4) cost; 5) stock after use. Which do you need?_ Ask only for the values that follow from the entities.
 
-**Notifications.** The table below is your source, not a list to offer in full: take at most five events that serve a named pain, then ask who else must be told. For each date with a deadline and each status change, propose the event and the person told (see the table). Then: _Which are needed? Which only in the system, which also by e-mail?_
+**Notifications.** The table below is your source, not a list to offer in full: take at most five events that serve a named pain, then ask who else must be told. Go through every date with a deadline and each status change yourself, but offer only the five that serve a pain; name the remaining kinds in the closing yes/no check (see the table). Then: _Which are needed? Which only in the system, which also by e-mail?_
 
 | Trigger | Typical recipient |
 |---|---|
@@ -44,6 +44,8 @@ _Usually a record goes New → In progress → Done → Closed, and can be Cance
 | Low stock | whoever orders |
 
 **Documents and files.** _Besides the screens, the system can produce documents for printing, spreadsheets and exports. Usually people need: 1) … 2) … 3) …, and sometimes a file to pass to another program. Which do you need and is there anything else? If you already have a form, send a sample or list its fields._ After the sample arrives, compare it with the fields already agreed, say in one line that the rest is already there, and ask only about the missing fields as a numbered list. Ask who signs and whether signatures are on paper or in the system.
+
+**Outsiders and blocks (last, open).** _Does anyone besides the people we discussed take part or get affected: visitors, contractors, people who leave? And is there anything that should stop someone from doing the next step: an unreturned item, an unpaid amount, a missing document?_ Do not propose answers; record what the user says.
 
 **Initial data.** _What must be in the system at the start: 1) … 2) …. For each: is there a table, will you enter it by hand, or start empty — and roughly how many records?_
 

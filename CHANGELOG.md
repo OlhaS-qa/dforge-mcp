@@ -4,9 +4,15 @@ All notable changes to `@dforge-core/dforge-mcp`. This project uses semver-ish
 `0.1.0-rc.N` pre-release tags; the published version is set at publish time via
 the release workflow, so committed `package.json` versions are placeholders.
 
-## Unreleased
+## 0.2.60 - 2026-11-19
+
+**Dependencies.** `@dforge-core/metadata` 0.0.59 (module tests accept `{ "sql": … }` in `given` and `expect`; translations accept a `secrets` section) and `@dforge-core/dforge-cli` 0.2.46 (`module pack` / `module validate` warn about a missing `translations/README.<locale>.md`; pack adds a generated `assets/data-model.svg`). 0.2.59 was published without a changelog entry.
+
+**Messages are written for the reader.** The action-DSL reference says what a date, time or number placeholder prints (the reader's chosen format over their browser locale; a whole number stays plain digits; `{total:n2}`, `{date:D}` name a format).
 
 **New skill `dforge-module-discovery` (draft).** A stage before Phase 0 for a new module described as a business problem: it interviews the user about the task (how it works now, what hurts, scale, goals), proposes a typical solution (entities, statuses, calculations, notifications, reports, scenarios) for the user to correct, and writes one approved `docs/SPEC.md` that `dforge-module-design` uses. It asks only what Phase 0b does not (business analysis, lifecycle, calculations, notifications, documents with a sample, initial data) and produces the `## Access Needs` and `## Outputs` sections in the Phase 0b shape. Not yet routed from `dforge-mcp-author`.
+
+**README per language.** The author skills describe `translations/README.<locale>.md` (shown to readers of that language on the marketplace, dforge.io and the in-app dialog; a missing one is a `module pack` / `module validate` warning, never an error), the storefront page's three tabs (Details = README, Features = generated, Changelog = `changelog/<version>.md`) and `> [!NOTE]`-style callouts. The warning needs `@dforge-core/dforge-cli` 0.2.46.
 
 ## 0.2.58 - 2026-11-14
 

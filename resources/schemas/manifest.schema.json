@@ -148,6 +148,27 @@
 			"uniqueItems": true,
 			"description": "Opt-in platform behaviours this package was authored for. Absent or empty = the pre-feature behaviour for all of them, so a module written before a feature existed keeps working until its author declares it and republishes. Unknown names are REJECTED at package load, never ignored — a misspelled feature would silently leave the old behaviour in place while the manifest claims otherwise. Values: 'report-security' = this module's reports require 'E' on their sec_object; declare the matching \"report:<code>\": \"E\" grants in security/roles.json first, or the reports go dark for every role."
 		},
+		"secrets": {
+			"type": "object",
+			"description": "Secrets this module's code reads, by code: getSecret('code'), a webhook's secretCd, fetchMail({ secret: 'code' }). The admin Secrets page shows each as a slot to fill, and in the section of every module that imports this one's functions (deps/<module>.json \"functions\"), since those functions read this module's secrets. Once declared: a fixed-string reference to an undeclared code fails pack and install, and secret.set refuses a code not listed. A name built at run time cannot be checked, so declare every value it can take. Omit the key to keep the old behaviour (any code may be set, nothing checked); {} declares that the module reads none. Labels translate under \"secrets\": { \"<code>\": { \"label\", \"desc\" } } in translations/<locale>.json.",
+			"propertyNames": { "pattern": "^[a-z][a-z0-9_]{0,62}$" },
+			"additionalProperties": {
+				"type": "object",
+				"required": ["label"],
+				"properties": {
+					"label": {
+						"type": "string",
+						"minLength": 1,
+						"description": "What the admin is asked for, e.g. 'Anthropic API key'."
+					},
+					"description": {
+						"type": "string",
+						"description": "Where to get the value and what uses it."
+					}
+				},
+				"additionalProperties": false
+			}
+		},
 		"created": {
 			"type": "string",
 			"format": "date",

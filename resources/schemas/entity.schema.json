@@ -34,6 +34,10 @@
 			"type": "boolean",
 			"description": "Records of this entity accept comments \u2014 the composer and thread appear on the record card, beside the audit history. Opt-in per entity; `comments` in the manifest sets a module-wide default that this overrides in both directions."
 		},
+		"lookupCreate": {
+			"type": "boolean",
+			"description": "false: no lookup pointing at this entity offers '+ Create \"text\"' after a search with no match — a record of it is not made from its name alone (a category that needs a parent, a document, an account). A Reference column's own `params.lookupCreate` overrides it either way. Creating the record in its own view is unaffected. Not declared on extension entities (with `extends`)."
+		},
 		"reactions": {
 			"type": "array",
 			"description": "Field-change reactions: rules that suggest a stored, editable value when another field is edited (1C's ПриИзменении). Run in the UI only — a form, an editable grid, and bulk update per selected record; a write over the API, an import or a DSL update() runs none. A rule fires on the user's edit of an 'on' column and sets each 'set' column — from a formula evaluated on the client, or from what a server rule's 'call' function returns; a value it sets may fire further rules, each rule at most once per edit, and never over a column the user edited. A column the user may not edit is skipped. Pack and install check every column, formula and function. See docs/ideas/field-change-reactions.md.",
@@ -589,6 +593,10 @@
 						},
 						"serverDefault": {
 							"$ref": "#/$defs/serverDefault"
+						},
+						"lookupCreate": {
+							"type": "boolean",
+							"description": "Reference (R) column: overrides the target entity's 'lookupCreate' for this lookup only — false hides its '+ Create \"text\"' option, true offers it although the target switched it off. The option appears after a search with no match when the user may insert into the target and its display field is its only required column. Creating the record in its own view is unaffected."
 						},
 						"currency": {
 							"type": "string",

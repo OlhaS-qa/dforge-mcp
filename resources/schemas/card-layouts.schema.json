@@ -18,7 +18,7 @@
 			"isDefault": {
 				"type": "boolean",
 				"default": false,
-				"description": "Whether this layout opens by default. Honoured on FIRST install only, and only when the view has no default layout yet — once a tenant has chosen their own default, an upgrade does not take it back."
+				"description": "Whether this layout opens by default. Honoured on FIRST install only — once a tenant has chosen their own default, an upgrade does not take it back. On the module's own entity it is the view's default, claimed only when the view has none yet. On another module's entity it is the default in this module's folders only; the owner's folders keep theirs."
 			},
 			"description": {
 				"type": "string",

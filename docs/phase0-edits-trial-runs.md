@@ -109,3 +109,17 @@ S = from the source, I = inferred. P1/P2 = plain runs, E1/E2 = edited runs. Y = 
 5. **Platform check.** The plain flow does it during design, after requirements are approved; the edited flow reads the references earlier and records limits in `Platform Limits`. In both flows platform limits (static security folders, number sequence reset on 1 January, no hard lock by status, an error rolling back the log write) surface in the design, not in the requirements.
 6. **Limits of the test.** One scenario (a school district); the customer sheet was written by another AI from a public procedure; customer answers were given from the sheet (answers taken from the checklist: fiscal year, urgent purchases). The customer answer about partial deliveries and several invoices per order in the edited runs was given outside the sheet and checklist (in the plain runs the session proposed such deliveries itself); it does not change the counts, but partial deliveries appear in the documents of those runs. In plain run 1 the session asked about documents, in plain run 2 it did not: the plain flow also varies.
 7. **Next:** make edit 2 more reliable and rerun twice; test separately the path "the customer already has a requirements document"; report the platform limits above to the platform team.
+
+## Test on an existing requirements document (a public tender brief, 41 needs, 9 traps)
+
+The customer brought a written description instead of an idea. One run of plain Phase 0 and one of Phase 0 with the edits.
+
+| | Plain Phase 0 | With the edits |
+|---|---|---|
+| Needs covered (of 41) | 36 + 2 partly | 36 + 2 partly |
+| Traps raised (of 9) | 0 + 2 partly | 2 + 3 partly |
+| Customer turns until REQUIREMENTS.md is approved | 11 | 17 (the completeness check asks the gaps one by one, 10 questions) |
+| Re-asked what the file already says | no | no |
+| Gaps shown to the customer in Phase 0c (the Gaps section of DESIGN.md) | 3 items, accepted in one answer (example thresholds, one accountant per legal entity, the order is sent by hand) | 7 in one list, 4 to 5 of them technical (an owner field, a lock on editing, the legal entity code in a number, accounting fields) |
+
+What it shows: both flows read the file and do not re-ask it, so no separate path is needed; the edits add the gap questions (2 traps raised against 0) at the cost of more customer turns in 0b; in 0c the customer is asked to confirm technical choices in both flows (3 items in the plain flow, 7 with the edits), which the 0c change in this branch is meant to remove; this is not yet verified in a live run.

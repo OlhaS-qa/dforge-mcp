@@ -10,6 +10,8 @@ the release workflow, so committed `package.json` versions are placeholders.
 
 **Phase 0a asks only the name and languages; platform check before requirements.** The customer is no longer asked for the module code, dependencies and scaffold depth: the agent decides them and states the code in one line (`full` preset for a large module or when the customer brings a requirements document, otherwise `minimal`). Phase 0b runs a quiet platform check before `REQUIREMENTS.md` is written (reads the reference or pattern for each capability asked for and agrees an alternative with the user when the platform cannot do it); the limits and workarounds are kept in a new `## Platform Limits` section of the `DESIGN.md` template (design item 8e).
 
+**Phase 0c: technical gaps are closed by the agent.** The Gaps & Proposals section is no longer put to the customer item by item: the agent resolves implementation gaps itself (field types, keys, formula columns, folders) and asks only about what changes what the customer sees or the business rules (visibility, roles, notification recipients and channels, external systems, names). In a trial on a ready requirements document the Phase 0c design had a Gaps section of 7 items that the customer was asked to confirm, 4 to 5 of them technical (an owner field, a lock on editing, the legal entity code in a number, accounting fields).
+
 ## 0.2.60 - 2026-11-19
 
 **Dependencies.** `@dforge-core/metadata` 0.0.59 (module tests accept `{ "sql": … }` in `given` and `expect`; translations accept a `secrets` section) and `@dforge-core/dforge-cli` 0.2.46 (`module pack` / `module validate` warn about a missing `translations/README.<locale>.md`; pack adds a generated `assets/data-model.svg`). 0.2.59 was published without a changelog entry.

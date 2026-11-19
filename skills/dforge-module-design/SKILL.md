@@ -148,6 +148,14 @@ The scan covers: FK optionality, status recovery paths, boolean-that-should-be-a
 status, set aggregation risk, deep navigation (2+ FK hops), self-referential FKs,
 security coverage, and seed-data circular references.
 
+**Resolve the technical gaps yourself; ask the user only about what changes
+their result.** A gap about a field type, a key, a formula column, a folder or
+any other implementation choice is decided by you: apply your proposal and
+record it in the section as *Resolved*. Ask the user only when the answer
+changes what they see or the business rules: who sees what, roles and rights,
+who is notified and by which channel, external systems, names of statuses and
+documents. One short list, in business words, not the whole Gaps section.
+
 **Check the pattern library.** When the user's words match a trigger in `dforge://pattern/` (an index is in `skills/dforge-mcp-author/patterns/README.md`: posted document with print form, Excel export, own-card role, approval status machine, approval by amount, multi-step approval, escalation by time), load that pattern and propose its design rows as a Gap/Proposal; adapt names to the domain, do not copy. Anything a pattern marks **unverified** is not promised to the user.
 
 Two design decisions to get right here, because fixing them in Phase 1 is a

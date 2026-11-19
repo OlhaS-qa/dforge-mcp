@@ -357,3 +357,13 @@ describe("completeness check 7 covers how a document leaves the organisation", (
 		expect(row).toMatch(/how many copies/);
 	});
 });
+
+describe("0c: technical gaps are closed by the agent, the user is asked only what changes their result", () => {
+	it("gapDetection says so", () => {
+		identity();
+		write("CLAUDE.md", read("CLAUDE.md").replace("- [ ] **0b**", "- [x] **0b**"));
+		const c = plan({ action: "check" });
+		expect(c.gapDetection).toMatch(/Resolve the technical gaps yourself/);
+		expect(c.gapDetection).toMatch(/only about a gap whose answer changes/);
+	});
+});

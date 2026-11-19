@@ -240,11 +240,16 @@ function handleCheck(root: string): PlanResult {
 				"After drafting: run gap detection pass (FK optionality, status recovery, boolean-to-status smell, " +
 				"set aggregation risk, deep navigation, self-referential FK, security coverage, seed data circular " +
 				"refs). Add a 'Gaps & Proposals' section for each issue found. ALL gaps must be resolved before " +
-				"Phase 0d.",
+				"Phase 0d. Resolve the technical gaps yourself (apply your proposal and record it as 'Resolved' in " +
+				"the section); ask the user only about a gap whose answer changes what they see or the business " +
+				"rules: who sees what, roles and rights, notification recipients and channels, external systems, " +
+				"names of statuses and documents. Do not ask the user to confirm field types, keys, formula columns, " +
+				"folders or other implementation choices.",
 			writeAction:
 				"Once gaps are resolved, write docs/DESIGN.md directly to disk (do not paste it into chat). Tell the " +
 				"user it's ready: give a short outline (entity/status-machine counts, section headings) and Gaps & " +
-				"Proposals status ('No gaps' or a one-line summary), then ask them to review and reply YES, or " +
+				"Proposals status ('No gaps' or a one-line summary; list only the decisions that changed what they " +
+				"see or the business rules), then ask them to review and reply YES, or " +
 				"describe what to change. If they request changes, edit the file directly and ask again. Once they " +
 				"reply YES, call dforge_module_plan({ action: 'write_design', moduleDir, userConfirmed: true }).",
 		};

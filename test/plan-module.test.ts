@@ -292,6 +292,8 @@ describe("Phase 0a asks only the name and languages", () => {
 		const c = plan({ action: "check" });
 		expect(c.followUpNote).toMatch(/quiet platform check/);
 		expect(c.followUpNote).toContain("## Platform Limits");
+	});
+});
 
 describe("write_requirements gate: rules, limits and exceptions", () => {
 	it("refuses a REQUIREMENTS.md without a section about rules, limits and exceptions", () => {

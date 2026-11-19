@@ -338,9 +338,9 @@ dforge_module_install({ moduleDir: "${root}" })
 
 // ─── write_requirements ───────────────────────────────────────────────────────
 
-/** True when REQUIREMENTS.md has a heading about rules, limits or exceptions (any level, any language of the body). */
+/** True when REQUIREMENTS.md has a heading naming limits or exceptions (any level, any language of the body); a heading like "Data and rules" is not enough. */
 function hasRulesSection(text: string): boolean {
-	return text.split(String.fromCharCode(10)).some((l) => /^#{1,6} +.*(rule|limit|exception|constraint)/i.test(l));
+	return text.split(String.fromCharCode(10)).some((l) => /^#{1,6} +.*(limit|exception)/i.test(l));
 }
 
 function handleWriteRequirements(root: string, args: Args): PlanResult {

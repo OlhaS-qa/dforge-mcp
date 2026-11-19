@@ -3,7 +3,7 @@
 //
 // The skills ship inside the npm tarball, but Claude Code only looks in
 // <config>/skills — not node_modules — so they have to be copied out. There are
-// four (a router plus three stage skills), and the router's directory also
+// six (a router, three stage skills, discovery and the 1C toolkit), and the router's directory also
 // carries the shared references/ + examples/ the MCP server serves as dforge://
 // resources, so hand-copying is error-prone.
 //
@@ -32,6 +32,7 @@ const SKILLS = [
 		"dforge-mcp-author",
 		"router — start here; also holds the shared\n                        references/ and examples/ the MCP server serves",
 	],
+	["dforge-module-discovery", "before Phase 0 — business interview, typical solution, docs/SPEC.md"],
 	["dforge-module-design", "Phase 0  — identity, intake, design, validation"],
 	["dforge-module-build", "Phases 1-5 — entities, behavior, views, security"],
 	["dforge-module-ship", "Phase 6  — validate, pack, install-fix loop"],

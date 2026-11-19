@@ -168,6 +168,7 @@ For each action:
 
 - [ ] **No** `translations/en.json` / `en-*.json` — install skips them. English is each definition's own short label (entity/field/role/setting `description`, view/menu/action/report `label`)
 - [ ] Each `translations/<locale>.json` (one per `supportedLocales` entry) has an `entities` section with `label`, `desc`, and `fields` for every entity
+- [ ] Each `supportedLocales` entry has `translations/README.<locale>.md` (a warning, not an error, when missing)
 - [ ] Every field (including trait-provided: `created_date`, `last_updated`, etc.) has a `label`
 - [ ] Has `views` section with labels for every data view
 - [ ] Has `menus` section matching the `ui/menus.json` structure

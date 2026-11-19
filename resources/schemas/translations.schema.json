@@ -44,6 +44,13 @@
 				"$ref": "#/$defs/menu"
 			}
 		},
+		"secrets": {
+			"type": "object",
+			"description": "Secret code (manifest \"secrets\") → label and description shown on Admin → Secrets. A locale in supportedLocales must translate every label.",
+			"additionalProperties": {
+				"$ref": "#/$defs/labelDesc"
+			}
+		},
 		"settings": {
 			"type": "object",
 			"description": "Setting code (settings.json) → label and description; $constraints → constraint name → message.",

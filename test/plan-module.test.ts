@@ -275,6 +275,18 @@ describe("Phase 0b intake: rules, limits and exceptions", () => {
 });
 
 describe("write_requirements gate: rules, limits and exceptions", () => {
+	it("a heading like Data and rules is not enough", () => {
+		identity();
+		write(
+			"docs/REQUIREMENTS.md",
+			`${REQ}mod_x
+## Data and rules
+- an invoice is linked to an order
+`,
+		);
+		expect(() => plan({ action: "write_requirements", userConfirmed: true })).toThrow(/rules, limits and exceptions/);
+	});
+
 	it("refuses a REQUIREMENTS.md without a section about rules, limits and exceptions", () => {
 		identity();
 		write(

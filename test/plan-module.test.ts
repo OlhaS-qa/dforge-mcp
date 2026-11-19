@@ -275,6 +275,19 @@ describe("Phase 0b intake: rules, limits and exceptions", () => {
 });
 
 describe("write_requirements gate: rules, limits and exceptions", () => {
+	it("accepts a Russian heading about limits and exceptions", () => {
+		identity();
+		write(
+			"docs/REQUIREMENTS.md",
+			`${REQ}mod_x
+## Ограничения и исключения
+- Ничего особого не названо.
+`,
+		);
+		const r = plan({ action: "write_requirements", userConfirmed: true });
+		expect(r.summary).toMatch(/Phase 0b complete/);
+	});
+
 	it("a heading like Data and rules is not enough", () => {
 		identity();
 		write(

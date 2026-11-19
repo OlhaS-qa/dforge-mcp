@@ -169,7 +169,8 @@ function handleCheck(root: string): PlanResult {
 			followUpNote:
 				"After answers 1-2: ask any domain ambiguity questions that remain open (e.g. 'What counts as a " +
 				"closed item?', 'Can anonymous users submit?'). Answer 5 (rules, limits and exceptions) is required " +
-				"before REQUIREMENTS.md is written. Then silently run the completeness check " +
+				"before REQUIREMENTS.md is written; ask it as soon as the people and the process are clear, not at the end (the file is refused without a " +
+				"section named for limits or exceptions). Then silently run the completeness check " +
 				"(dforge://reference/requirements-completeness) and ask only about failures. " +
 				"Continue one at a time until no open questions " +
 				"remain. Dependencies and locales are confirmed from Phase 0a — carry them into REQUIREMENTS.md " +
@@ -330,9 +331,9 @@ dforge_module_install({ moduleDir: "${root}" })
 
 // ─── write_requirements ───────────────────────────────────────────────────────
 
-/** True when REQUIREMENTS.md has a heading naming limits or exceptions (any level, any language of the body); a heading like "Data and rules" is not enough. */
+/** True when REQUIREMENTS.md has a heading naming limits or exceptions (English, Russian or Ukrainian words); a heading like "Data and rules" is not enough. */
 function hasRulesSection(text: string): boolean {
-	return text.split(String.fromCharCode(10)).some((l) => /^#{1,6} +.*(limit|exception)/i.test(l));
+	return text.split(String.fromCharCode(10)).some((l) => /^#{1,6} +.*(limit|exception|огранич|исключ|лимит|обмеж|виняток)/i.test(l));
 }
 
 function handleWriteRequirements(root: string, args: Args): PlanResult {

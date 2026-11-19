@@ -160,13 +160,16 @@ function handleCheck(root: string): PlanResult {
 					"event, and ask for a real SAMPLE or the regulatory form it must follow. (Write them in " +
 					"REQUIREMENTS.md under '## Outputs' as O-1, O-2 …, or 'None' if it only has screens. These become " +
 					"the Outputs table in 0c; every datum on a sample must exist as a field.)",
+				"Are there rules, limits or exceptions the system must know about? Amounts and norms, time limits, " +
+					"thresholds, people who work differently (contractors, people who have left, temporary staff), and " +
+					"anything that must be BLOCKED. Only the customer knows these. (Write each answer as a rule with " +
+					"its figure in REQUIREMENTS.md; never invent a figure; 'nothing special' is a valid answer and is " +
+					"written as such. Ask this question even when the customer has not mentioned any limits.)",
 			],
 			followUpNote:
 				"After answers 1-2: ask any domain ambiguity questions that remain open (e.g. 'What counts as a " +
-				"closed item?', 'Can anonymous users submit?'). Before writing REQUIREMENTS.md, ask once: 'Are there " +
-				"rules, limits or exceptions the system must know about — amounts and norms, time limits, thresholds, " +
-				"people who work differently (contractors, people who have left, temporary staff) — and anything that " +
-				"must be blocked?' (never invent a figure), then silently run the completeness check " +
+				"closed item?', 'Can anonymous users submit?'). Answer 5 (rules, limits and exceptions) is required " +
+				"before REQUIREMENTS.md is written. Then silently run the completeness check " +
 				"(dforge://reference/requirements-completeness) and ask only about failures. Before writing " +
 				"REQUIREMENTS.md also run the quiet platform check: for each capability the user asked for (print, " +
 				"export, e-mail, schedule, approval, visibility, notification) read its dforge://reference and " +

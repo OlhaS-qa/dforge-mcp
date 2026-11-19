@@ -262,12 +262,14 @@ describe("validate structural checks", () => {
 });
 
 describe("Phase 0b intake: rules, limits and exceptions", () => {
-	it("followUpNote asks once about rules, limits and exceptions and points to the completeness check", () => {
+	it("0b returns a required question about rules, limits and exceptions and the completeness check", () => {
 		identity();
 		const c = plan({ action: "check" });
 		expect(c.currentPhase).toBe("0b");
-		expect(c.followUpNote).toMatch(/rules, limits or exceptions/);
-		expect(c.followUpNote).toMatch(/contractors, people who have left/);
+		expect(c.questions).toHaveLength(5);
+		expect(c.questions[4]).toMatch(/rules, limits or exceptions/);
+		expect(c.questions[4]).toMatch(/contractors, people who have left/);
+		expect(c.followUpNote).toMatch(/required/);
 		expect(c.followUpNote).toContain("dforge://reference/requirements-completeness");
 	});
 });

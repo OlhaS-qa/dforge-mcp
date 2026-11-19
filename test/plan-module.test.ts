@@ -346,3 +346,14 @@ describe("write_requirements gate: rules, limits and exceptions", () => {
 		expect(r.summary).toMatch(/Phase 0b complete/);
 	});
 });
+
+describe("completeness check 7 covers how a document leaves the organisation", () => {
+	it("names the way it is sent, the copies and who signs", async () => {
+		const { readFileSync } = await import("node:fs");
+		const { join } = await import("node:path");
+		const text = readFileSync(join(__dirname, "..", "skills", "dforge-mcp-author", "references", "requirements-completeness.md"), "utf8");
+		const row = text.split(String.fromCharCode(10)).find((l) => l.startsWith("| 7 |")) ?? "";
+		expect(row).toMatch(/how it is sent/);
+		expect(row).toMatch(/how many copies/);
+	});
+});

@@ -4,6 +4,10 @@ All notable changes to `@dforge-core/dforge-mcp`. This project uses semver-ish
 `0.1.0-rc.N` pre-release tags; the published version is set at publish time via
 the release workflow, so committed `package.json` versions are placeholders.
 
+## Unreleased
+
+**The tables of a balance register are described (issue #40).** `registers.md` gets a section *The tables a `balance` register needs* (a unique constraint over the dimensions on the state entity, a column for the state row's key in the journal, the `stateField` column on the document) with the errors that follow when one is missing (`42P10`, `42703`, "Already posted."), an example of the state column, and a line in *Common mistakes*; `validation-checklist.md` gets a *Registers* section with one item per rule. Validate, pack and install do not check these parts (0.2.61 / CLI 0.2.46), so a module without them installs green and fails at the first posting. A validate warning for each rule is proposed in #40 and not part of this change.
+
 ## 0.2.61 - 2026-11-19
 
 **Skills synced with dForge-core.** `manifest.md`: `secrets` declarations (undeclared code refused once declared, per-folder values). `column-types.md`: `lookupCreate` on an entity and on a Reference column. `dforge-module-ship`: module tests with `$as`, `query` and `register` row checks.

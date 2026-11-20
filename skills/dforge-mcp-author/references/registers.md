@@ -54,6 +54,16 @@ Register codes: lowercase letters, digits, underscores. A document addresses one
 }
 ```
 
+### The tables a `balance` register needs
+
+The installer generates none of them: you declare the state entity, the journal and the document column. `dforge_module_validate`, `module pack` and `module install` do not check the parts below, so a module that lacks one installs without a warning and fails at the **first posting**, with a raw SQL error. Take `wms-registry` as the model (`stock`, `stock_movement`, `transfer`).
+
+| Table | Must have | If it is missing, posting fails with |
+|---|---|---|
+| State entity (`entity`) | the dimensions and the resources, and a **unique constraint over exactly the dimension tuple**: `"UQ_warehouse_product": { "type": "unique", "fields": ["warehouse_id", "product_id"] }` | `42P10 there is no unique or exclusion constraint matching the ON CONFLICT specification` |
+| Journal (`journal`) | the dimensions and the resources, the `journalDate` and `journalDirection` columns, `source` (jsonb), and **a column for the state row's key, named like the state entity's primary key** (`stock_id` in `stock_movement`, because the state entity `stock` has the key `stock_id`) | `42703 column "<state key>" of relation "<journal>" does not exist` |
+| The document | the **state column** that `stateField` names in the `A` column (see *Binding a document*) | `Already posted.` and no movement |
+
 ### Turnover (`wms-registry.product_flow`)
 
 ```json
@@ -176,6 +186,18 @@ A register column is a `bool` state column. `A` writes `balance`, `turnover` and
 }
 ```
 
+The document must also declare the column that `stateField` names: the **posting state**, a checkbox that defaults to `false`. Posting and unposting are done by turning this state column on and off (a user, an action or the API); setting the `A` column itself does not post. Without the state column the first posting answers `Already posted.`.
+
+```json
+"stock_out_state": {
+    "dbDatatype": "bool",
+    "fieldTypeCd": "checkbox",
+    "flags": "VEM",
+    "formula": "false",
+    "description": "Stock Out Posted"
+}
+```
+
 | Param | Meaning |
 |---|---|
 | `register` | `module_cd.register_cd`. Do not combine with inline `registries`. |
@@ -285,6 +307,7 @@ For a history loaded from another system, an `accounting` register may declare `
 
 ## Common mistakes
 
+- **A balance register with incomplete tables.** No unique key over the dimensions on the state entity, no column for the state row's key in the journal, or no `stateField` column on the document: validate, pack and install stay green and the first posting fails (`42P10`, `42703`, `Already posted.`). See *The tables a `balance` register needs*.
 - **Undeclared or unqualified register.** `params.register` must be `module_cd.register_cd` and exist. Install fails, not the first posting.
 - **Unmapped required resource.** Map it, or mark the resource `"required": false` when only some writers supply it.
 - **Empty dimension.** An empty (NULL) dimension refuses the posting; there is no `allowEmpty`, on any kind. Two ways out: map the dimension through an expression with a placeholder, `"=COALESCE([frp_id], 0)"` (`A` column only), or list it in `skipPostingWhenEmpty`, which leaves the document posted while those rows move nothing. Prefer one line table per binding. Use `skipPostingWhenEmpty` only when the distinction lives in the data, such as a serial number filled on some rows. Data loaded from another system often has such rows (a movement with no warehouse), so decide this before the load.

@@ -71,6 +71,12 @@ For each entity:
 - [ ] Has `link` with `entity`, `thisKey`, `otherKey`
 - [ ] `link.otherKey` points to a real FK column on the target entity
 
+## Registers (`registers.json`)
+
+- [ ] Every `balance` register: the state entity has a **unique constraint over exactly its `dimensions`** (validate and install do not check it; the first posting fails with `42P10` otherwise)
+- [ ] Every `balance` register with a journal: the journal has a column named like the state entity's primary key (`<state entity>_id`), or posting fails with `42703`
+- [ ] Every `A` column: `params.stateField` names a `bool` checkbox column of the same entity with `formula: "false"` (see `registers.md`, *Binding a document*)
+
 ## Data views
 
 - [ ] Every data view has `label` and `dataSources` (`viewType` is optional — omit for grid; it defaults to `grid` at runtime)
